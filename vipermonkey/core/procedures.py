@@ -57,22 +57,22 @@ pyparsing.ParserElement.setDefaultWhitespaceChars(' \t\x19')
 from pyparsing import CaselessKeyword, Group, Optional, Suppress, \
     ZeroOrMore, Literal
 
-from vba_context import Context
-from statements import extend_statement_grammar, public_private, simple_statements_line, \
+from core.vba_context import Context
+from core.statements import extend_statement_grammar, public_private, simple_statements_line, \
     bogus_simple_for_each_statement, do_const_assignments, Do_Statement, While_Statement, \
     For_Each_Statement, For_Statement, FollowedBy, Combine, params_list_paren, bad_next_statement, \
     bad_if_statement, statements_line, function_type2, type_expression
-from identifiers import lex_identifier, identifier, TODO_identifier_or_object_attrib, \
+from core.identifiers import lex_identifier, identifier, TODO_identifier_or_object_attrib, \
     type_suffix
-from comments_eol import EOS, comment_single_quote, rem_statement
-from vba_lines import line_terminator
-import utils
-from utils import safe_str_convert
-from logger import log
-from tagged_block_finder_visitor import tagged_block_finder_visitor
-from vba_object import VBA_Object, eval_arg
-from python_jit import to_python, _check_for_iocs, _get_var_vals
-import vba_conversion
+from core.comments_eol import EOS, comment_single_quote, rem_statement
+from core.vba_lines import line_terminator
+from core import utils
+from core.utils import safe_str_convert
+from core.logger import log
+from core.tagged_block_finder_visitor import tagged_block_finder_visitor
+from core.vba_object import VBA_Object, eval_arg
+from core.python_jit import to_python, _check_for_iocs, _get_var_vals
+from core import vba_conversion
 
 # --- SUB --------------------------------------------------------------------
 
@@ -759,7 +759,7 @@ class Function(VBA_Object):
                     
             # Copy all the global variables from the function context to the caller
             # context so global updates are tracked.
-            for global_var in context.globals.keys():
+            for global_var in list(context.globals.keys()):
                 caller_context.globals[global_var] = context.globals[global_var]
                     
             if (log.getEffectiveLevel() == logging.DEBUG):

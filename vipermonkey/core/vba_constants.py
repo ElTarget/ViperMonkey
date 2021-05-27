@@ -48,7 +48,7 @@ __version__ = '0.08'
 
 import random
 
-from utils import safe_str_convert
+from core.utils import safe_str_convert
 
 def is_constant(name):
     """Check to see if there is a VBA constant with the given name.

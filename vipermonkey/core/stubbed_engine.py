@@ -49,8 +49,8 @@ import unidecode
 import string
 
 import logging
-from logger import log
-from utils import safe_str_convert
+from core.logger import log
+from core.utils import safe_str_convert
 
 class StubbedEngine(object):
     """Stubbed out Vipermonkey analysis engine that just supports
@@ -81,20 +81,20 @@ class StubbedEngine(object):
             if (isinstance(action, str)):
                 action = unidecode.unidecode(action.decode('unicode-escape'))
         except UnicodeDecodeError:
-            action = ''.join(filter(lambda x:x in string.printable, action))
+            action = ''.join([x for x in action if x in string.printable])
         if (isinstance(params, str)):
             try:
                 decoded = params.replace("\\", "#ESCAPED_SLASH#").decode('unicode-escape').replace("#ESCAPED_SLASH#", "\\")
                 params = unidecode.unidecode(decoded)
             except Exception as e:
                 log.warn("Unicode decode of action params failed. " + str(e))
-                params = ''.join(filter(lambda x:x in string.printable, params))
+                params = ''.join([x for x in params if x in string.printable])
         try:
             if (isinstance(description, str)):
                 description = unidecode.unidecode(description.decode('unicode-escape'))
         except UnicodeDecodeError as e:
             log.warn("Unicode decode of action description failed. " + str(e))
-            description = ''.join(filter(lambda x:x in string.printable, description))
+            description = ''.join([x for x in description if x in string.printable])
 
         # Throttle actions that happen a lot.
         action_tuple = (action, params, description)

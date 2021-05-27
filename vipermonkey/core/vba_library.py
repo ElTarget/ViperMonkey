@@ -55,28 +55,28 @@ import time
 import math
 import re
 import random
-from from_unicode_str import from_unicode_str
+from core.from_unicode_str import from_unicode_str
 import decimal
 #import sys
 #import traceback
 
 from pyparsing import ParseException
 
-import vb_str
-from vba_context import VBA_LIBRARY
-from vba_object import eval_arg
-from vba_object import VbaLibraryFunc
-from vba_object import VBA_Object
-import expressions
-import excel
-import modules
-import strip_lines
-from python_jit import _eval_python
-import utils
-from excel import pull_cells_sheet, get_largest_sheet, get_num_rows
-import vba_conversion
+from core import vb_str
+from core.vba_context import VBA_LIBRARY
+from core.vba_object import eval_arg
+from core.vba_object import VbaLibraryFunc
+from core.vba_object import VBA_Object
+from core import expressions
+from core import excel
+from core import modules
+from core import strip_lines
+from core.python_jit import _eval_python
+from core import utils
+from core.excel import pull_cells_sheet, get_largest_sheet, get_num_rows
+from core import vba_conversion
 
-from logger import log
+from core.logger import log
 
 # === VBA LIBRARY ============================================================
 
@@ -159,7 +159,7 @@ def get_raw_shellcode_data():
     @return (dict) A dict mapping shellcode byte addresses (int) to
     shellcode byte values (int).
     """
-    import vba_context
+    from core import vba_context
     return vba_context.shellcode
     
 def run_external_function(func_name, context, params, lib_info):
@@ -614,7 +614,7 @@ class _Chr(VbaLibraryFunc):
         if (param < 0):
             param = param * -1
         if (param > 255):
-            converter = unichr
+            converter = chr
             
         # Do the conversion.
         try:
@@ -975,7 +975,7 @@ class VarType(VbaLibraryFunc):
             return 2
         if (isinstance(val, float)):
             return 5
-        if (isinstance(val, long)):
+        if (isinstance(val, int)):
             return 3
         return 0
 
@@ -1004,7 +1004,7 @@ class Mid(VbaLibraryFunc):
         if ((s is None) or (s == "NULL")): return "\x00"
         # If start is NULL, NULL is also returned.
         if ((params[1] is None) or (params[1] == "NULL")): return "\x00"
-        if not isinstance(s, basestring):
+        if not isinstance(s, str):
             s = vba_conversion.str_convert(s)
         start = 0
         try:
@@ -1198,7 +1198,7 @@ class Right(VbaLibraryFunc):
         
         # "If String contains the data value Null, Null is returned."
         if s is None: return None
-        if not isinstance(s, basestring):
+        if not isinstance(s, str):
             s = utils.safe_str_convert(s)
         start = 0
         try:
@@ -2097,7 +2097,7 @@ class RtlMoveMemory(VbaLibraryFunc):
         # Track the shellcode bytes.
         if (len(params) < 3):
             return
-        import vba_context
+        from core import vba_context
         vba_context.add_shellcode_data(params[0], params[1], params[2])
         
 class GetByteCount_2(VbaLibraryFunc):
@@ -2293,7 +2293,7 @@ class StrReverse(VbaLibraryFunc):
         if ((params[0] is not None) and (len(params) > 0)):
             string = params[0]
             if ((not isinstance(params[0], str)) and
-                (not isinstance(params[0], unicode))):
+                (not isinstance(params[0], str))):
                 string = utils.safe_str_convert(params[0])
         r = string[::-1]
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -3818,7 +3818,7 @@ class OnTime(VbaLibraryFunc):
         except KeyError:
             log.warning("OnTime() callback function '" + callback_name + "' not found.")
             return "NULL"
-        import procedures
+        from core import procedures
         if (not isinstance(callback, procedures.Function) and
             not isinstance(callback, procedures.Sub)):
             log.warning("OnTime() callback function '" + callback_name + "' found, but not a function.")
@@ -4108,7 +4108,7 @@ class Close(VbaLibraryFunc):
                 file_id = context.get_interesting_fileid()
             else:
                 # Get the ID of the file.
-                file_id = context.open_files.keys()[0]
+                file_id = list(context.open_files.keys())[0]
 
         # We are actually closing a file.
         context.close_file(file_id)
@@ -4182,7 +4182,7 @@ class WriteLine(VbaLibraryFunc):
         else:        
 
             # Get the ID of the file.
-            file_id = context.open_files.keys()[0]
+            file_id = list(context.open_files.keys())[0]
         
         # TODO: Handle writing at a given file position.
 
@@ -4597,7 +4597,7 @@ class ReadText(VbaLibraryFunc):
         # Simulate the read.
 
         # Get the ID of the file.
-        file_id = context.open_files.keys()[0]
+        file_id = list(context.open_files.keys())[0]
 
         # TODO: This function takes a parameter that specifies the number of bytes to read!!
 
@@ -5934,7 +5934,7 @@ class WriteProcessMemory(VbaLibraryFunc):
         # Track the shellcode bytes.
         if (len(params) < 4):
             return
-        import vba_context
+        from core import vba_context
         vba_context.add_shellcode_data(params[1], params[2], params[3])
         
 class Write(VbaLibraryFunc):
@@ -5959,7 +5959,7 @@ class Write(VbaLibraryFunc):
         if not context.open_files:
             log.error("Cannot process Write(). No open files.")
             return
-        files = context.open_files.keys()
+        files = list(context.open_files.keys())
         if len(files) > 1:
             # Skip ADODB.Stream when guessing what file to write to.
             tmp_files = []
@@ -6095,7 +6095,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
     VBA_LIBRARY[name] = _class()
 
 if (log.getEffectiveLevel() == logging.DEBUG):
-    log.debug('VBA Library contains: %s' % ', '.join(VBA_LIBRARY.keys()))
+    log.debug('VBA Library contains: %s' % ', '.join(list(VBA_LIBRARY.keys())))
 
 # --- VBA CONSTANTS ----------------------------------------------------------
 

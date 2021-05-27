@@ -93,25 +93,25 @@ import re
 from pyparsing import ParseException
 import prettytable
 
-from logger import log
-from procedures import Function
-from procedures import Sub
-from function_call_visitor import function_call_visitor
-from function_defn_visitor import function_defn_visitor
-from function_import_visitor import function_import_visitor
-from var_defn_visitor import var_defn_visitor
-import filetype
-import read_ole_fields
-from meta import FakeMeta
-from vba_lines import vba_collapse_long_lines
-from modules import module
+from core.logger import log
+from core.procedures import Function
+from core.procedures import Sub
+from core.function_call_visitor import function_call_visitor
+from core.function_defn_visitor import function_defn_visitor
+from core.function_import_visitor import function_import_visitor
+from core.var_defn_visitor import var_defn_visitor
+from core import filetype
+from core import read_ole_fields
+from core.meta import FakeMeta
+from core.vba_lines import vba_collapse_long_lines
+from core.modules import module
 # Make sure we populate the VBA Library:
-import vba_library
-from stubbed_engine import StubbedEngine
-import expressions
-import vba_context
-import excel
-from utils import safe_str_convert
+from core import vba_library
+from core.stubbed_engine import StubbedEngine
+from core import expressions
+from core import vba_context
+from core import excel
+from core.utils import safe_str_convert
 
 # === FUNCTIONS ==============================================================
 
@@ -163,7 +163,7 @@ def pull_urls_excel_sheets(workbook):
         try:
             value = safe_str_convert(cell["value"]).strip()
         except UnicodeEncodeError:
-            value = ''.join(filter(lambda x:x in string.printable, cell["value"])).strip()
+            value = ''.join([x for x in cell["value"] if x in string.printable]).strip()
 
         if (len(value) == 0):
             continue
@@ -210,7 +210,7 @@ def pull_b64_excel_sheets(workbook):
         try:
             value = safe_str_convert(cell["value"]).strip()
         except UnicodeEncodeError:
-            value = ''.join(filter(lambda x:x in string.printable, cell["value"])).strip()
+            value = ''.join([x for x in cell["value"] if x in string.printable]).strip()
 
         if (len(value) == 0):
             continue
@@ -375,7 +375,7 @@ class ViperMonkey(StubbedEngine):
         new_dat = dat
         if (isinstance(dat, dict)):
             new_dat = FakeMeta()
-            for field in dat.keys():
+            for field in list(dat.keys()):
                 setattr(new_dat, safe_str_convert(field), dat[field])
         self.metadata = new_dat
         
@@ -388,7 +388,7 @@ class ViperMonkey(StubbedEngine):
         if (m is None):
             return
         self.modules.append(m)
-        for name, _sub in m.subs.items():
+        for name, _sub in list(m.subs.items()):
             # Skip duplicate subs that look less interesting than the old one.
             if (name in self.globals):
                 old_sub = self.globals[name]
@@ -400,22 +400,22 @@ class ViperMonkey(StubbedEngine):
                 log.debug('(1) storing sub "%s" in globals' % name)
             self.globals[name.lower()] = _sub
             self.globals[name] = _sub
-        for name, _function in m.functions.items():
+        for name, _function in list(m.functions.items()):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing function "%s" in globals' % name)
             self.globals[name.lower()] = _function
             self.globals[name] = _function
-        for name, _prop in m.functions.items():
+        for name, _prop in list(m.functions.items()):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing property let "%s" in globals' % name)
             self.globals[name.lower()] = _prop
             self.globals[name] = _prop
-        for name, _function in m.external_functions.items():
+        for name, _function in list(m.external_functions.items()):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function
             self.externals[name.lower()] = _function
-        for name, _var in m.global_vars.items():
+        for name, _var in list(m.global_vars.items()):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing global var "%s" = %s in globals (1)' % (name, safe_str_convert(_var)))
             if (isinstance(name, str)):
@@ -442,10 +442,10 @@ class ViperMonkey(StubbedEngine):
             self.add_compiled_module(m)
 
         except ParseException as err:
-            print '*** PARSING ERROR (1) ***'
-            print err.line
-            print " " * (err.column - 1) + "^"
-            print err
+            print('*** PARSING ERROR (1) ***')
+            print(err.line)
+            print(" " * (err.column - 1) + "^")
+            print(err)
             
     def _get_external_funcs(self):
         """Get a list of external (or VB builtin) functions called in the
@@ -577,7 +577,7 @@ class ViperMonkey(StubbedEngine):
         context.globals["['ThisDocument'].Paragraphs".lower()] = self.doc_text
         context.globals["['ActiveDocument'].Characters".lower()] = list("\n".join(self.doc_text))
         context.globals["ActiveDocument.Characters".lower()] = list("\n".join(self.doc_text))
-        context.globals["ActiveDocument.Characters.Count".lower()] = long(len(self.doc_text))
+        context.globals["ActiveDocument.Characters.Count".lower()] = int(len(self.doc_text))
         context.globals["Count".lower()] = 1
         context.globals[".Pages.Count".lower()] = 1
         context.globals["me.Pages.Count".lower()] = 1

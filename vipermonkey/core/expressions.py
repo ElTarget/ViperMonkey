@@ -65,23 +65,23 @@ from pyparsing import CaselessKeyword, CaselessLiteral, Combine, FollowedBy, For
     Suppress, White, Word, ZeroOrMore, delimitedList
 import pyparsing
 
-from identifiers import lex_identifier, reserved_identifier, TODO_identifier_or_object_attrib, \
+from core.identifiers import lex_identifier, reserved_identifier, TODO_identifier_or_object_attrib, \
     strict_reserved_keywords, unrestricted_name, enum_val_id, identifier, typed_name, \
     TODO_identifier_or_object_attrib_loose
-from lib_functions import StrReverse, Environ, Asc, Chr, chr_, asc, expression, strReverse
-from literals import date_string, decimal_literal, float_literal, literal, \
+from core.lib_functions import StrReverse, Environ, Asc, Chr, chr_, asc, expression, strReverse
+from core.literals import date_string, decimal_literal, float_literal, literal, \
     quoted_string_keep_quotes, integer, quoted_string
-from operators import AddSub, And, Concatenation, Eqv, FloorDivision, Mod, MultiDiv, Neg, \
+from core.operators import AddSub, And, Concatenation, Eqv, FloorDivision, Mod, MultiDiv, Neg, \
     Not, Or, Power, Sum, Xor
-import procedures
-from vba_object import eval_arg, eval_args, VbaLibraryFunc, VBA_Object
-from python_jit import to_python
-import vba_context
-import utils
-import vba_conversion
-from utils import safe_str_convert
+from core import procedures
+from core.vba_object import eval_arg, eval_args, VbaLibraryFunc, VBA_Object
+from core.python_jit import to_python
+from core import vba_context
+from core import utils
+from core import vba_conversion
+from core.utils import safe_str_convert
 
-from logger import log
+from core.logger import log
 
 def _vba_to_python_op(op, is_boolean):
     """Convert a VBA boolean operator to a Python boolean operator or a
@@ -170,7 +170,7 @@ class SimpleNameExpression(VBA_Object):
         
         # Is this a 0 argument builtin function call? Make sure this is not a
         # local variable shadowing the name of a VBA builtin.
-        import vba_library
+        from core import vba_library
         if ((self.name.lower() in vba_library.VBA_LIBRARY) and
             (isinstance(value, VbaLibraryFunc)) and
             (value.num_args() == 0)):
@@ -195,7 +195,7 @@ class SimpleNameExpression(VBA_Object):
     def eval(self, context, params=None):
         params = params # pylint warning
         
-        import statements
+        from core import statements
         
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('try eval variable/function %r' % self.name)
@@ -230,7 +230,7 @@ class SimpleNameExpression(VBA_Object):
             # if there are many failed lookups.
             var_name = safe_str_convert(self.name)
             global missed_var_count
-            if (var_name not in missed_var_count.keys()):
+            if (var_name not in list(missed_var_count.keys())):
                 missed_var_count[var_name] = 0
             missed_var_count[var_name] += 1
             if (missed_var_count[var_name] < 20):
@@ -467,7 +467,7 @@ class MemberAccessExpression(VBA_Object):
         # SpecialCells(xlCellTypeConstants)
         # SpecialCells(xlCellTypeConstants, UsedRange())
         # SpecialCells(xlCellTypeConstants, UsedRange(Sheets(d)))
-        import vba_library
+        from core import vba_library
         
         # Load elements of the member access expression onto a stack.
         obj_stack = []
@@ -1366,7 +1366,7 @@ class MemberAccessExpression(VBA_Object):
             rhs = rhs[0]
         if (safe_str_convert(rhs) != "Close"):
             return None
-        from vba_library import Close
+        from core.vba_library import Close
         file_close = Close()
             
         # File closed.
@@ -1918,7 +1918,7 @@ class MemberAccessExpression(VBA_Object):
             filename = filename[filename.rindex("\\") + 1:]        
         fname = out_dir + "/" + filename
         fname = fname.replace("\x00", "").replace("..", "")
-        fname = ''.join(filter(lambda x:x in string.printable, fname))
+        fname = ''.join([x for x in fname if x in string.printable])
         fname = re.sub(r"[^ -~]", "__", fname)
         try:
 
@@ -2176,7 +2176,7 @@ class MemberAccessExpression(VBA_Object):
 
             # Do we have the needed field?
             key = safe_str_convert(self.rhs).replace("[", "").replace("]", "").replace("'", "")
-            if (key.lower() in tmp_lhs.keys()):
+            if (key.lower() in list(tmp_lhs.keys())):
 
                 # Return the field value.
                 return tmp_lhs[key.lower()]
@@ -2184,7 +2184,7 @@ class MemberAccessExpression(VBA_Object):
             # Text value of an Excel cell object?
             if (key.lower() == "text"):
                 key = "value"
-                if (key.lower() in tmp_lhs.keys()):
+                if (key.lower() in list(tmp_lhs.keys())):
 
                     # Return the field value.
                     return tmp_lhs[key.lower()]
@@ -3335,7 +3335,7 @@ class Function_Call(VBA_Object):
         self.name = safe_str_convert(tokens.name)
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('Function_Call.name = %r' % self.name)
-        assert isinstance(self.name, basestring)
+        assert isinstance(self.name, str)
         self.params = tokens.params
 
         # Do some special handling of calls to MultiByteToWideChar. It looks like the
@@ -3468,7 +3468,7 @@ class Function_Call(VBA_Object):
     def eval(self, context, params=None):
 
         # Save the unresolved argument values.
-        import vba_library
+        from core import vba_library
         vba_library.var_names = self.params
         
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -3584,7 +3584,7 @@ class Function_Call(VBA_Object):
                 # Set the values of the arguments passed as ByRef parameters.
                 #print "WHERE: 6"
                 if (hasattr(f, "byref_params")):
-                    for byref_param_info in f.byref_params.keys():
+                    for byref_param_info in list(f.byref_params.keys()):
                         try:
                             arg_var_name = safe_str_convert(self.params[byref_param_info[1]])
                             if (context.contains(arg_var_name)):
@@ -3717,7 +3717,7 @@ class Function_Call(VBA_Object):
         context.in_bitwise_expression = old_bitwise
 
         # Is this a VBA internal function? Or a call to an external function?
-        import vba_library
+        from core import vba_library
         is_internal = (func_name.lower() in vba_library.VBA_LIBRARY)
         if (is_internal or is_external):
 
@@ -4213,10 +4213,10 @@ class BoolExprItem(VBA_Object):
             lhs = lhs + 0.0
 
         # Convert unicode to str by stripping non-ASCII chars. Not ideal.
-        if (isinstance(lhs, unicode)):
-            lhs = ''.join(filter(lambda x:x in string.printable, lhs))
-        if (isinstance(rhs, unicode)):
-            rhs = ''.join(filter(lambda x:x in string.printable, rhs))
+        if (isinstance(lhs, str)):
+            lhs = ''.join([x for x in lhs if x in string.printable])
+        if (isinstance(rhs, str)):
+            rhs = ''.join([x for x in rhs if x in string.printable])
             
         # Handle unexpected types.
         rhs_invalid_type = ((not isinstance(rhs, int)) and (not isinstance(rhs, str)) and (not isinstance(rhs, float)))

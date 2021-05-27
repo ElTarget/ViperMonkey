@@ -15,7 +15,7 @@ class MyListener(vbaListener):
             if isinstance(child, vbaParser.AmbiguousIdentifierContext):
             # if type(child).__name__ != 'AmbiguousIdentifierContext':
                 name = child.getText()
-                print('Sub %r' % name)
+                print(('Sub %r' % name))
             # self.that.globals[name.lower()] = ctx
 
     def exitSubStmt(self, ctx):
@@ -27,16 +27,16 @@ class MyListener(vbaListener):
             if type(child).__name__ != 'AmbiguousIdentifierContext':
                 continue
             name = child.getText()
-            print('Function %r' % name)
+            print(('Function %r' % name))
             # self.that.globals[name.lower()] = ctx
 
     def enterBlockStmt(self, ctx):
         print('enterBlockStmt:')
-        print(ctx.getText())
+        print((ctx.getText()))
 
     def enterLiteral(self, ctx):
         print('enterLiteral:')
-        print(ctx.getText())
+        print((ctx.getText()))
 
 
 try:
@@ -44,7 +44,7 @@ try:
 except:
     sys.exit('Usage: %s <VBA text file>' % sys.argv[0])
 
-print('Parsing %s' % filename)
+print(('Parsing %s' % filename))
 print('Lexer')
 lexer = vbaLexer(antlr4.FileStream(sys.argv[1]))
 print('Stream')

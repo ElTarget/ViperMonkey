@@ -135,7 +135,7 @@ if REGEX:
             for entry in match.captures('entry'):
                 sub_match = CHR.match(entry)
                 if sub_match:
-                    character = chr(reduce(xor, map(int, sub_match.captures('op'))))
+                    character = chr(reduce(xor, list(map(int, sub_match.captures('op')))))
                     # Escape if its a quote.
                     if character == '"':
                         character = '""'

@@ -39,8 +39,7 @@ https://github.com/decalage2/ViperMonkey
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import re
-from curses_ascii import isascii
-from curses_ascii import isprint
+from core.curses_ascii import isascii, isprint
 import base64
 import string
 
@@ -75,9 +74,9 @@ def safe_str_convert(s):
     try:
         return str(s)
     except UnicodeDecodeError:
-        return filter(isprint, s)
+        return list(filter(isprint, s))
     except UnicodeEncodeError:
-        return filter(isprint, s)
+        return list(filter(isprint, s))
 
 class Infix(object):
     """Used to define our own infix operators.
@@ -109,7 +108,7 @@ def safe_plus(x,y):
     """
 
     # Handle Excel Cell objects. Grrr.
-    import excel
+    from core import excel
     if excel.is_cell_dict(x):
         x = x["value"]
     if excel.is_cell_dict(y):
@@ -132,7 +131,7 @@ def safe_plus(x,y):
     # casting (I think) minus variable type information (Dim a as
     # String:a = 1 + "3" gets "13", we're ignoring that here). Pure
     # garbage.
-    import vba_conversion
+    from core import vba_conversion
     if (isinstance(x, str)):
         y = vba_conversion.str_convert(y)
     if (isinstance(x, int)):
@@ -285,7 +284,7 @@ def b64_decode(value):
         # Make sure this is a potentially valid base64 string
         tmp_str = ""
         try:
-            tmp_str = filter(isascii, str(value).strip())
+            tmp_str = list(filter(isascii, str(value).strip()))
         except UnicodeDecodeError:
             return None
         tmp_str = tmp_str.replace(" ", "").replace("\x00", "")
@@ -405,7 +404,7 @@ def strip_nonvb_chars(s):
     """
 
     # Handle unicode strings.
-    if (isinstance(s, unicode)):
+    if (isinstance(s, str)):
         s = s.encode('ascii','replace')
     
     # Sanity check.

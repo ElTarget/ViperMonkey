@@ -42,6 +42,7 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import operator
+from functools import reduce
 
 __version__ = '0.03'
 
@@ -51,11 +52,11 @@ __version__ = '0.03'
 import logging
 from collections import Iterable
 
-from vba_object import eval_args, VBA_Object
-from python_jit import to_python
-from logger import log
-from utils import safe_str_convert
-import vba_conversion
+from core.vba_object import eval_args, VBA_Object
+from core.python_jit import to_python
+from core.logger import log
+from core.utils import safe_str_convert
+from core import vba_conversion
 
 def debug_repr(op, args):
     """Represent an operator applied to a list of arguments as a string
@@ -653,7 +654,7 @@ class MultiOp(VBA_Object):
             # Try converting strings to numbers.
             # TODO: Need to handle floats in strings.
             try:
-                args = map(vba_conversion.coerce_to_num, evaluated_args)
+                args = list(map(vba_conversion.coerce_to_num, evaluated_args))
                 ret = args[0]
                 for op, arg in zip(self.operators, args[1:]):
                     ret = self.operator_map[op](ret, arg)

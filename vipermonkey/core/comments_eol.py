@@ -11,8 +11,8 @@ pyparsing.ParserElement.setDefaultWhitespaceChars(' \t\x19')
 
 import logging
 from pyparsing import Literal, SkipTo, Combine, Suppress, Optional, CaselessKeyword, OneOrMore
-from vba_lines import line_terminator
-from logger import log
+from core.vba_lines import line_terminator
+from core.logger import log
 if (log.getEffectiveLevel() == logging.DEBUG ):
     log.debug('importing comments_eol')
 

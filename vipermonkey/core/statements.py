@@ -65,37 +65,37 @@ from pyparsing import CaselessKeyword, Combine, delimitedList, FollowedBy, \
     ParseException, ParseResults, Regex, Suppress, White, ZeroOrMore, \
     CharsNotIn
 
-from identifiers import identifier, lex_identifier, TODO_identifier_or_object_attrib, \
+from core.identifiers import identifier, lex_identifier, TODO_identifier_or_object_attrib, \
     TODO_identifier_or_object_attrib_loose, enum_val_id, unrestricted_name, \
     reserved_type_identifier, typed_name
-from literals import integer, quoted_string, literal, decimal_literal, \
+from core.literals import integer, quoted_string, literal, decimal_literal, \
     quoted_string_keep_quotes
-from comments_eol import rem_statement, EOS
-from expressions import any_expression, boolean_expression, BoolExpr, expression, \
+from core.comments_eol import rem_statement, EOS
+from core.expressions import any_expression, boolean_expression, BoolExpr, expression, \
     file_pointer, function_call, Function_Call, member_access_expression, \
     MemberAccessExpression, simple_name_expression, SimpleNameExpression, \
     file_pointer_loose, expr_list, expr_const, expr_list_strict, \
     function_call_limited
-from vba_context import Context, is_procedure
-from reserved import reserved_complex_type_identifier
-from from_unicode_str import from_unicode_str
-from vba_object import eval_arg, eval_args, VbaLibraryFunc, VBA_Object
-from python_jit import _loop_vars_to_python, to_python, _updated_vars_to_python, _eval_python
-import procedures
-from var_in_expr_visitor import var_in_expr_visitor
-from function_call_visitor import function_call_visitor
-import vb_str
-import loop_transform
-import utils
-from utils import safe_str_convert
-import vba_conversion
+from core.vba_context import Context, is_procedure
+from core.reserved import reserved_complex_type_identifier
+from core.from_unicode_str import from_unicode_str
+from core.vba_object import eval_arg, eval_args, VbaLibraryFunc, VBA_Object
+from core.python_jit import _loop_vars_to_python, to_python, _updated_vars_to_python, _eval_python
+from core import procedures
+from core.var_in_expr_visitor import var_in_expr_visitor
+from core.function_call_visitor import function_call_visitor
+from core import vb_str
+from core import loop_transform
+from core import utils
+from core.utils import safe_str_convert
+from core import vba_conversion
 
 import traceback
-from logger import log
+from core.logger import log
 import sys
 import re
 import base64
-from curses_ascii import isprint
+from core.curses_ascii import isprint
 import hashlib
 
 def is_simple_statement(s):
@@ -1328,7 +1328,7 @@ class Let_Statement(VBA_Object):
 
             # Try converting the text from base64.
             try:
-                tmp_str = filter(isprint, safe_str_convert(value).strip())
+                tmp_str = list(filter(isprint, safe_str_convert(value).strip()))
                 value = base64.b64decode(tmp_str)
             except Exception as e:
                 log.warning("base64 conversion of '" + safe_str_convert(value) + "' failed. " + safe_str_convert(e))
@@ -1484,7 +1484,7 @@ class Let_Statement(VBA_Object):
                     arr_var[index] = new_arr
 
             # Handle strings.
-            if isinstance(arr_var, (str, unicode)):
+            if isinstance(arr_var, str):
 
                 # Do we need to extend the length of the string to include the index?
                 if (index >= len(arr_var)):
@@ -1492,7 +1492,7 @@ class Let_Statement(VBA_Object):
                 
                 # We now have a string with the proper # of elements. Set the
                 # array element to the proper value.
-                if isinstance(value, (str, unicode)):
+                if isinstance(value, str):
                     arr_var = arr_var[:index] + value + arr_var[(index + 1):]
                 elif (isinstance(value, int)):
                     try:
@@ -1687,7 +1687,7 @@ class For_Statement(VBA_Object):
         
         # Get the start index. If this is a string, convert to an int.
         start = eval_arg(self.start_value, context=context)
-        if (isinstance(start, basestring)):
+        if (isinstance(start, str)):
             start = vba_conversion.int_convert(start)
 
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -1695,7 +1695,7 @@ class For_Statement(VBA_Object):
 
         # Get the end index. If this is a string, convert to an int.
         end = eval_arg(self.end_value, context=context)
-        if (isinstance(end, basestring)):
+        if (isinstance(end, str)):
             end = vba_conversion.int_convert(end)
         if (end is None):
             log.warning("Not emulating For loop. Loop end '" + safe_str_convert(self.end_value) + "' evaluated to None.")
@@ -1707,7 +1707,7 @@ class For_Statement(VBA_Object):
         # Get the loop step value.
         if self.step_value != 1:
             step = eval_arg(self.step_value, context=context)
-            if (isinstance(step, basestring)):
+            if (isinstance(step, str)):
                 step = vba_conversion.int_convert(step)
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
@@ -3901,7 +3901,7 @@ class If_Statement(VBA_Object):
                     if (isinstance(i, VBA_Object)):
                         self._children.append(i)
             if (isinstance(piece["body"], dict)):
-                for i in piece["body"].values():
+                for i in list(piece["body"].values()):
                     if (isinstance(i, VBA_Object)):
                         self._children.append(i)
 
@@ -3913,7 +3913,7 @@ class If_Statement(VBA_Object):
                     if (isinstance(i, VBA_Object)):
                         self._children.append(i)
             if (isinstance(piece["guard"], dict)):
-                for i in piece["guard"].values():
+                for i in list(piece["guard"].values()):
                     if (isinstance(i, VBA_Object)):
                         self._children.append(i)
 
@@ -3968,8 +3968,8 @@ class If_Statement(VBA_Object):
             r += body + " "
 
         if (full_str):
-            print guard
-            print body
+            print(guard)
+            print(body)
             sys.exit(0)
         return r
 
@@ -4271,7 +4271,7 @@ class Call_Statement(VBA_Object):
         func_name = safe_str_convert(self.name)
         if ("." in func_name):
             func_name = func_name[func_name.index(".") + 1:]
-        import vba_library
+        from core import vba_library
         is_internal = (func_name.lower() in vba_library.VBA_LIBRARY)
         if (is_internal or is_external):
 
@@ -4416,7 +4416,7 @@ class Call_Statement(VBA_Object):
             return None
 
         # Save the unresolved argument values.
-        import vba_library
+        from core import vba_library
         vba_library.var_names = self.params
         
         # Reset the called function name if this is an alias for an imported external
@@ -4520,7 +4520,7 @@ class Call_Statement(VBA_Object):
                 
                 # Set the values of the arguments passed as ByRef parameters.
                 if (hasattr(s, "byref_params") and s.byref_params):
-                    for byref_param_info in s.byref_params.keys():
+                    for byref_param_info in list(s.byref_params.keys()):
                         if (byref_param_info[1] < len(self.params)):
                             arg_var_name = safe_str_convert(self.params[byref_param_info[1]])
                             context.set(arg_var_name, s.byref_params[byref_param_info])
@@ -5529,13 +5529,13 @@ class External_Function(VBA_Object):
         self.params = tokens.params
         self.lib_name = safe_str_convert(tokens.lib_info.lib_name)
         # normalize lib name: remove quotes, lowercase, add .dll if no extension
-        if isinstance(self.lib_name, basestring):
+        if isinstance(self.lib_name, str):
             self.lib_name = safe_str_convert(tokens.lib_name).strip('"').lower()
             if '.' not in self.lib_name:
                 self.lib_name += '.dll'
         self.lib_name = safe_str_convert(self.lib_name)
         self.alias_name = safe_str_convert(tokens.lib_info.alias_name)
-        if isinstance(self.alias_name, basestring):
+        if isinstance(self.alias_name, str):
             # TODO: this might not be necessary if alias is parsed as quoted string
             self.alias_name = self.alias_name.strip('"')
         if (len(self.alias_name.strip()) == 0):

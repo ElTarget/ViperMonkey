@@ -46,8 +46,8 @@ import re
 
 from pyparsing import ParseException
 
-from logger import log
-import statements
+from core.logger import log
+from core import statements
 
 def _transform_dummy_loop1(loop):
     """Transform useless loops like 'y = 20:Do While x < 100:If x = 6

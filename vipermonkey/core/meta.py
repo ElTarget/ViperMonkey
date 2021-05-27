@@ -20,9 +20,9 @@ https://github.com/decalage2/ViperMonkey
 import logging
 import subprocess
 
-from logger import log
+from core.logger import log
 
-from utils import safe_str_convert
+from core.utils import safe_str_convert
 
 class FakeMeta(object):
     """Class used to hold Office file metadata fields and values.

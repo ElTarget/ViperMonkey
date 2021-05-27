@@ -43,9 +43,9 @@ import re
 import string
 
 import logging
-from logger import log
+from core.logger import log
 
-from utils import safe_str_convert
+from core.utils import safe_str_convert
 
 def int_convert(arg, leave_alone=False):
     """Convert a VBA expression to an int, handling VBA NULL.
@@ -111,14 +111,14 @@ def str_convert(arg):
     """
     if (arg == "NULL"):
         return ''
-    import excel
+    from core import excel
     if (excel.is_cell_dict(arg)):
         arg = arg["value"]
     try:
         return str(arg)
     except Exception as e:
-        if (isinstance(arg, unicode)):
-            return ''.join(filter(lambda x:x in string.printable, arg))
+        if (isinstance(arg, str)):
+            return ''.join([x for x in arg if x in string.printable])
         log.error("Cannot convert given argument to str. Defaulting to ''. " + str(e))
         return ''
 
@@ -171,7 +171,7 @@ def coerce_to_str(obj, zero_is_null=False):
     # Not NULL. We have data.
 
     # Easy case. Is this already some sort of a string?
-    if (isinstance(obj, basestring)):
+    if (isinstance(obj, str)):
 
         # Convert to a regular str if needed.
         return safe_str_convert(obj)

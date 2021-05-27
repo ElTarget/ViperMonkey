@@ -57,9 +57,9 @@ __version__ = '0.08'
 # --- IMPORTS ------------------------------------------------------------------
 
 import logging
-from logger import log
+from core.logger import log
 import re
-from curses_ascii import isprint
+from core.curses_ascii import isprint
 import traceback
 
 from inspect import getouterframes, currentframe
@@ -67,10 +67,10 @@ import sys
 from datetime import datetime
 import pyparsing
 
-from var_in_expr_visitor import var_in_expr_visitor
-from utils import safe_str_convert
-import utils
-import excel
+from core.var_in_expr_visitor import var_in_expr_visitor
+from core.utils import safe_str_convert
+from core import utils
+from core import excel
 
 max_emulation_time = None
 
@@ -230,7 +230,7 @@ class VBA_Object(object):
         if ((hasattr(self, "_children")) and (self._children is not None)):
             return self._children
         r = []
-        for _, value in self.__dict__.iteritems():
+        for _, value in self.__dict__.items():
             if (isinstance(value, VBA_Object)):
                 r.append(value)
             if isinstance(value, (list, pyparsing.ParseResults)):
@@ -238,7 +238,7 @@ class VBA_Object(object):
                     if (isinstance(i, VBA_Object)):
                         r.append(i)
             if (isinstance(value, dict)):
-                for i in value.values():
+                for i in list(value.values()):
                     if (isinstance(i, VBA_Object)):
                         r.append(i)
         self._children = r
@@ -360,7 +360,7 @@ def _read_from_object_text(arg, context):
     #
     # Make sure not to pull out Shapes() references that appear as arguments to function
     # calls.
-    import expressions
+    from core import expressions
     if (("shapes(" in arg_str_low) and (not isinstance(arg, expressions.Function_Call))):
 
         # Yes we do. 
@@ -453,7 +453,7 @@ def contains_excel(arg):
         return True
     
     # Got a function call?
-    import expressions
+    from core import expressions
     if (not isinstance(arg, expressions.Function_Call)):
         return False
 
@@ -486,7 +486,7 @@ def get_cached_value(arg):
 
     # This is not already resolved to an int. See if we computed this before.
     arg_str = safe_str_convert(arg)
-    if (arg_str not in constant_expr_cache.keys()):
+    if (arg_str not in list(constant_expr_cache.keys())):
         return None
     return constant_expr_cache[arg_str]
 
@@ -558,11 +558,11 @@ def is_constant_math(arg):
     paren_pat = base_pat + "|(?:\\((?:\\s*" + base_pat + "\\s*[+\\-\\*\\\\]\\s*)*\\s*" + base_pat + "\\))"
     arg_str = safe_str_convert(arg).strip()
     try:
-        arg_str = unicode(arg_str)
+        arg_str = str(arg_str)
     except UnicodeDecodeError:
-        arg_str = filter(isprint, arg_str)
-        arg_str = unicode(arg_str)
-    return (local_re.match(unicode(paren_pat), arg_str) is not None)
+        arg_str = list(filter(isprint, arg_str))
+        arg_str = str(arg_str)
+    return (local_re.match(str(paren_pat), arg_str) is not None)
 
 def _handle_wscriptshell_run(arg, context, got_constant_math):
     """Handle cases where wscriptshell.run() is being called and there is
@@ -750,7 +750,7 @@ def _handle_form_variable_read(arg, context, got_constant_math):
                 log.debug("eval_arg: Try to run as function '" + func_name + "'...")
             func = context.get(func_name)
             r = func
-            import procedures
+            from core import procedures
             if (isinstance(func, (procedures.Function, procedures.Sub)) or
                 ('vipermonkey.core.vba_library.' in safe_str_convert(type(func)))):
                 r = eval_arg(func, context, treat_as_var_name=True)
@@ -1034,5 +1034,5 @@ def eval_args(args, context, treat_as_var_name=False):
             got_vba_objects = True
     if (not got_vba_objects):
         return args
-    r = map(lambda arg: eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name), args)
+    r = [eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name) for arg in args]
     return r

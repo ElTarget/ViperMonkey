@@ -2,7 +2,7 @@
 
 if __name__ == '__main__':
     import sys
-    from vmonkey import *
+    from .vmonkey import *
 
     f=open(sys.argv[1],'r')
     x=f.read()
@@ -10,4 +10,4 @@ if __name__ == '__main__':
 
     r=process_file('','',x, strip_useless=True)
 
-    print r[0][1]
+    print(r[0][1])

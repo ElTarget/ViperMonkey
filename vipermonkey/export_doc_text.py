@@ -192,9 +192,9 @@ if __name__ == '__main__':
     document = get_document(args.file, connection)
 
     if args.text:
-        print(get_text(document))
+        print((get_text(document)))
     elif args.tables:
-        print(json.dumps(get_tables(document)))
+        print((json.dumps(get_tables(document))))
 
     # clean up
     document.close(True)

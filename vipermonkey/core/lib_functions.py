@@ -47,17 +47,17 @@ __version__ = '0.02'
 # --- IMPORTS ------------------------------------------------------------------
 
 import re
-from curses_ascii import isprint
+from core.curses_ascii import isprint
 import logging
 from pyparsing import Suppress, Regex, CaselessKeyword, Optional, \
     CaselessLiteral, Literal, Forward
 
-from vba_object import eval_arg, VBA_Object
-from python_jit import to_python
-import vb_str
-from utils import safe_str_convert
+from core.vba_object import eval_arg, VBA_Object
+from core.python_jit import to_python
+from core import vb_str
+from core.utils import safe_str_convert
 
-from logger import log
+from core.logger import log
 
 # --- VBA Expressions ---------------------------------------------------------
 
@@ -93,7 +93,7 @@ class Chr(VBA_Object):
     def eval(self, context, params=None):
 
         # This is implemented in the common vba_library._Chr handler class.
-        import vba_library
+        from core import vba_library
         # pylint: disable=protected-access
         chr_handler = vba_library._Chr()
         param = eval_arg(self.arg, context)

@@ -50,7 +50,7 @@ import logging
 import os
 from hashlib import sha256
 from datetime import datetime
-from logger import log
+from core.logger import log
 import re
 try:
     # sudo pypy -m pip install rure
@@ -64,9 +64,9 @@ import codecs
 import copy
 import struct
 
-import vba_constants
-import utils
-from utils import safe_str_convert
+from core import vba_constants
+from core import utils
+from core.utils import safe_str_convert
 
 def to_hex(s):
     """Convert a string to a VBA hex string.
@@ -138,7 +138,7 @@ def get_shellcode_data():
 
     # Get the shellcode bytes in order. Assume any missing
     # bytes are x86 NOOP instructions.
-    indices = shellcode.keys()
+    indices = list(shellcode.keys())
     indices.sort()
     last_i = None
     r = []
@@ -360,7 +360,7 @@ class Context(object):
                 self.globals = _globals
 
             # Save intermediate IOCs if any appear.
-            for var in _globals.keys():
+            for var in list(_globals.keys()):
                 self.save_intermediate_iocs(_globals[var])
                 
         elif context is not None:
@@ -421,7 +421,7 @@ class Context(object):
             self.doc_vars = doc_vars
 
             # Save intermediate IOCs if any appear.
-            for var in doc_vars.keys():
+            for var in list(doc_vars.keys()):
                 self.save_intermediate_iocs(doc_vars[var])
 
         elif context is not None:
@@ -469,10 +469,10 @@ class Context(object):
             globals_eq = (self.globals == other.globals)
             if (not globals_eq):
                 s1 = set()
-                for i in self.globals.items():
+                for i in list(self.globals.items()):
                     s1.add(safe_str_convert(i))
                 s2 = set()
-                for i in other.globals.items():
+                for i in list(other.globals.items()):
                     s2.add(safe_str_convert(i))
                 if (safe_str_convert(s1 ^ s2) == "set([])"):
                     globals_eq = True
@@ -784,7 +784,7 @@ class Context(object):
         # Also look for the last saved file.
         longest = ""
         cdrive = None
-        for file_id in self.open_files.keys():
+        for file_id in list(self.open_files.keys()):
             if ((self.last_saved_file is not None) and (safe_str_convert(file_id).lower() == self.last_saved_file.lower())):
                 cdrive = file_id
                 break
@@ -826,7 +826,7 @@ class Context(object):
         fname = fname.replace(".\\", "").replace("\\", "/")
 
         # Don't reopen already opened files.
-        return (fname in self.open_files.keys())
+        return (fname in list(self.open_files.keys()))
         
     def open_file(self, fname, file_id=""):
         """Simulate opening a file.
@@ -850,7 +850,7 @@ class Context(object):
         fname = fname.replace(".\\", "").replace("\\", "/")
 
         # Don't reopen already opened files.
-        if (fname in self.open_files.keys()):
+        if (fname in list(self.open_files.keys())):
             log.warning("File " + safe_str_convert(fname) + " is already open.")
             return
 
@@ -889,7 +889,7 @@ class Context(object):
         if fname not in self.open_files:
 
             # Are we referencing this by numeric ID.
-            if (fname in self.file_id_map.keys()):
+            if (fname in list(self.file_id_map.keys())):
                 fname = self.file_id_map[fname]
             else:
 
@@ -899,7 +899,7 @@ class Context(object):
                     var_name = fname[1:]
                     if self.contains(var_name):
                         fname = "#" + safe_str_convert(self.get(var_name))
-                        if (fname in self.file_id_map.keys()):
+                        if (fname in list(self.file_id_map.keys())):
                             got_it = True
                             fname = self.file_id_map[fname]
                 
@@ -972,7 +972,7 @@ class Context(object):
         after dumping, if False leave them open.
 
         """
-        for fname in self.open_files.keys():
+        for fname in list(self.open_files.keys()):
             self.dump_file(fname, autoclose=autoclose)
 
     def get_num_open_files(self):
@@ -1016,7 +1016,7 @@ class Context(object):
         if fname not in self.open_files:
 
             # Are we referencing this by numeric ID.
-            if (fname in self.file_id_map.keys()):
+            if (fname in list(self.file_id_map.keys())):
                 file_id = fname
                 fname = self.file_id_map[fname]
             else:
@@ -1120,7 +1120,7 @@ class Context(object):
 
         """
         
-        if (not isinstance(name, basestring)):
+        if (not isinstance(name, str)):
             raise KeyError('Object %r not found' % name)
         
         # Search in the global VBA library:
@@ -1162,7 +1162,7 @@ class Context(object):
         @throws KeyError Thrown if the named variable is not found.
 
         """        
-        if (not isinstance(name, basestring)):
+        if (not isinstance(name, str)):
             raise KeyError('Object %r not found' % name)
 
         # Flag if this is a change handler lookup.
@@ -1564,7 +1564,7 @@ class Context(object):
         @throws KeyError This is thrown if the variable is not found.
 
         """
-        if (not isinstance(var, basestring)):
+        if (not isinstance(var, str)):
             return None
         var = var.lower()
         if (var not in self.types):
@@ -1583,7 +1583,7 @@ class Context(object):
         variable, if not found return None.
 
         """
-        if (not isinstance(var, basestring)):
+        if (not isinstance(var, str)):
             return None
 
         # Normalize the variable name to lower case.
@@ -1604,7 +1604,7 @@ class Context(object):
 
             # Return these as (name, value) tuples.
             r = []
-            for var_name in self.doc_vars.keys():
+            for var_name in list(self.doc_vars.keys()):
                 r.append((var_name, self.doc_vars[var_name]))                
             return r
         
@@ -1691,7 +1691,7 @@ class Context(object):
                 pass
             if (uni_value is not None):
                 B64_REGEX = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
-                b64_strs = re2.findall(unicode(B64_REGEX), uni_value)
+                b64_strs = re2.findall(str(B64_REGEX), uni_value)
                 for curr_value in b64_strs:
                     if (len(curr_value) > 100):
                         got_ioc = True
@@ -1742,8 +1742,8 @@ class Context(object):
             return False
         
         # Are we setting a cell formula?
-        import expressions
-        import vba_object
+        from core import expressions
+        from core import vba_object
         if (not isinstance(name, expressions.MemberAccessExpression)):
             return False
         tmp_rhs = safe_str_convert(name.rhs)
@@ -1801,7 +1801,7 @@ class Context(object):
 
         """
 
-        import procedures
+        from core import procedures
         
         # Do we know the value of the variable?
         if (not self.contains(name)):
@@ -1868,13 +1868,13 @@ class Context(object):
 
         # We might have a vipermonkey simple name expression. Convert to a string
         # so we can use it.
-        import expressions
+        from core import expressions
         if (isinstance(name, expressions.SimpleNameExpression)):
             name = safe_str_convert(name)
         
         # Does the name make sense?
         orig_name = name
-        if (not isinstance(name, basestring)):
+        if (not isinstance(name, str)):
             log.warning("context.set() " + safe_str_convert(name) + " is improper type. " + safe_str_convert(type(name)))
             name = safe_str_convert(name)
 
@@ -1907,7 +1907,7 @@ class Context(object):
 
             # See if this is actually referring to a global variable.
             name_str = name_str[:name_str.index("(")].strip()
-            if (name_str in self.globals.keys()):
+            if (name_str in list(self.globals.keys())):
                 force_global = True
 
         # This should be a global variable if we are not in a function.
@@ -1995,7 +1995,7 @@ class Context(object):
             try:
 
                 # Is this a Microsoft.XMLDOM object?
-                import vba_object
+                from core import vba_object
                 node_type = orig_name
                 if (isinstance(orig_name, expressions.MemberAccessExpression)):
                     node_type = orig_name.lhs

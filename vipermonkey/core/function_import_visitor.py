@@ -42,9 +42,9 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from visitor import visitor
-import statements
-from utils import safe_str_convert
+from core.visitor import visitor
+from core import statements
+from core.utils import safe_str_convert
 
 class function_import_visitor(visitor):
     """Collect the names and aliases of all functions imported from DLLs.

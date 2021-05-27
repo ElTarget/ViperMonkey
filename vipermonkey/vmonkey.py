@@ -1,4 +1,4 @@
-#!/usr/bin/env pypy
+#!/usr/bin/env pypy3
 
 """@package vipermonkey.vmonkey
 
@@ -15,7 +15,7 @@ Project Repository:
 https://github.com/decalage2/ViperMonkey
 """
 
-from __future__ import print_function
+
 
 # pylint: disable=pointless-string-statement
 """@mainpage

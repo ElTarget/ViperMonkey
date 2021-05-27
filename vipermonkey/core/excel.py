@@ -45,21 +45,22 @@ __version__ = '0.03'
 
 #import traceback
 #import sys
-from logger import log
+from core.logger import log
 import logging
 import json
 import os
-import filetype
+from core import filetype
 import random
 import re
 import subprocess
+from functools import reduce
 try:
     import xlrd2 as xlrd
 except ImportError:
     log.warning("xlrd2 Python package not installed. Falling back to xlrd.")
     import xlrd
 
-from utils import safe_str_convert
+from core.utils import safe_str_convert
     
 _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
     
@@ -558,7 +559,7 @@ def _pull_cells_sheet_internal(sheet, strip_empty):
     # Find the max row and column for the cells.
     max_row = -1
     max_col = -1
-    for cell_index in sheet.cells.keys():
+    for cell_index in list(sheet.cells.keys()):
         curr_row = cell_index[0]
         curr_col = cell_index[1]
         if (curr_row > max_row):
@@ -672,7 +673,7 @@ class ExcelSheet(object):
         r = ""
         if debug:
             r += "Sheet: '" + self.name + "'\n\n"
-            for cell in self.cells.keys():
+            for cell in list(self.cells.keys()):
                 r += safe_str_convert(cell) + "\t=\t'" + safe_str_convert(self.cells[cell]) + "'\n"
         else:
             r += "Sheet: '" + self.name + "'\n"
@@ -689,7 +690,7 @@ class ExcelSheet(object):
         if (self.__num_rows is not None):
             return self.__num_rows
         max_row = -1
-        for cell in self.cells.keys():
+        for cell in list(self.cells.keys()):
             curr_row = cell[0]
             if (curr_row > max_row):
                 max_row = curr_row
@@ -705,7 +706,7 @@ class ExcelSheet(object):
         if (self.__num_cols is not None):
             return self.__num_cols
         max_col = -1
-        for cell in self.cells.keys():
+        for cell in list(self.cells.keys()):
             curr_col = cell[1]
             if (curr_col > max_col):
                 max_col = curr_col

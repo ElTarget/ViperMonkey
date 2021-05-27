@@ -50,19 +50,19 @@ import traceback
 import re
 import sys
 
-from curses_ascii import isprint
+from core.curses_ascii import isprint
 import pyparsing
 import logging
-from logger import log
+from core.logger import log
 
-from utils import safe_print, safe_str_convert
-from vba_context import Context
-from vba_object import VBA_Object, VbaLibraryFunc
-from function_call_visitor import function_call_visitor
-import utils
-from lhs_var_visitor import lhs_var_visitor
-from var_in_expr_visitor import var_in_expr_visitor
-from let_statement_visitor import let_statement_visitor
+from core.utils import safe_print, safe_str_convert
+from core.vba_context import Context
+from core.vba_object import VBA_Object, VbaLibraryFunc
+from core.function_call_visitor import function_call_visitor
+from core import utils
+from core.lhs_var_visitor import lhs_var_visitor
+from core.var_in_expr_visitor import var_in_expr_visitor
+from core.let_statement_visitor import let_statement_visitor
 
 def _boilerplate_to_python(indent):
     """Get starting boilerplate code for VB to Python JIT code.
@@ -108,7 +108,7 @@ def _get_local_func_type(expr, context):
     """
 
     # Sanity check.
-    import expressions
+    from core import expressions
     if (not isinstance(expr, expressions.Function_Call)):
         return None
 
@@ -138,8 +138,8 @@ def _infer_type_of_expression(expr, context):
 
     """
 
-    import operators
-    import vba_library
+    from core import operators
+    from core import vba_library
 
     #print "LOOK FOR TYPE"
     #print expr
@@ -151,7 +151,7 @@ def _infer_type_of_expression(expr, context):
         return expr.return_type()
 
     # Call of function?
-    import expressions
+    from core import expressions
     if (isinstance(expr, expressions.Function_Call)):
 
         # Call of builtin function?
@@ -269,8 +269,8 @@ def _get_var_vals(item, context, global_only=False):
 
     """
 
-    import procedures
-    import statements
+    from core import procedures
+    from core import statements
 
     # Get all the variables.
 
@@ -558,7 +558,7 @@ def to_python(arg, context, params=None, indent=0, statements=False):
         try:
             arg_str = safe_str_convert(arg)
         except UnicodeEncodeError:
-            arg_str = filter(isprint, arg)
+            arg_str = list(filter(isprint, arg))
         r = " " * indent + arg_str
 
     #print "--- to_python() ---"
@@ -616,7 +616,7 @@ def _updated_vars_to_python(loop, context, indent):
     @return (str) Python JIT code.
 
     """
-    import statements
+    from core import statements
     
     indent_str = " " * indent
     lhs_visitor = lhs_var_visitor()
@@ -854,7 +854,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
             # Magic. For some reason exec'ing in locals() makes the dynamically generated
             # code recognize functions defined in the dynamic code. I don't know why.
             log.info("Evaluating Python JIT code...")
-            exec code_python in locals()
+            exec(code_python, locals())
         else:
 
             # JIT code execution goes not involve emulating VB GOTOs.
@@ -870,7 +870,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
         
         # Update the context with the variable values from the JIT code execution.
         try:
-            for updated_var in var_updates.keys():
+            for updated_var in list(var_updates.keys()):
                 if (updated_var == "__shell_code__"):
                     continue
                 context.set(updated_var, var_updates[updated_var])
@@ -878,7 +878,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
             log.warning("No variables set by Python JIT code.")
 
         # Update shellcode bytes from the JIT emulation.
-        import vba_context
+        from core import vba_context
         vba_context.shellcode = var_updates["__shell_code__"]
 
     except NotImplementedError as e:

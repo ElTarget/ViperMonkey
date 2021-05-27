@@ -56,9 +56,9 @@ pyparsing.ParserElement.setDefaultWhitespaceChars(' \t\x19')
 
 from pyparsing import QuotedString, Regex
 
-from logger import log
-from vba_object import VBA_Object
-from utils import safe_str_convert
+from core.logger import log
+from core.vba_object import VBA_Object
+from core.utils import safe_str_convert
 
 # --- BOOLEAN ------------------------------------------------------------
 
