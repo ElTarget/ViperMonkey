@@ -40,6 +40,8 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from core.utils import safe_str_convert
+
 # Office magic numbers.
 magic_nums = {
     "office97" : "D0 CF 11 E0 A1 B1 1A E1",    # Office 97
@@ -76,6 +78,7 @@ def get_1st_8_bytes(fname, is_data):
     else:
         info = fname[:9]
 
+    info = safe_str_convert(info)
     curr_magic = ""
     for b in info:
         curr_magic += hex(ord(b)).replace("0x", "").upper() + " "

@@ -69,9 +69,13 @@ def safe_str_convert(s):
     # Handle Excel strings.
     if (isinstance(s, dict) and ("value" in s)):
         s = s["value"]
-
+        
     # Do the actual string conversion.
     try:
+
+        # Handle bytes-like objects.
+        if isinstance(s, bytes):
+            s = s.decode('UTF-8')            
         return str(s)
     except UnicodeDecodeError:
         return list(filter(isprint, s))

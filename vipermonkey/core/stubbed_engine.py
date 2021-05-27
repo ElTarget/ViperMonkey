@@ -77,24 +77,12 @@ class StubbedEngine(object):
         """
 
         # Make sure all the action info is a proper string.
-        try:
-            if (isinstance(action, str)):
-                action = unidecode.unidecode(action.decode('unicode-escape'))
-        except UnicodeDecodeError:
-            action = ''.join([x for x in action if x in string.printable])
+        if (isinstance(action, str)):
+            action = safe_str_convert(action)
         if (isinstance(params, str)):
-            try:
-                decoded = params.replace("\\", "#ESCAPED_SLASH#").decode('unicode-escape').replace("#ESCAPED_SLASH#", "\\")
-                params = unidecode.unidecode(decoded)
-            except Exception as e:
-                log.warn("Unicode decode of action params failed. " + str(e))
-                params = ''.join([x for x in params if x in string.printable])
-        try:
-            if (isinstance(description, str)):
-                description = unidecode.unidecode(description.decode('unicode-escape'))
-        except UnicodeDecodeError as e:
-            log.warn("Unicode decode of action description failed. " + str(e))
-            description = ''.join([x for x in description if x in string.printable])
+            params = safe_str_convert(params)
+        if (isinstance(description, str)):
+            description = safe_str_convert(description)
 
         # Throttle actions that happen a lot.
         action_tuple = (action, params, description)

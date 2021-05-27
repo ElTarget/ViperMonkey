@@ -45,7 +45,7 @@ def get_metadata_exif(filename):
     # Use exiftool to get the document metadata.
     output = None
     try:
-        output = subprocess.check_output(["exiftool", filename])
+        output = safe_str_convert(subprocess.check_output(["exiftool", filename]))
     except Exception as e:
         log.error("Cannot read metadata with exiftool. " + safe_str_convert(e))
         return {}

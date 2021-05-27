@@ -115,21 +115,21 @@ def is_garbage_vba(vba, test_all=False, bad_pct=.6):
 def pull_base64(data):
     """Pull base64 strings from some data.
 
-    @param data (str) The data from which to extract base64 strings.
+    @param data (bytes) The data from which to extract base64 strings.
     
     @return (list) A list of base64 strings found in the input.
 
     """
 
     # Pull out strings that might be base64.
-    base64_pat_loose = r"[A-Za-z0-9+/=]{40,}"
+    base64_pat_loose = br"[A-Za-z0-9+/=]{40,}"
     r = set(re.findall(base64_pat_loose, data))
     return r
 
 def unzip_data(data):
     """Unzip zipped data in memory.
 
-    @param data (str) The data to unzip.
+    @param data (bytes) The data to unzip.
 
     @return (tuple) A 2 element tuple where the 1st element is the
     unzipped data and the 2nd element is the name of a temp file used
@@ -140,7 +140,7 @@ def unzip_data(data):
 
     # Unzip the data.
     # PKZip magic #: 50 4B 03 04
-    zip_magic = chr(0x50) + chr(0x4B) + chr(0x03) + chr(0x04)
+    zip_magic = (chr(0x50) + chr(0x4B) + chr(0x03) + chr(0x04)).encode("utf-8")
     delete_file = False
     fname = None
     if data.startswith(zip_magic):
@@ -3781,7 +3781,7 @@ def _read_doc_text_strings(data):
     """Use a heuristic to read in the document text. This is used as a
     fallback if reading the text with libreoffice fails.
 
-    @param data (str) The read in Office file (data).
+    @param data (bytes) The read in Office file (data).
 
     @return (tuple) A 2 element tuple where the 1st element is the
     strings grabbed from the raw Word file data and the 2nd element is
@@ -3790,7 +3790,7 @@ def _read_doc_text_strings(data):
     """
 
     # Pull strings from doc.
-    str_list = re.findall("[^\x00-\x1F\x7F-\xFF]{4,}", data)
+    str_list = re.findall(b"[^\x00-\x1F\x7F-\xFF]{4,}", data)
     r = []
     for s in str_list:
         r.append(s)

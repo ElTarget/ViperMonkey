@@ -535,6 +535,7 @@ class ViperMonkey(StubbedEngine):
         context.globals["__DOC_TABLE_CONTENTS__"] = self.doc_tables
             
         # Save the document text in the proper variable in the context.
+        self.doc_text = safe_str_convert(self.doc_text)
         context.globals["Range.Text".lower()] = "\n".join(self.doc_text)
         context.globals["Me.Content".lower()] = "\n".join(self.doc_text)
         context.globals["Me.Content.Text".lower()] = "\n".join(self.doc_text)

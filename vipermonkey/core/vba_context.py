@@ -1684,19 +1684,13 @@ class Context(object):
 
         # Is there base64 in the data? Don't track too many base64 IOCs.
         if ((num_b64_iocs < 200) and (value not in intermediate_iocs)):
-            uni_value = None
-            try:
-                uni_value = value.decode("utf-8")
-            except UnicodeDecodeError:
-                pass
-            if (uni_value is not None):
-                B64_REGEX = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
-                b64_strs = re2.findall(str(B64_REGEX), uni_value)
-                for curr_value in b64_strs:
-                    if (len(curr_value) > 100):
-                        got_ioc = True
-                        num_b64_iocs += 1
-                        log.info("Found possible intermediate IOC (base64): '" + curr_value + "'")
+            B64_REGEX = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
+            b64_strs = re2.findall(B64_REGEX, value)
+            for curr_value in b64_strs:
+                if (len(curr_value) > 100):
+                    got_ioc = True
+                    num_b64_iocs += 1
+                    log.info("Found possible intermediate IOC (base64): '" + curr_value + "'")
 
         # Did we find anything?
         if (not got_ioc):

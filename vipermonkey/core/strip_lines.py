@@ -307,16 +307,9 @@ def hide_weird_calls(vba_code):
     """
 
     # Do we have these weird calls?
-    uni_vba_code = None
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-        # Punt.
-        return vba_code
     #pat = u"\r?\n\s*\w+(?:\.\w+)*\s*\(.{1,30}\)\s*"
     pat = "\r?\n\s*\w+(?:\.\w+)*\s*\(.{1,30}\)"
-    print((re2.findall(pat, uni_vba_code)))
-    if (re2.search(pat, uni_vba_code) is None):
+    if (re2.search(pat, vba_code) is None):
         return vba_code
     return vba_code
 
@@ -355,27 +348,20 @@ def fix_unbalanced_quotes(vba_code):
     """
 
     # Fix invalid string assignments.
-    uni_vba_code = None
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-        # Punt.
-        return vba_code
-
     if debug_strip:
         print("UNBALANCED_QUOTES: 1")
         print(vba_code)
-    if (re2.search("\r?\n\s*(?:Set)?\s*(\w+)\s+=\s+\"\r?\n", uni_vba_code) is not None):
+    if (re2.search("\r?\n\s*(?:Set)?\s*(\w+)\s+=\s+\"\r?\n", vba_code) is not None):
         vba_code = re.sub(r"\r?\n\s*(?:Set)?\s*(\w+)\s+=\s+\"\r?\n", r'\n\1 = ""\n', vba_code)
         if debug_strip:
             print("UNBALANCED_QUOTES: 2")
             print(vba_code)
-    if (re2.search("(\w+\s+=\s+\")(:[^\"]+)\r?\n", uni_vba_code) is not None):
+    if (re2.search("(\w+\s+=\s+\")(:[^\"]+)\r?\n", vba_code) is not None):
         vba_code = re.sub(r"(\w+\s+=\s+\")(:[^\"]+)\r?\n", r'\1"\2\n', vba_code)
         if debug_strip:
             print("UNBALANCED_QUOTES: 2")
             print(vba_code)
-    if (re2.search("^\"[^=]*([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", uni_vba_code) is not None):
+    if (re2.search("^\"[^=]*([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", vba_code) is not None):
         vba_code = re.sub(r"^\"[^=]*([=>])\s*\"\s+[Tt][Hh][Ee][Nn]", r'\1 "" Then', vba_code)
         if debug_strip:
             print("UNBALANCED_QUOTES: 3")
@@ -550,19 +536,7 @@ def fix_skipped_1st_arg1(vba_code):
     """
 
     # Skipped this if unneeded.
-    uni_vba_code = None
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-
-        # Try stripping offending characters from the string.
-        tmp_code = list(filter(isascii, vba_code))
-        try:
-            uni_vba_code = tmp_code.decode("utf-8")
-        except UnicodeDecodeError:
-            # Punt.            
-            return vba_code
-    if (re2.search(str(r".*[0-9a-zA-Z_\.]+\(\s*,.*"), uni_vba_code, re.DOTALL) is None):
+    if (re2.search(r".*[0-9a-zA-Z_\.]+\(\s*,.*", vba_code, re.DOTALL) is None):
         return vba_code
     
     # We don't want to replace things like this in string literals. Temporarily
@@ -736,17 +710,9 @@ def fix_bad_next_statements(vba_code):
     @return (str) The modified VB code.
 
     """
-
-    uni_vba_code = None
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-        # Punt.
-        return vba_code
-    
     pat = "Next +(?:\w+ *, *)+\w+ *\n"
     r = vba_code
-    if (re2.search(str(pat), uni_vba_code) is not None):
+    if (re2.search(str(pat), vba_code) is not None):
         index_pat = "(?:(\w+) *, *)+(\w+)"
         for bad_next in re.findall(pat, vba_code):
             new_nexts = ""
@@ -782,13 +748,7 @@ def fix_stupid_string_concats(vba_code):
     """
 
     # Do we need to do this?
-    uni_vba_code = None
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-        # Punt.
-        return vba_code
-    if (re2.search(str(r"&\s+\+"), uni_vba_code) is None):
+    if (re2.search(str(r"&\s+\+"), vba_code) is None):
         return vba_code
 
     # Change the string concats to something sensible.
@@ -804,17 +764,10 @@ def fix_bad_exponents(vba_code):
 
     """
 
-    uni_vba_code = None
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-        # Punt.
-        return vba_code
-    
     # Do we have possible bad exponents?
     pat = '([\w\(\)])\^([\w\(\)])'
     r = ""
-    if (re2.search(str(pat), uni_vba_code) is not None):
+    if (re2.search(pat, vba_code) is not None):
 
         # Now look line by line through the code so as not to modify these constructs
         # when they appear in strings.
@@ -826,14 +779,7 @@ def fix_bad_exponents(vba_code):
                 continue
 
             # Line with no bad exponents?
-            uni_line = None
-            try:
-                uni_line = line.decode("utf-8")
-            except UnicodeDecodeError:
-                # Punt.
-                r += line + "\n"
-                continue
-            if (re2.search(str(pat), uni_line) is None):
+            if (re2.search(pat, line) is None):
                 r += line + "\n"
                 continue
 
@@ -860,15 +806,8 @@ def fix_bad_var_names(vba_code):
     # Skip this until fixed.
     return vba_code
     
-    #uni_vba_code = None
-    #try:
-    #    uni_vba_code = vba_code.decode("utf-8")
-    #except UnicodeDecodeError:
-    #    # Punt.
-    #    return vba_code
-    #
     #pat = "(\w)&\s*((?:[\+\-/\*=n,\)\n&]|[Mm]od|[Aa]nd|[Oo]r|[Xx]or|[Ee]qv))"
-    #if (re2.search(unicode(pat), uni_vba_code) is not None):
+    #if (re2.search(pat, vba_code) is not None):
     #    vba_code = re.sub(pat, r"\1 \2", vba_code) + "\n"
     #return vba_code
 
@@ -882,15 +821,8 @@ def fix_unhandled_named_params(vba_code):
 
     """
 
-    uni_vba_code = None
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-        # Punt.
-        return vba_code
-    
     pat = "\n([^\n]*\w+\([^\n]*\w+:=)"
-    if (re2.search(str(pat), uni_vba_code) is not None):
+    if (re2.search(str(pat), vba_code) is not None):
 
         # Pull out the lines containing ':=',
         line_pat = r"\n[^\n]*:=[^\n]*\n"
@@ -956,16 +888,8 @@ def fix_unhandled_array_assigns(vba_code):
     @return (str) The modified VB code.
 
     """
-
-    uni_vba_code = None
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-        # Punt.
-        return vba_code
-    
     pat = "\n(\s*\w+\((?:\w+\s*,\s*){2,}\w+\)\s*=)"
-    if (re2.search(str(pat), uni_vba_code) is not None):
+    if (re2.search(pat, vba_code) is not None):
         vba_code = re.sub(pat, r"\n' UNHANDLED ARRAY ASSIGNMENT \1", vba_code) + "\n"
         fix_pat = r"' UNHANDLED ARRAY ASSIGNMENT\s+Mid\("
         vba_code = re.sub(fix_pat, r"Mid(", vba_code)
@@ -980,16 +904,8 @@ def fix_unhandled_event_statements(vba_code):
     @return (str) The modified VB code.
 
     """
-
-    uni_vba_code = None
-    try:
-        uni_vba_code = "\n" + vba_code.decode("utf-8") + "\n"
-    except UnicodeDecodeError:
-        # Punt.
-        return vba_code
-    
     pat = "\n( *(?:[Pp]ublic) *Event[^\n]{10,})"
-    if (re2.search(str(pat), uni_vba_code) is not None):
+    if (re2.search(pat, vba_code) is not None):
         vba_code = "\n" + vba_code + "\n"
         vba_code = re.sub(pat, r"\n' UNHANDLED EVENT STATEMENT \1", vba_code) + "\n"
     return vba_code
@@ -1003,16 +919,9 @@ def fix_unhandled_raiseevent_statements(vba_code):
     @return (str) The modified VB code.
 
     """
-
-    uni_vba_code = None
-    try:
-        uni_vba_code = "\n" + vba_code.decode("utf-8") + "\n"
-    except UnicodeDecodeError:
-        # Punt.
-        return vba_code
     
     pat = "\n( *RaiseEvent[^\n]{3,})"
-    if (re2.search(str(pat), uni_vba_code) is not None):
+    if (re2.search(str(pat), vba_code) is not None):
         vba_code = "\n" + vba_code + "\n"
         vba_code = re.sub(pat, r"\n' UNHANDLED RAISEEVENT STATEMENT \1", vba_code) + "\n"
     return vba_code
@@ -1354,40 +1263,25 @@ def fix_weird_copyhere(vba_code):
 
     # Not handling this weird CopyHere() call.
     # foo.NameSpace(bar).CopyHere(baz), fubar
-    uni_vba_code = ""
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-        log.warning("Converting VB code to unicode failed.")
     if debug_strip:
         print("HERE: 4")
         print(vba_code)
     namespace_pat = r"(\w+\.NameSpace\(.+\)\.CopyHere\(.+\)),\s*[^\n]+"
-    if (re2.search(str(namespace_pat), uni_vba_code) is not None):
+    if (re2.search(str(namespace_pat), vba_code) is not None):
         vba_code = re.sub(namespace_pat, r"\1", vba_code)
     # CreateObject(foo).Namespace(bar).CopyHere baz, fubar
-    uni_vba_code = ""
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-        log.warning("Converting VB code to unicode failed.")
     if debug_strip:
         print("HERE: 5")
         print(vba_code)
     namespace_pat = r"(CreateObject\(.+\).[Nn]ame[Ss]pace\(.+\)\.CopyHere\s+.+),\s*[^\n]+"
-    if (re2.search(str(namespace_pat), uni_vba_code) is not None):
+    if (re2.search(str(namespace_pat), vba_code) is not None):
         vba_code = re.sub(namespace_pat, r"\1", vba_code)
     # foo.Run(bar) & baz, fubar    
-    uni_vba_code = ""
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-        log.warning("Converting VB code to unicode failed.")
     if debug_strip:
         print("HERE: 6")
         print(vba_code)
     namespace_pat = r"(\w+\.Run\(.+\)[^,\n]*),\s*[^\n\)]+"
-    if (re2.search(str(namespace_pat), uni_vba_code) is not None):
+    if (re2.search(str(namespace_pat), vba_code) is not None):
         if debug_strip:
             print("HERE: 6.1")
         vba_code = re.sub(namespace_pat, r"\1", vba_code)
@@ -1406,16 +1300,11 @@ def fix_comments_after_else(vba_code):
 
     # Comments like 'ddffd' at the end of an Else line are hard to parse.
     # Get rid of them.
-    uni_vba_code = ""
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-        log.warning("Converting VB code to unicode failed.")
     if debug_strip:
         print("HERE: 8")
         print(vba_code)
     bad_else_pat = r"\n\s*Else\s*'.*\n"
-    if (re2.search(str(bad_else_pat), uni_vba_code) is not None):
+    if (re2.search(str(bad_else_pat), vba_code) is not None):
         bad_exps = re.findall(bad_else_pat, vba_code)
         for bad_exp in bad_exps:
             vba_code = vba_code.replace(bad_exp, "\nElse\n")
@@ -1501,16 +1390,11 @@ def fix_weird_single_line_ifs(vba_code):
 
     # Rewrite some weird single line if statements.
     # If utc_NegativeOffset Then: utc_Offset = -utc_Offset
-    uni_vba_code = ""
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-        log.warning("Converting VB code to unicode failed.")
     if debug_strip:
         print("HERE: 14")
         print(vba_code)
     pat = r"(?i)If\s+.{1,100}\s+Then\s*:[^\n]{1,100}\n"
-    if (re2.search(str(pat), uni_vba_code) is not None):
+    if (re2.search(str(pat), vba_code) is not None):
         for curr_if in re.findall(pat, vba_code):
             new_if = curr_if.replace("Then:", "Then ")
             vba_code = vba_code.replace(curr_if, new_if)    
@@ -1538,14 +1422,9 @@ def hide_colons(vba_code):
     if debug_strip:
         print("HERE: 15")
         print(vba_code)
-    uni_vba_code = ""
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-        log.warning("Converting VB code to unicode failed.")
     pat = r"(?i)\n\s*If\s+.{1,100}\s+Then.{1,100}:.{1,100}(?:\s*Else.{1,100})?\n"
     single_line_ifs = []
-    if (re2.search(str(pat), uni_vba_code) is not None):
+    if (re2.search(str(pat), vba_code) is not None):
         pos = 0
         for curr_if in re.findall(pat, vba_code):
             if_name = "HIDE_THIS_IF" + "_" * len(safe_str_convert(pos)) + safe_str_convert(pos)
@@ -1594,13 +1473,8 @@ def fix_elseif_lines(vba_code):
 
     # Fix some elseif lines if needed.
     # "ElseIf c >= 65 And c <= 90 Then f = 65"
-    uni_vba_code = ""
-    try:
-        uni_vba_code = "\n" + vba_code.decode("utf-8") + "\n"
-    except UnicodeDecodeError:
-        pass
     elif_pat = "(\r?\n[^\"]*ElseIf.{5,50}Then)"
-    if (re2.search(str(elif_pat), uni_vba_code) is not None):
+    if (re2.search(str(elif_pat), vba_code) is not None):
         vba_code = re.sub(elif_pat, r"\1\n", vba_code)    
 
     # Done.
@@ -2377,27 +2251,15 @@ def fix_vba_code(vba_code):
     if debug_strip:
         print("FIX_VBA_CODE: 17.6")
         print(vba_code)
-    uni_vba_code = None
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-        pass
-    if (uni_vba_code is not None):
-        bad_call_pat = "(\r?\n\s*[\w_]{2,50})\""
-        if (re2.search(str(bad_call_pat), uni_vba_code)):
-            vba_code = re.sub(bad_call_pat, r'\1 "', vba_code)
+    bad_call_pat = "(\r?\n\s*[\w_]{2,50})\""
+    if (re2.search(str(bad_call_pat), vba_code)):
+        vba_code = re.sub(bad_call_pat, r'\1 "', vba_code)
     
     # Skip the next part if unnneeded.
     if debug_strip:
         print("FIX_VBA_CODE: 18")
         print(vba_code)
-    uni_vba_code = None
-    try:
-        uni_vba_code = vba_code.decode("utf-8")
-    except UnicodeDecodeError:
-        # Punt.
-        return vba_code
-    got_multassign = (re2.search("(?:\w+\s*=\s*){2}", uni_vba_code) is not None)
+    got_multassign = (re2.search("(?:\w+\s*=\s*){2}", vba_code) is not None)
     if ((" if+" not in vba_code) and
         (" If+" not in vba_code) and
         ("\nif+" not in vba_code) and
@@ -2680,6 +2542,7 @@ def find_var_assigns(vba_code, change_callbacks, local_funcs):
     for line in vba_code.split("\n"):
 
         # Strip line numbers from starts of lines.
+        line = safe_str_convert(line)
         line = strip_line_nums(line)
         
         # Skip comment lines.
@@ -2710,12 +2573,7 @@ def find_var_assigns(vba_code, change_callbacks, local_funcs):
         tmp_line = line
         if ("=" in line):
             tmp_line = line[:line.index("=") + 1]
-        uni_tmp_line = ""
-        try:
-            uni_tmp_line = tmp_line.decode("utf-8")
-        except UnicodeDecodeError:
-            uni_tmp_line = tmp_line.decode("latin-1")
-        match = assign_re.findall(uni_tmp_line)
+        match = assign_re.findall(tmp_line)
         if ((len(match) > 0) and
             is_assign_line(line, line_num, local_funcs, bool_statements)):
             
@@ -2757,6 +2615,8 @@ def find_var_assigns(vba_code, change_callbacks, local_funcs):
                     
                     # Keep updates of the LHS where the LHS appears on the RHS
                     # (ex. a = a + 1).
+                    var = safe_str_convert(var)
+                    val = safe_str_convert(val)
                     if (var.lower() in val.lower()):
                         continue
 

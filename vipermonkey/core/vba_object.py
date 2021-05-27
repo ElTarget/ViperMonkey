@@ -62,7 +62,7 @@ import re
 from core.curses_ascii import isprint
 import traceback
 
-from inspect import getouterframes, currentframe
+import inspect
 import sys
 from datetime import datetime
 import pyparsing
@@ -131,7 +131,7 @@ def limits_exceeded(throw_error=False):
     """
 
     # Check to see if we are approaching the recursion limit.
-    level = len(getouterframes(currentframe(1)))
+    level = len(inspect.stack())
     recursion_exceeded = (level > (sys.getrecursionlimit() * .50))
     time_exceeded = False
 
