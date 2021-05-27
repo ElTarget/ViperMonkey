@@ -408,12 +408,7 @@ def strip_nonvb_chars(s):
     """
 
     # Handle unicode strings.
-    if (isinstance(s, str)):
-        s = s.encode('ascii','replace')
-    
-    # Sanity check.
-    if (not isinstance(s, str)):
-        return s
+    s = safe_str_convert(s)
 
     # Do we need to do this?
     if (re.search(r"[^\x09-\x7e]", s) is None):
