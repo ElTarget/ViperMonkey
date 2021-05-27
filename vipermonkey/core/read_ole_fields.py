@@ -439,6 +439,8 @@ def get_msftedit_variables(obj):
             data = obj
         except TypeError:
             data = obj
+        except ValueError:
+            data = obj
 
     # Is this an Office 97 file?
     if (filetype.is_office97_file(data, True)):
@@ -2500,6 +2502,8 @@ def get_ole_textbox_values(obj, vba_code):
         except IOError:
             data = obj
         except TypeError:
+            data = obj
+        except ValueError:
             data = obj
 
     # Is this an Office97 file?
