@@ -2562,25 +2562,25 @@ def get_ole_textbox_values(obj, vba_code):
 
     # Normalize Page object naming.
     # Page1M3A
-    page_name_pat = r"Page(\d+)(?:(?:\-\d+)|[a-zA-Z\.]+[a-zA-Z0-9]*)"
-    data = re.sub(page_name_pat, r"Page\1", data)
+    page_name_pat = br"Page(\d+)(?:(?:\-\d+)|[a-zA-Z\.]+[a-zA-Z0-9]*)"
+    data = re.sub(page_name_pat, br"Page\1", data)
     
     # Set the general marker for Form data chunks and fields in the Form chunks.
-    form_str = "Microsoft Forms 2.0"
-    form_str_pat = r"Microsoft Forms 2.0 [A-Za-z]{2,30}(?!Form)"
-    field_marker = "Forms."
+    form_str = b"Microsoft Forms 2.0"
+    form_str_pat = br"Microsoft Forms 2.0 [A-Za-z]{2,30}(?!Form)"
+    field_marker = b"Forms."
     if (re.search(form_str_pat, data) is None):
         if debug:
             print("\nNO FORMS")
             sys.exit(0)
         return []
 
-    pat = r"(?:(?:[\x20-\x7e]|\r?\n){3,})|(?:(?:(?:\x00|\xff)(?:[\x20-\x7e]|\r?\n)){3,})"
+    pat = br"(?:(?:[\x20-\x7e]|\r?\n){3,})|(?:(?:(?:\x00|\xff)(?:[\x20-\x7e]|\r?\n)){3,})"
     index = 0
     r = []
     found_names = set()
     long_strs = []
-    end_object_marker = "D\x00o\x00c\x00u\x00m\x00e\x00n\x00t\x00S\x00u\x00m\x00m\x00a\x00r\x00y\x00I\x00n\x00f\x00o\x00r\x00m\x00a\x00t\x00i\x00o\x00n"
+    end_object_marker = b"D\x00o\x00c\x00u\x00m\x00e\x00n\x00t\x00S\x00u\x00m\x00m\x00a\x00r\x00y\x00I\x00n\x00f\x00o\x00r\x00m\x00a\x00t\x00i\x00o\x00n"
     while (re.search(form_str_pat, data[index:]) is not None):
 
         # Break out the data for an embedded OLE textbox form.
@@ -2595,12 +2595,12 @@ def get_ole_textbox_values(obj, vba_code):
             print(safe_str_convert(strs).replace("\\x00", "").replace("\\xff", ""))
 
         # Save long strings. Maybe they are the value of a previous variable?
-        longest_str = ""
+        longest_str = b""
         orig_strs = strs
         for field in strs:
             if ((len(field) > 30) and
                 (len(field) > len(longest_str)) and
-                (not field.startswith("Microsoft "))):
+                (not field.startswith(b"Microsoft "))):
                 longest_str = field
         long_strs.append(longest_str)
 
@@ -2644,7 +2644,7 @@ def get_ole_textbox_values(obj, vba_code):
         text = _clean_text_for_name(chunk, name, text, object_names, stream_names, longest_str, orig_strs, debug)
                     
         # Save the form name and text value.
-        if ((text != "") or (not name.startswith("Page"))):
+        if ((text != "") or (not name.startswith(b"Page"))):
             if debug:
                 print("\nSET '" + name + "' = '" + text + "'")
             r.append((name, text))
