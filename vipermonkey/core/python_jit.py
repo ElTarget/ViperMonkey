@@ -91,6 +91,7 @@ def _boilerplate_to_python(indent):
     boilerplate += indent_str + " " * 4 + "vm_context\n"
     boilerplate += indent_str + "except (NameError, UnboundLocalError):\n"
     boilerplate += indent_str + " " * 4 + "vm_context = context\n"
+    boilerplate += "\nvar_updates = {}\n"
     return boilerplate
 
 def _get_local_func_type(expr, context):
@@ -141,13 +142,13 @@ def _infer_type_of_expression(expr, context):
     from core import operators
     from core import vba_library
 
-    #print "LOOK FOR TYPE"
-    #print expr
-    #print type(expr)
+    #print("LOOK FOR TYPE")
+    #print(expr)
+    #print(type(expr))
 
     # Function with a hard coded type?
     if (hasattr(expr, "return_type")):
-        #print "POSSIBLE TYPE (1) '" + safe_str_convert(expr) + "' == " + safe_str_convert(expr.return_type())
+        #print("POSSIBLE TYPE (1) '" + safe_str_convert(expr) + "' == " + safe_str_convert(expr.return_type()))
         return expr.return_type()
 
     # Call of function?
@@ -158,12 +159,12 @@ def _infer_type_of_expression(expr, context):
         if (expr.name.lower() in vba_library.VBA_LIBRARY):
             builtin = vba_library.VBA_LIBRARY[expr.name.lower()]
             if (hasattr(builtin, "return_type")):
-                #print "POSSIBLE TYPE (2.1) '" + safe_str_convert(expr) + "' == " + safe_str_convert(builtin.return_type())
+                #print("POSSIBLE TYPE (2.1) '" + safe_str_convert(expr) + "' == " + safe_str_convert(builtin.return_type()))
                 return builtin.return_type()
 
         # Call of locally defined function.
         r = _get_local_func_type(expr, context)
-        #print "POSSIBLE TYPE (2.2) '" + safe_str_convert(expr) + "' == " + safe_str_convert(r)
+        #print("POSSIBLE TYPE (2.2) '" + safe_str_convert(expr) + "' == " + safe_str_convert(r))
         return r
         
     # Easy cases. These have to be integers.
@@ -178,12 +179,12 @@ def _infer_type_of_expression(expr, context):
                          operators.Power,
                          operators.Subtraction,
                          operators.Xor)):
-        #print "POSSIBLE TYPE (3) '" + safe_str_convert(expr) + "' == " + "INTEGER"
+        #print("POSSIBLE TYPE (3) '" + safe_str_convert(expr) + "' == " + "INTEGER")
         return "INTEGER"
 
     # Must be a string.
     if (isinstance(expr, operators.Concatenation)):
-        #print "POSSIBLE TYPE (4) '" + safe_str_convert(expr) + "' == " + "STRING"
+        #print("POSSIBLE TYPE (4) '" + safe_str_convert(expr) + "' == " + "STRING")
         return "STRING"
     
     # Harder case. This could be an int or a str (or some other numeric type, but
@@ -192,7 +193,7 @@ def _infer_type_of_expression(expr, context):
 
         # If we are doing subtraction we need numeric types.
         if ((hasattr(expr, "operators")) and ("-" in expr.operators)):
-            #print "POSSIBLE TYPE (5) '" + safe_str_convert(expr) + "' == " + "INTEGER"
+            #print("POSSIBLE TYPE (5) '" + safe_str_convert(expr) + "' == " + "INTEGER")
             return "INTEGER"
         
         # We have only '+'. Try to figure out the type based on the parts of the expression.
@@ -201,11 +202,11 @@ def _infer_type_of_expression(expr, context):
             child_type = _infer_type_of_expression(child, context)
             if (child_type is not None):
                 r_type = child_type
-                #print "POSSIBLE TYPE (6) '" + safe_str_convert(child) + "' == " + safe_str_convert(r_type)
+                #print("POSSIBLE TYPE (6) '" + safe_str_convert(child) + "' == " + safe_str_convert(r_type))
         return r_type
 
     # Can't figure out the type.
-    #print "POSSIBLE TYPE (7) '" + safe_str_convert(expr) + "' == " + "UNKNOWN!!"
+    #print("POSSIBLE TYPE (7) '" + safe_str_convert(expr) + "' == " + "UNKNOWN!!")
     return None
     
 def _infer_type(var, code_chunk, context):
@@ -373,14 +374,14 @@ def _get_var_vals(item, context, global_only=False):
         if (val is None):
 
             # Variable is not defined. Try to infer the type based on how it is used.
-            #print "TOP LOOK TYPE: " + safe_str_convert(var)
+            #print("TOP LOOK TYPE: " + safe_str_convert(var))
             var_type, certain_of_type = _infer_type(var, item, context)
-            #print (var_type, certain_of_type)
+            #print((var_type, certain_of_type))
             if (var_type == "INTEGER"):
                 val = "NULL"
                 if certain_of_type:
-                    #print "SET TYPE INT"
-                    #print var
+                    #print("SET TYPE INT")
+                    #print(var)
                     val = 0
                     context.set_type(var, "Integer")
             elif (var_type == "STRING"):
@@ -490,9 +491,14 @@ def to_python(arg, context, params=None, indent=0, statements=False):
         
     # VBA Object?
     r = None
+    #print(type(arg))
+    #print(hasattr(arg, "to_python"))
+    #print(type(arg.to_python))
     if (hasattr(arg, "to_python") and
         ((safe_str_convert(type(arg.to_python)) == "<type 'method'>") or
-         (safe_str_convert(type(arg.to_python)) == "<type 'instancemethod'>"))):
+         (safe_str_convert(type(arg.to_python)) == "<class 'method'>") or
+         (safe_str_convert(type(arg.to_python)) == "<type 'instancemethod'>") or
+         (safe_str_convert(type(arg.to_python)) == "<class 'instancemethod'>"))):
         r = arg.to_python(context, params=params, indent=indent)
 
     # String literal?
@@ -541,8 +547,8 @@ def to_python(arg, context, params=None, indent=0, statements=False):
             try:
                 r += to_python(statement, context, indent=indent+4) + "\n"
             except Exception as e:
-                #print statement
-                #print e
+                #print(statement)
+                #print(e)
                 #traceback.print_exc(file=sys.stdout)
                 #sys.exit(0)
                 return "ERROR! to_python failed! " + safe_str_convert(e)
@@ -560,11 +566,11 @@ def to_python(arg, context, params=None, indent=0, statements=False):
         except UnicodeEncodeError:
             arg_str = list(filter(isprint, arg))
         r = " " * indent + arg_str
-
-    #print "--- to_python() ---"
-    #print arg
-    #print type(arg)
-    #print r
+        
+    #print("--- to_python() ---")
+    #print(arg)
+    #print(type(arg))
+    #print(r)
         
     # Done.
     return r
@@ -638,16 +644,14 @@ def _updated_vars_to_python(loop, context, indent):
         var = var.replace(".", "")
         var_dict_str += '"' + var + '" : ' + py_var
     var_dict_str += "}"
-    save_vals = indent_str + "try:\n"
-    save_vals += indent_str + " " * 4 + "var_updates\n"
-    save_vals += indent_str + " " * 4 + "var_updates.update(" + var_dict_str + ")\n"
-    save_vals += indent_str + "except (NameError, UnboundLocalError):\n"
-    save_vals += indent_str + " " * 4 + "var_updates = " + var_dict_str + "\n"
+    save_vals = ""
+    save_vals += indent_str + "var_updates.update(" + var_dict_str + ")\n"
     save_vals += indent_str + 'var_updates["__shell_code__"] = core.vba_library.get_raw_shellcode_data()\n'
     save_vals = indent_str + "# Save the updated variables for reading into ViperMonkey.\n" + save_vals
     if (log.getEffectiveLevel() == logging.DEBUG):
-        save_vals += indent_str + "print \"UPDATED VALS!!\"\n"
-        save_vals += indent_str + "print var_updates\n"
+        save_vals += indent_str + "print(\"UPDATED VALS!!\")\n"
+        save_vals += indent_str + "print(var_updates)\n"
+    save_vals += "\nfinal_var_updates = var_updates\n"
     return save_vals
 
 def _get_all_called_funcs(item, context):
@@ -810,7 +814,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
         if (log.getEffectiveLevel() == logging.DEBUG):
             safe_print("JIT CODE!!")
             safe_print(code_python)
-            #print "REMOVE THIS!!!"
+            #print("REMOVE THIS!!!")
             #sys.exit(0)
         log.info("Done generating Python JIT code.")
 
@@ -855,6 +859,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
             # code recognize functions defined in the dynamic code. I don't know why.
             log.info("Evaluating Python JIT code...")
             exec(code_python, locals())
+            var_updates = locals()["final_var_updates"]
         else:
 
             # JIT code execution goes not involve emulating VB GOTOs.

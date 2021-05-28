@@ -2989,7 +2989,8 @@ def _get_comments_docprops_2007(unzipped_data):
     pos = 1
     r = []
     for text in comment_blocks:
-        r.append((pos, _clean_2007_text(text)))
+        new_text = safe_str_convert(_clean_2007_text(text))
+        r.append((pos, new_text))
         pos += 1
 
     # Done.
@@ -3064,7 +3065,8 @@ def _get_comments_2007(fname):
         block_text = ""
 
         for text in texts:
-            block_text += _clean_2007_text(text)
+            new_text = safe_str_convert(_clean_2007_text(text))
+            block_text += _clean_2007_text(new_text)
 
         # Save the comment.
         r.append((curr_id, block_text))
@@ -3699,7 +3701,7 @@ def _read_doc_text_libreoffice(data):
 
     @param data (bytes) The read in Office file (data).
 
-    @return (tuple) Returns a tuple containing the doc text and a list
+    @return (tuple) Returns a tuple containing the doc text (str) and a list
     of tuples containing dumped tables.
 
     """
@@ -3731,6 +3733,7 @@ def _read_doc_text_libreoffice(data):
     try:
         output = subprocess.check_output(["timeout", "30", "python3", _thismodule_dir + "/../export_doc_text.py",
                                           "--text", "-f", out_dir])
+        output = safe_str_convert(output)
     except Exception as e:
         log.error("Running export_doc_text.py failed. " + safe_str_convert(e))
         os.remove(out_dir)
@@ -3755,7 +3758,7 @@ def _read_doc_text_libreoffice(data):
         first_line = first_line[good_pos:]
                 
         # NOTE: This is specific to fixing an unbalanced C-style comment in the 1st line.
-        pat = br'^\*.*\*\/'
+        pat = r'^\*.*\*\/'
         if (re.match(pat, first_line) is not None):
             first_line = "/" + first_line
         if (first_line.startswith("[]*")):
@@ -3767,6 +3770,7 @@ def _read_doc_text_libreoffice(data):
     try:
         output = subprocess.check_output(["python3", _thismodule_dir + "/../export_doc_text.py",
                                           "--tables", "-f", out_dir])
+        output = safe_str_convert(output)
     except Exception as e:
         log.error("Running export_doc_text.py failed. " + safe_str_convert(e))
         os.remove(out_dir)
