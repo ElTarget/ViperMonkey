@@ -3331,7 +3331,7 @@ def pull_urls_from_comments(vba):
         line = line.strip()
         if ((not line.startswith("'")) and (not line.lower().startswith("rem "))):
             continue
-        for url in re.findall(URL_REGEX, line):
+        for url in re.findall(URL_REGEX, safe_str_convert(line)):
             urls.add(url.strip())
 
     # Return the URLs that appear in comments.
@@ -3369,7 +3369,7 @@ def pull_urls_office97(fname, is_data, vba):
     comment_urls = set()
     if (vba is not None):
         comment_urls = pull_urls_from_comments(vba)
-    file_urls = re.findall(URL_REGEX, data)
+    file_urls = re.findall(URL_REGEX, safe_str_convert(data))
     r = set()
     for url in file_urls:
         url = url.strip()

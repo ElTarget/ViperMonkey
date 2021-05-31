@@ -57,6 +57,11 @@ except ImportError:
 from logging import LogRecord
 from logging import FileHandler
 
+def _test_char(c):
+    if isinstance(c, int):
+        c = chr(c)
+    return isprint(c)
+        
 def safe_str_convert(s):
     """Convert a string to ASCII without throwing a unicode decode error.
 
@@ -77,10 +82,15 @@ def safe_str_convert(s):
         if isinstance(s, bytes):
             s = s.decode('UTF-8')            
         return str(s)
-    except UnicodeDecodeError:
-        return list(filter(isprint, s))
-    except UnicodeEncodeError:
-        return list(filter(isprint, s))
+    except (UnicodeDecodeError, UnicodeEncodeError, SystemError):
+        if isinstance(s, bytes):
+            r = ""
+            for c in s:
+                curr_char = chr(c)
+                if (isprint(curr_char)):
+                    r += curr_char
+            return r
+        return ''.join(list(filter(_test_char, s)))
 
 class Infix(object):
     """Used to define our own infix operators.
