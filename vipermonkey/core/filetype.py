@@ -78,11 +78,13 @@ def get_1st_8_bytes(fname, is_data):
     else:
         info = fname[:9]
 
-    info = safe_str_convert(info)
     curr_magic = ""
     for b in info:
-        curr_magic += hex(ord(b)).replace("0x", "").upper() + " "
-        
+        # Handle info being bytes or str.
+        if (isinstance(b, str)):
+            b = ord(b)
+        curr_magic += hex(b).replace("0x", "").upper() + " "
+
     return curr_magic
 
 def is_pe_file(fname, is_data):
