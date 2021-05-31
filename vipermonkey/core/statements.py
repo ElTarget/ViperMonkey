@@ -1690,6 +1690,13 @@ class For_Statement(VBA_Object):
         if (isinstance(start, str)):
             start = vba_conversion.int_convert(start)
 
+        # The start value could be an unitialized variable. Set it here
+        # so that JIT generation will know it is an int.
+        if isinstance(self.start_value, SimpleNameExpression):
+            var_name = safe_str_convert(self.start_value)
+            if (not context.contains(var_name)):
+                context.set(var_name, start)
+            
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
 
@@ -1700,7 +1707,14 @@ class For_Statement(VBA_Object):
         if (end is None):
             log.warning("Not emulating For loop. Loop end '" + safe_str_convert(self.end_value) + "' evaluated to None.")
             return (None, None, None)
-            
+
+        # The end value could be an unitialized variable. Set it here
+        # so that JIT generation will know it is an int.
+        if isinstance(self.end_value, SimpleNameExpression):
+            var_name = safe_str_convert(self.end_value)
+            if (not context.contains(var_name)):
+                context.set(var_name, end)
+        
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
 
