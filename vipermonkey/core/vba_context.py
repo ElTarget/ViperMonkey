@@ -1460,8 +1460,7 @@ class Context(object):
         """
         
         # Sanity check.
-        if ((name is None) or
-            (isinstance(name, str) and (len(name.strip()) == 0))):
+        if ((name is None) or (len(safe_str_convert(name).strip()) == 0)):
             raise KeyError('Object %r not found' % name)
         
         # Short circuit looking for variable change handlers if possible.
@@ -1520,6 +1519,9 @@ class Context(object):
         context, False if not.
 
         """
+        # All spaces is not a valid variable name.
+        if (safe_str_convert(name).strip() == ""):
+            return False
         if (local):
             return (safe_str_convert(name).lower() in self.locals)
         try:

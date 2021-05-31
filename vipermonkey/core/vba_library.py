@@ -1497,14 +1497,18 @@ class Count(VbaLibraryFunc):
         context = context # pylint
 
         # Sanity check.
-        if ((params is None) or
-            (len(params) == 0) or
-            (not isinstance(params[0], dict))):
+        if ((params is None) or(len(params) == 0)):
             return "NULL"
-
+        
         # Return the # of Added items.
         # Subtract 1 due to "__ADDED_ITEMS__" entry in dict.
-        return (len(params[0]) - 1)
+        items = params[0]
+        if isinstance(items, dict):
+            return (len(items) - 1)
+        try:
+            return len(items)
+        except TypeError:
+            return "NULL"
 
 
 parse_cache = {}
@@ -2556,7 +2560,7 @@ class Paragraphs(VbaLibraryFunc):
         
         # Sanity check.
         if ((params is None) or (len(params) == 0)):
-            log.error("Paragraphs() called with no arguments. Returning all paragraphs.")
+            log.warning("Paragraphs() called with no arguments. Returning all paragraphs.")
             return paragraphs
 
         # Get the paragraph index.

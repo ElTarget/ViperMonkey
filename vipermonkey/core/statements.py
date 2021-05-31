@@ -1751,8 +1751,13 @@ class For_Statement(VBA_Object):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
         else:
-            step = "1"
-
+            step = 1
+        try:
+            step = int(step)
+        except ValueError:
+            log.warn("Loop step value '" + safe_str_convert(self.step_value) + "' can't be converted to int. Assume 1.")
+            step = 1
+            
         # Done.
         return (start, end, step)
     

@@ -535,7 +535,11 @@ class ViperMonkey(StubbedEngine):
         context.globals["__DOC_TABLE_CONTENTS__"] = self.doc_tables
             
         # Save the document text in the proper variable in the context.
-        self.doc_text = safe_str_convert(self.doc_text)
+        if isinstance(self.doc_text, list):
+            tmp_text = []
+            for para in self.doc_text:
+                tmp_text.append(safe_str_convert(para))
+            self.doc_text = tmp_text
         context.globals["Range.Text".lower()] = "\n".join(self.doc_text)
         context.globals["Me.Content".lower()] = "\n".join(self.doc_text)
         context.globals["Me.Content.Text".lower()] = "\n".join(self.doc_text)
@@ -551,6 +555,9 @@ class ViperMonkey(StubbedEngine):
         context.globals["ActiveDocument.Content.Start".lower()] = 0
         context.globals["ActiveDocument.Content.End".lower()] = len("\n".join(self.doc_text))
         context.globals["ActiveDocument.Paragraphs".lower()] = self.doc_text
+        context.globals["ActiveDocument.Paragraphs.Count".lower()] = len(self.doc_text)
+        context.globals["Paragraphs.Count".lower()] = len(self.doc_text)
+        context.globals[".Paragraphs.Count".lower()] = len(self.doc_text)
         context.globals["ThisDocument.Content".lower()] = "\n".join(self.doc_text)
         context.globals["ThisDocument.Content.Text".lower()] = "\n".join(self.doc_text)
         context.globals["ThisDocument.Range.Text".lower()] = "\n".join(self.doc_text)
@@ -579,7 +586,6 @@ class ViperMonkey(StubbedEngine):
         context.globals["['ActiveDocument'].Characters".lower()] = list("\n".join(self.doc_text))
         context.globals["ActiveDocument.Characters".lower()] = list("\n".join(self.doc_text))
         context.globals["ActiveDocument.Characters.Count".lower()] = int(len(self.doc_text))
-        context.globals["Count".lower()] = 1
         context.globals[".Pages.Count".lower()] = 1
         context.globals["me.Pages.Count".lower()] = 1
         context.globals["['ThisDocument'].Characters".lower()] = list("\n".join(self.doc_text))
