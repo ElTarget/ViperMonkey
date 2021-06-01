@@ -4199,14 +4199,19 @@ class WriteText(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        if ((params is None) or (len(params) < 1)):
+        print("WRITETEXT")
+        print(params)
+        if ((params is None) or (len(params) < 1)):            
+            print("BOO: 1")
             return
 
         # Get the data.
         txt = params[0]
         if (len(params) == 3):
             txt = params[2]
-        
+        print("TXT")
+        print(txt)
+            
         # Set the text value of the string as a faux variable. Make this
         # global as a hacky solution to handle fields in user defined objects.
         #

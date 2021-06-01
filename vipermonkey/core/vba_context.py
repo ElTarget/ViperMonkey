@@ -855,7 +855,7 @@ class Context(object):
             return
 
         # Open the simulated file.
-        self.open_files[fname] = b''
+        self.open_files[fname] = ''
         if (file_id != ""):
             self.file_id_map[file_id] = fname
         log.info("Opened file " + fname)
@@ -914,15 +914,14 @@ class Context(object):
             # Hex string?
             if ((len(data.strip()) == 4) and (re.match('&H[0-9A-F]{2}', data, re.IGNORECASE))):
                 data = chr(int(data.strip()[-2:], 16))
-
-            self.open_files[fname] += data
+            self.open_files[fname] += safe_str_convert(data)
             return True
 
         # Are we writing a list?
         elif isinstance(data, list):
             for d in data:
                 if (isinstance(d, int)):
-                    self.open_files[fname] += chr(d)
+                    self.open_files[fname] += safe_str_convert(chr(d))
                 else:
                     self.open_files[fname] += safe_str_convert(d)
             return True
@@ -1026,7 +1025,7 @@ class Context(object):
         log.info("Closing file " + fname)
 
         # Get the data written to the file and track it.
-        data = self.open_files[fname]
+        data = safe_str_convert(self.open_files[fname])
         self.closed_files[fname] = data
 
         # Clear the file out of the open files.
@@ -1065,7 +1064,7 @@ class Context(object):
                 
         # Hash the data to be saved.
         raw_data = self.closed_files[fname]
-        file_hash = sha256(raw_data).hexdigest()
+        file_hash = sha256(bytes(raw_data, "utf-8")).hexdigest()
 
         # TODO: Set a flag to control whether to dump file contents.
 

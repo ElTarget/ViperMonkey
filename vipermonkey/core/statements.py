@@ -4399,18 +4399,23 @@ class Call_Statement(VBA_Object):
         """
         
         # Can we handle this call as a member access expression?
+        print("WITH CALL!!")
+        print(self)
         as_member_access = self._handle_as_member_access(context)
         if (as_member_access is not None):
+            print("HISS: 1")
             return as_member_access
         
         # Is this a call like '.WriteText "foo"'?
         func_name = safe_str_convert(self.name).strip()
         if (not func_name.startswith(".")):
+            print("HISS: 2")
             return None
 
         # We have a call to a function whose name starts with '.'. Are
         # we in a With block?
         if (len(context.with_prefix) == 0):
+            print("HISS: 3")
             return None
 
         # We have a method call of the With object. Make a member
@@ -4421,6 +4426,8 @@ class Call_Statement(VBA_Object):
         full_expr = MemberAccessExpression(None, None, None, raw_fields=(context.with_prefix, [call_obj], []))
 
         # Evaluate the fully qualified object method call.
+        print("FULL EXPR")
+        print(full_expr)
         r = eval_arg(full_expr, context)
         return r
         
