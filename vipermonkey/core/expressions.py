@@ -1736,6 +1736,8 @@ class MemberAccessExpression(VBA_Object):
         txt = None
         rhs_val = eval_arg(rhs.params[0], context)
         txt = rhs_val
+        if isinstance(txt, str):
+            txt = bytes(txt, "utf-8")
         print("TEXT!!")
         print(txt)
         print(type(txt))
