@@ -4225,6 +4225,7 @@ class WriteText(VbaLibraryFunc):
             context.set(var_name, b"", force_global=True)
         final_txt = context.get(var_name) + txt
         context.set(var_name, final_txt, force_global=True)
+        #print(final_txt)
         
 class CurDir(VbaLibraryFunc):
     """Emulate CurDir() function (stubbed).
@@ -4592,6 +4593,12 @@ class ReadText(VbaLibraryFunc):
         with_str = utils.safe_str_convert(context.with_prefix).strip()
         if (with_str.endswith("GetDecodedContentStream")):
             var_name = with_str.replace("GetDecodedContentStream", "GetEncodedContentStream") + ".ReadText"
+            if (context.contains(var_name)):
+                return context.get(var_name)
+
+        # Do we have a synthetic variable with the text?
+        if ((params is not None) and (len(params) > 0)):
+            var_name = utils.safe_str_convert(params[0]) + ".ReadText"
             if (context.contains(var_name)):
                 return context.get(var_name)
             

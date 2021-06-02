@@ -78,6 +78,7 @@ def _boilerplate_to_python(indent):
     boilerplate = indent_str + "import core.vba_library\n"
     boilerplate = indent_str + "import core.vba_context\n"
     boilerplate += indent_str + "from core.utils import safe_print\n"
+    boilerplate += indent_str + "from core.utils import safe_str_convert\n"
     boilerplate += indent_str + "from core.utils import plus\n"
     boilerplate += indent_str + "from core.utils import eq\n"
     boilerplate += indent_str + "from core.utils import neq\n"
@@ -781,12 +782,19 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
 
     # Emulating full VB programs in Python is difficult, so for now skip loops
     # that Execute() dynamic VB.
-    code_vba = safe_str_convert(loop).replace("\n", "\\n")[:20]
-    log.info("Starting JIT emulation of '" + code_vba + "...' ...")
-    if (("Execute(" in safe_str_convert(loop)) or
-        ("ExecuteGlobal(" in safe_str_convert(loop)) or
-        ("Eval(" in safe_str_convert(loop))):
+    code_vba = safe_str_convert(loop)
+    short_code_vba = code_vba.replace("\n", "\\n")[:20]
+    log.info("Starting JIT emulation of '" + short_code_vba + "...' ...")
+    if (("Execute(" in code_vba) or
+        ("ExecuteGlobal(" in code_vba) or
+        ("Eval(" in code_vba)):
         log.warning("Loop Execute()s dynamic code. Not JIT emulating.")
+        return False
+
+    # The emulation of .WriteText() uses a synthetic variable in the context,
+    # so it does not work cleanly in the Python JIT code.
+    if ('.WriteText(' in code_vba):
+        log.warning("Loop calls .WriteText(). Not JIT emulating.")
         return False
     
     # Generate the Python code for the VB code and execute the generated Python code.
@@ -868,7 +876,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
             # Run the JIT code in the given namespace.
             exec(code_python, namespace)
             var_updates = namespace["var_updates"]
-        log.info("Done JIT emulation of '" + code_vba + "...' .")
+        log.info("Done JIT emulation of '" + short_code_vba + "...' .")
 
         # Cache the loop results.
         jit_cache[code_python] = var_updates
@@ -894,6 +902,9 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
 
     except Exception as e:
 
+        #safe_print("REMOVE THIS!!")
+        #raise e
+        
         # Cache the error.
         jit_cache[code_python] = "ERROR"
         
