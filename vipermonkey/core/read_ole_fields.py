@@ -140,7 +140,7 @@ def unzip_data(data):
 
     # Unzip the data.
     # PKZip magic #: 50 4B 03 04
-    zip_magic = (chr(0x50) + chr(0x4B) + chr(0x03) + chr(0x04)).encode("utf-8")
+    zip_magic = (chr(0x50) + chr(0x4B) + chr(0x03) + chr(0x04)).encode("latin-1")
     delete_file = False
     fname = None
     if data.startswith(zip_magic):
@@ -1517,7 +1517,7 @@ def get_ole_text_method_1(vba_code, data, debug=False):
            replace(b"0\x00\xe5", b"").\
            replace(b"\xfc", b"").\
            replace(b"\x19 ", b"").\
-           replace(b"_epx" + chr(223).encode("utf-8"), b"").\
+           replace(b"_epx" + chr(223).encode("latin-1"), b"").\
            replace(b"R\x00o\x00o\x00t\x00 \x00E\x00n\x00t\x00r\x00y", b"").\
            replace(b"Embedded Object", b"").\
            replace(b"mbedded Object", b"").\

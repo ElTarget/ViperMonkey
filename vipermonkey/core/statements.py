@@ -4350,15 +4350,19 @@ class Call_Statement(VBA_Object):
         """
 
         # Is this a method call?
+        #print("HANDLE AS MEMBER!!")
+        #print(self)
         func_name = safe_str_convert(self.name).strip()
         if (("." not in func_name) or (func_name.startswith("."))):
+            #print("UGH: 1")
             return None
         short_func_name = func_name[func_name.rindex(".") + 1:]
         
         # It's a method call. Is it one we are handling as a member
         # access expression?
-        memb_funcs = set(["AddItem", "Append_3"])
+        memb_funcs = set(["AddItem", "Append_3", "SaveToFile"])
         if (short_func_name not in memb_funcs):
+            #print("UGH: 2")
             return None
 
         # It should be handled as a member access expression.
@@ -4376,6 +4380,7 @@ class Call_Statement(VBA_Object):
             func_call_str += safe_str_convert(p_eval)
         func_call_str += ")"
         try:
+            #print("CALL STR: '" + func_call_str + "'")
             memb_exp = member_access_expression.parseString(func_call_str, parseAll=True)[0]
 
             # Evaluate the call as a member access expression.
@@ -4386,6 +4391,7 @@ class Call_Statement(VBA_Object):
                 log.debug('Eval "' + func_call_str + '" as member access expression failed. ' + safe_str_convert(e))
                 
             # Can't eval as a member access expression.
+            #print("UGH: 3")
             return None
         
     def _handle_with_calls(self, context):
@@ -4399,23 +4405,23 @@ class Call_Statement(VBA_Object):
         """
         
         # Can we handle this call as a member access expression?
-        print("WITH CALL!!")
-        print(self)
+        #print("WITH CALL!!")
+        #print(self)
         as_member_access = self._handle_as_member_access(context)
         if (as_member_access is not None):
-            print("HISS: 1")
+            #print("HISS: 1")
             return as_member_access
         
         # Is this a call like '.WriteText "foo"'?
         func_name = safe_str_convert(self.name).strip()
         if (not func_name.startswith(".")):
-            print("HISS: 2")
+            #print("HISS: 2")
             return None
 
         # We have a call to a function whose name starts with '.'. Are
         # we in a With block?
         if (len(context.with_prefix) == 0):
-            print("HISS: 3")
+            #print("HISS: 3")
             return None
 
         # We have a method call of the With object. Make a member
@@ -4426,8 +4432,8 @@ class Call_Statement(VBA_Object):
         full_expr = MemberAccessExpression(None, None, None, raw_fields=(context.with_prefix, [call_obj], []))
 
         # Evaluate the fully qualified object method call.
-        print("FULL EXPR")
-        print(full_expr)
+        #print("FULL EXPR")
+        #print(full_expr)
         r = eval_arg(full_expr, context)
         return r
         

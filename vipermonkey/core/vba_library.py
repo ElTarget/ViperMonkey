@@ -4199,18 +4199,20 @@ class WriteText(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        print("WRITETEXT")
-        print(params)
+        #print("WRITETEXT")
+        #print(params)
         if ((params is None) or (len(params) < 1)):            
-            print("BOO: 1")
+            #print("BOO: 1")
             return
 
         # Get the data.
         txt = params[0]
         if (len(params) == 3):
             txt = params[2]
-        print("TXT")
-        print(txt)
+        if (not isinstance(txt, bytes)):
+            txt = bytes(txt, "latin-1")
+        #print("TXT")
+        #print(txt)
             
         # Set the text value of the string as a faux variable. Make this
         # global as a hacky solution to handle fields in user defined objects.
@@ -4220,7 +4222,7 @@ class WriteText(VbaLibraryFunc):
         # Assume we are writing to ADODB.Stream.ReadText
         var_name = "ADODB.Stream.ReadText"
         if (not context.contains(var_name)):
-            context.set(var_name, "", force_global=True)
+            context.set(var_name, b"", force_global=True)
         final_txt = context.get(var_name) + txt
         context.set(var_name, final_txt, force_global=True)
         

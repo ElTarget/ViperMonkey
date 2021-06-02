@@ -1064,7 +1064,11 @@ class Context(object):
                 
         # Hash the data to be saved.
         raw_data = self.closed_files[fname]
-        file_hash = sha256(bytes(raw_data, "utf-8")).hexdigest()
+        file_hash = None
+        if isinstance(raw_data, bytes):
+            file_hash = sha256(raw_data).hexdigest()
+        else:
+            file_hash = sha256(bytes(raw_data, "latin-1")).hexdigest()
 
         # TODO: Set a flag to control whether to dump file contents.
 
@@ -1101,7 +1105,10 @@ class Context(object):
 
             # Write out the dropped file.
             with open(file_path, 'wb') as f:
-                f.write(raw_data)
+                if isinstance(raw_data, bytes):                
+                    f.write(raw_data)
+                else:
+                    f.write(bytes(raw_data, "latin-1"))
             log.info("Wrote dumped file (hash " + safe_str_convert(file_hash) + ") to " + safe_str_convert(file_path) + ".")
         except Exception as e:
             log.error("Writing file " + safe_str_convert(fname) + " failed with error: " + safe_str_convert(e))

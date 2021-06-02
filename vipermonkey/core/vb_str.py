@@ -102,7 +102,7 @@ def is_mixed_wide_ascii_str(the_str):
     """
     uni_str = None
     try:
-        uni_str = the_str.decode("utf-8")
+        uni_str = the_str.decode("latin-1")
     except UnicodeDecodeError:
         # Punt.
         return False

@@ -80,7 +80,7 @@ def safe_str_convert(s):
 
         # Handle bytes-like objects.
         if isinstance(s, bytes):
-            s = s.decode('UTF-8')            
+            s = s.decode('latin-1')            
         return str(s)
     except (UnicodeDecodeError, UnicodeEncodeError, SystemError):
         if isinstance(s, bytes):

@@ -578,6 +578,7 @@ def _remove_duplicate_iocs(iocs):
     for ioc1 in iocs:
         
         # Does this IOC look like straight up garbage?
+        ioc1 = safe_str_convert(ioc1)
         if (read_ole_fields.is_garbage_vba(ioc1, test_all=True, bad_pct=.25)):
             skip.add(ioc1)
             continue
@@ -585,6 +586,7 @@ def _remove_duplicate_iocs(iocs):
         # Looks somewhat sensible. See if it is a duplicate.
         keep_curr = True
         for ioc2 in iocs:
+            ioc2 = safe_str_convert(ioc2)
             if (ioc2 in skip):
                 continue
             if ((ioc1 != ioc2) and (ioc1 in ioc2)):
