@@ -3617,7 +3617,7 @@ def _read_custom_doc_props(fname):
                 break
         if (data is None):
             return []
-        strs = re.findall("([\w\.\:/]{4,})", data)
+        strs = re.findall("([\w\.\:/]{4,})", safe_str_convert(data))
         
         # Treat each wide character string as a potential variable that has a value
         # of the string 1 positions ahead on the current string. This introduces "variables"
@@ -3652,6 +3652,8 @@ def _read_custom_doc_props(fname):
     except Exception as e:
         if ("not an OLE2 structured storage file" not in safe_str_convert(e)):
             log.error("Cannot read custom doc properties. " + safe_str_convert(e))
+            #traceback.print_exc()
+            #sys.exit(0)
         return []
 
 def _get_embedded_object_values(fname):
