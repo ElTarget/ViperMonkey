@@ -4276,6 +4276,8 @@ def _read_payload_textbox_text(data, vba_code, vm):
     tmp_data = get_drawing_titles(data)
     object_data.extend(tmp_data)
     for (var_name, var_val) in object_data:
+        var_name = safe_str_convert(var_name)
+        var_val = safe_str_convert(var_val)
         var_name_variants = [var_name,
                              "ActiveDocument." + var_name,
                              var_name + ".Tag",
@@ -4321,7 +4323,7 @@ def _read_payload_textbox_text(data, vba_code, vm):
                 log.debug("Added potential VBA OLE form textbox text (1) %r = %r to doc_vars." % (tmp_var_name, tmp_var_val))
 
         # Handle Pages(NN) and Tabs(NN) references.
-        page_pat = br"Page(\d+)"
+        page_pat = r"Page(\d+)"
         if (re.match(page_pat, var_name)):
             page_index = safe_str_convert(int(re.findall(page_pat, var_name)[0]) - 1)
             page_var_name = "Pages('" + page_index + "')"
