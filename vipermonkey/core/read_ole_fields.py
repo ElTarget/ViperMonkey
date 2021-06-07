@@ -1647,7 +1647,7 @@ def get_ole_text_method_1(vba_code, data, debug=False):
                 if debug1:
                     print("CHECK !!!!!!!!!!!!!")
                     print("chopping off " + safe_str_convert(end_pos))
-                curr_agg_str = aggregate_str[:-end_pos]
+                curr_agg_str = bytes(aggregate_str[:-end_pos], "latin-1")
                 for i in range(1, len(repeated_subst) + 1):
                     curr_first_half = repeated_subst[:i]
                     if debug1:
@@ -1671,7 +1671,7 @@ def get_ole_text_method_1(vba_code, data, debug=False):
 
             # Handle chopping garbage characters from the end of the aggregate string.
             if (matched_agg_str != ""):
-                aggregate_str = matched_agg_str
+                aggregate_str = safe_str_convert(matched_agg_str)
                 
             # There could be extra characters in front of the 2nd half of the string.
             if (first_half_rep is not None):
@@ -1700,20 +1700,20 @@ def get_ole_text_method_1(vba_code, data, debug=False):
                 if (repeated_subst in val):
                     start_pos = val.index(repeated_subst)                    
                     while (((start_pos - 1) >= 0) and
-                           (re.match("[A-Za-z]", val[start_pos - 1]) is not None)):
+                           (re.match(b"[A-Za-z]", bytes([val[start_pos - 1]])) is not None)):
                         start_pos -= 1
                     val = val[start_pos:]
                 else:
-                    val = re.sub(obj_pat, "", val)
+                    val = re.sub(obj_pat, b"", val)
                 
-            # Add in another payload piece.
-            aggregate_str += val
+            # Add in another payload piece.            
+            aggregate_str += safe_str_convert(val)
         if debug1:
             print("-------")
             print(val.strip())
             print(pct)
     if (len(aggregate_str) == 0):
-        aggregate_str = max_substs
+        aggregate_str = safe_str_convert(max_substs)
         
     # Get the names of ActiveX/OLE items accessed in the VBA.
     object_names = set(re.findall(r"(?:ThisDocument|ActiveDocument|\w+)\.(\w+)", vba_code))
@@ -3500,6 +3500,8 @@ def _read_doc_vars_ole(fname):
             
     except Exception as e:
         log.error("Cannot read document variables. " + safe_str_convert(e))
+        #traceback.print_exc()
+        #sys.exit(0)
         return []
 
 def _read_doc_vars(data, fname):
@@ -3894,14 +3896,14 @@ def _get_doc_var_info(ole):
     # The fcStwUser field holds the offset of the doc var info in the 0Table or 1Table stream. It is preceded
     # by 119 other 4 byte values, hence the 120*4 offset.
     fib_offset = 32 + 2 + 28 + 2 + 88 + 2 + (120 * 4)
-    tmp = data[fib_offset+3] + data[fib_offset+2] + data[fib_offset+1] + data[fib_offset]
+    tmp = bytes([data[fib_offset+3]]) + bytes([data[fib_offset+2]]) + bytes([data[fib_offset+1]]) + bytes([data[fib_offset]])
     doc_var_offset = struct.unpack('!I', tmp)[0]
 
     # Get the size of the doc vars (lcbStwUser).
     # Get offset to FibRgFcLcb97 (https://msdn.microsoft.com/en-us/library/dd949344(v=office.12).aspx) and then
     # offset to lcbStwUser (https://msdn.microsoft.com/en-us/library/dd905534(v=office.12).aspx).
     fib_offset = 32 + 2 + 28 + 2 + 88 + 2 + (120 * 4) + 4
-    tmp = data[fib_offset+3] + data[fib_offset+2] + data[fib_offset+1] + data[fib_offset]
+    tmp = bytes([data[fib_offset+3]]) + bytes([data[fib_offset+2]]) + bytes([data[fib_offset+1]]) + bytes([data[fib_offset]])
     doc_var_size = struct.unpack('!I', tmp)[0]
     
     return (doc_var_offset, doc_var_size)
