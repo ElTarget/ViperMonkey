@@ -146,9 +146,9 @@ def safe_plus(x,y):
     # String:a = 1 + "3" gets "13", we're ignoring that here). Pure
     # garbage.
     from core import vba_conversion
-    if (isinstance(x, str)):
+    if (isinstance(x, str) and (not isinstance(y, str))):
         y = vba_conversion.str_convert(y)
-    if (isinstance(x, int)):
+    if (isinstance(x, int) and (not isinstance(y, int))):
         y = vba_conversion.int_convert(y)
 
     # Easy case first.
