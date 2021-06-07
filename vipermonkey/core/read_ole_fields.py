@@ -50,6 +50,7 @@ import re
 import random
 import os
 import sys
+import traceback
 from collections import Counter
 import string
 
@@ -252,7 +253,7 @@ def get_drawing_titles(data):
         r.append((var_name, drawing_text))
 
     # Done.
-    return r
+    return _make_elems_str(r)
 
 def get_defaulttargetframe_text(data):
     """Read custom DefaultTargetFrame value from an Office 2007+ file.
@@ -360,7 +361,7 @@ def get_customxml_text(data):
         os.remove(fname)
 
     # Return the results.
-    return r
+    return _make_elems_str(r)
     
 def get_msftedit_variables_97(data):
     """Looks for variable/text value pairs stored in an embedded rich
@@ -410,7 +411,7 @@ def get_msftedit_variables_97(data):
             r.append((chunk_name, chunk_data))
 
     # Done.
-    return r
+    return _make_elems_str(r)
 
 def get_msftedit_variables(obj):
     """Looks for variable/text value pairs stored in an embedded rich edit
@@ -761,7 +762,7 @@ def _handle_control_tip_text(control_tip_var_names, vals, debug):
                     r.append((n, vals[pos + 1]))
 
     # Done.
-    return r
+    return _make_elems_str(r)
 
 def _get_specific_values(chunk, stream_names, debug):
     """Get possible OLE object text values.
@@ -1027,7 +1028,7 @@ def get_ole_textbox_values2(data, debug, vba_code, stream_names):
     if debug:
         print("\nRESULTS VALUES2:")
         print(r)
-    return r
+    return _make_elems_str(r)
 
 def get_ole_textbox_values1(data, debug, stream_names):
     """Read in the text associated with embedded OLE form textbox
@@ -1171,7 +1172,7 @@ def get_ole_textbox_values1(data, debug, stream_names):
     if debug:
         print("\n-----------\nResult:")
         print(r)
-    return r
+    return _make_elems_str(r)
 
 def get_vbaprojectbin(data):
     """Pull the vbaProject.bin file from a 2007+ Office (ZIP) file.
@@ -1750,7 +1751,7 @@ def get_ole_text_method_1(vba_code, data, debug=False):
     r = []
     for curr_object in object_names:
         r.append((curr_object, aggregate_str))
-    return r
+    return _make_elems_str(r)
 
 def _get_next_chunk(data, index, form_str, form_str_pat, end_object_marker):
     """Get the next chunk of OLE object name/value information from the
@@ -2297,7 +2298,7 @@ def _merge_ole_form_results(r, v1_vals, v1_1_vals):
     r = tmp
 
     # Done.
-    return r
+    return _make_elems_str(r)
 
 def _clean_up_ole_form_results(r, long_strs, v1_vals, v1_1_vals, object_names, debug):
     """Clean up the object name/value results computed in various ways,
@@ -2468,7 +2469,24 @@ def _clean_up_ole_form_results(r, long_strs, v1_vals, v1_1_vals, object_names, d
 
     # Done.
     return r
-            
+
+def _make_elems_str(r):
+    """Convert all the tuple elements in a list of tuples to str.
+
+    @param r (list) A list of tuples.
+
+    @return (list) A list of tuples where each element is a
+    str.
+
+    """
+    r1 = []
+    for tup in r:
+        new_tup = []
+        for elem in tup:
+            new_tup.append(safe_str_convert(elem))
+        r1.append(tuple(new_tup))
+    return r1
+        
 def get_ole_textbox_values(obj, vba_code):
     """Read in the text associated with embedded OLE form textbox
     objects. NOTE: This currently is a NASTY hack.
@@ -2531,7 +2549,7 @@ def get_ole_textbox_values(obj, vba_code):
     # Try a method specific to a certain maldoc campaign first.
     r = get_ole_text_method_1(vba_code, data, debug=debug)
     if (r is not None):
-        return r
+        return _make_elems_str(r)
     
     # And try alternate method of pulling data. These will be merged in later.
     v1_vals = get_ole_textbox_values1(data, debug, stream_names)
@@ -2665,7 +2683,7 @@ def get_ole_textbox_values(obj, vba_code):
         print(r)
         sys.exit(0)
         
-    return r
+    return _make_elems_str(r)
 
 def read_form_strings(vba):
     """Read in the form strings in order as a lists of tuples like
@@ -2701,7 +2719,7 @@ def read_form_strings(vba):
             r.append((stream_name, form_string))
 
         # Done.
-        return r
+        return _make_elems_str(r)
 
     except Exception as e:
         log.error("Cannot read form strings. " + safe_str_convert(e))
@@ -2811,7 +2829,7 @@ def get_shapes_text_values_xml(fname):
         # Move to next shape.
         pos += 1
 
-    return r
+    return _make_elems_str(r)
 
 def get_shapes_text_values_direct_2007(data):
     """Read in shapes name/value mappings directly from word/document.xml
@@ -2849,7 +2867,7 @@ def get_shapes_text_values_direct_2007(data):
     
     # Return the Shape name and text value.
     r = [(name, val)]
-    return r
+    return _make_elems_str(r)
 
 def get_shapes_text_values_direct_2007_1(data):
     """Read in shapes name/value mappings directly from word/document.xml
@@ -2878,7 +2896,7 @@ def get_shapes_text_values_direct_2007_1(data):
         
     # Return the Shape name and text value.
     r = [(name, val)]
-    return r
+    return _make_elems_str(r)
 
 def _parse_activex_chunk(data):
     """Parse out ActiveX text values from 2007+ activeXN.bin file
@@ -3077,7 +3095,7 @@ def _get_comments_2007(fname):
         os.remove(fname)
     #print r
     #sys.exit(0)
-    return r
+    return _make_elems_str(r)
 
 def get_comments(fname):
     """Read the comments from an Office file.
@@ -3095,7 +3113,7 @@ def get_comments(fname):
         return []
 
     # Read comments from 2007+ file.
-    return _get_comments_2007(fname)
+    return _make_elems_str(_get_comments_2007(fname))
 
 def get_shapes_text_values_2007(fname):
     """Read in the text associated with Shape objects in a document saved
@@ -3133,11 +3151,11 @@ def get_shapes_text_values_2007(fname):
     # First see if the shapes text is stored directly in document.xml.
     r = get_shapes_text_values_direct_2007(data)
     if (len(r) > 0):
-        return r
+        return _make_elems_str(r)
     r = get_shapes_text_values_direct_2007_1(data)
     if (len(r) > 0):
         #print r
-        return r
+        return _make_elems_str(r)
     
     # Pull out any shape name to internal ID mappings.
     # <w:control r:id="rId10" w:name="ziPOVJ5" w:shapeid="_x0000_i1028"/>
@@ -3209,7 +3227,7 @@ def get_shapes_text_values_2007(fname):
         os.remove(fname)
     #print r
     #sys.exit(0)
-    return r
+    return _make_elems_str(r)
 
 def get_shapes_text_values(fname, stream):
     """Read in the text associated with Shape objects in the
@@ -3226,7 +3244,7 @@ def get_shapes_text_values(fname, stream):
     # Maybe 2007+ file?
     r = get_shapes_text_values_2007(fname)
     if (len(r) > 0):
-        return r
+        return _make_elems_str(r)
     
     r = []
     try:
@@ -3303,7 +3321,7 @@ def get_shapes_text_values(fname, stream):
         if ("not an OLE2 structured storage file" in safe_str_convert(e)):
             r = get_shapes_text_values_xml(fname)
 
-    return r
+    return _make_elems_str(r)
 
 
 URL_REGEX = r'(http[s]?://(?:(?:[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(?::[0-9]+)?)+(?:/[/\?&\~=a-zA-Z0-9_\-\.]+)))'
@@ -3423,7 +3441,7 @@ def _read_doc_vars_zip(fname):
         r.append((i[0], val))
     
     # Return the doc vars.
-    return r
+    return _make_elems_str(r)
     
 def _read_doc_vars_ole(fname):
     """Use a heuristic to try to read in document variable names and
@@ -3478,7 +3496,7 @@ def _read_doc_vars_ole(fname):
             pos += 1
 
         # Return guesses at doc variable assignments.
-        return r
+        return _make_elems_str(r)
             
     except Exception as e:
         log.error("Cannot read document variables. " + safe_str_convert(e))
@@ -3515,7 +3533,7 @@ def _read_doc_vars(data, fname):
         r = _read_doc_vars_zip(obj)
     # else, it might be XML or text, can't read doc vars yet
     # TODO: implement read_doc_vars for those formats
-    return r
+    return _make_elems_str(r)
 
 def _get_inlineshapes_text_values(data):
     """Read in the text associated with InlineShape objects in the
@@ -3569,7 +3587,7 @@ def _get_inlineshapes_text_values(data):
         if ("not an OLE2 structured storage file" in safe_str_convert(e)):
             r = get_shapes_text_values_xml(data)
 
-    return r
+    return _make_elems_str(r)
 
 def _read_custom_doc_props(fname):
     """Use a heuristic to try to read in custom document property names
@@ -3629,7 +3647,7 @@ def _read_custom_doc_props(fname):
             pos += 1
 
         # Return guesses at custom doc prop assignments.
-        return r
+        return _make_elems_str(r)
             
     except Exception as e:
         if ("not an OLE2 structured storage file" not in safe_str_convert(e)):
@@ -3693,7 +3711,8 @@ def _get_embedded_object_values(fname):
         if ("not an OLE2 structured storage file" not in safe_str_convert(e)):
             log.error("Cannot read tag/caption from embedded objects. " + safe_str_convert(e))
 
-    return r
+    # Done.
+    return _make_elems_str(r)
 
 def _read_doc_text_libreoffice(data):
     """Read in the document text and tables from a Word file (already
@@ -3954,8 +3973,11 @@ def _get_form_var_val(var_name, form_vars):
 
     # Get a reasonable value for the form variable.
     r = form_vars[var_name] if (var_name in form_vars and form_vars[var_name] is not None) else ''
-    r = r.replace('\xb1', '').replace('\x03', '')
-    return r
+    if isinstance(r, bytes):
+        r = r.replace(b'\xb1', b'').replace(b'\x03', b'')
+    else:
+        r = r.replace('\xb1', '').replace('\x03', '')
+    return safe_str_convert(r)
     
 def _read_payload_form_vars(vba, vm):
     """Read and save the text values associated with OLE form variables.
@@ -3980,7 +4002,7 @@ def _read_payload_form_vars(vba, vm):
                 # Get the sanitized field values for the current form var.
 
                 # Var name.
-                var_name = form_variables['name']
+                var_name = safe_str_convert(form_variables['name'])
                 if (var_name is None):
                     continue
 
@@ -3991,7 +4013,7 @@ def _read_payload_form_vars(vba, vm):
                     macro_name = macro_name[start:]
 
                 # Absolute var name.
-                global_var_name = (macro_name + "." + var_name).encode('ascii', 'ignore').replace("\x00", "")
+                global_var_name = (safe_str_convert(macro_name) + "." + safe_str_convert(var_name)).replace("\x00", "")
                 tag = _get_form_var_val('tag', form_variables)
 
                 # Caption for form var.
@@ -4023,6 +4045,7 @@ def _read_payload_form_vars(vba, vm):
                 # take precedence.
 
                 # Save full form variable names.
+                val = safe_str_convert(val)
                 name = global_var_name.lower()                        
                 vm.globals[name] = val
                 if (log.getEffectiveLevel() == logging.DEBUG):
