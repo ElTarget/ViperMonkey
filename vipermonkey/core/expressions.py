@@ -137,6 +137,7 @@ class SimpleNameExpression(VBA_Object):
 
     def __init__(self, original_str, location, tokens, name=None):
         super(SimpleNameExpression, self).__init__(original_str, location, tokens)
+        self.gloss = None
         if (name is not None):
             self.name = name
         else:
@@ -145,7 +146,10 @@ class SimpleNameExpression(VBA_Object):
             log.debug('parsed "%r" as SimpleNameExpression' % self)
 
     def __repr__(self):
-        return '%s' % self.name
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = '%s' % self.name
+        return self.gloss
 
     def to_python(self, context, params=None, indent=0):
         params = params # pylint warning
@@ -313,6 +317,7 @@ class MemberAccessExpression(VBA_Object):
     def __init__(self, original_str, location, tokens, raw_fields=None):
 
         # Are we manually creating a member access object?
+        self.gloss = None
         self.is_loop = False
         if (raw_fields is not None):
             self.lhs = raw_fields[0]
@@ -336,12 +341,15 @@ class MemberAccessExpression(VBA_Object):
                 log.debug('parsed %r as MemberAccessExpression' % self)
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         r = safe_str_convert(self.lhs)
         for t in self.rhs:
             r += "." + safe_str_convert(t)
         if (len(self.rhs1) > 0):
             r += "." + safe_str_convert(self.rhs1)
-        return r
+        self.gloss = r
+        return self.gloss
 
     def _to_python_handle_listbox_list(self, context, indent):
         """Convert List() object method calls like foo.List(bar) to Python.
@@ -3150,13 +3158,17 @@ class NamedArgument(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(NamedArgument, self).__init__(original_str, location, tokens)
 
+        self.gloss = None        
         self.name = tokens.name
         self.value = tokens.value
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed "%r" as NamedArgument' % self)
 
     def __repr__(self):
-        return '%s:=%s' % (self.name, self.value)
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = '%s:=%s' % (self.name, self.value)
+        return self.gloss
 
     def eval(self, context, params=None):
         params = params # pylint warning
@@ -3225,12 +3237,16 @@ class With_Member_Expression(VBA_Object):
     def __init__(self, original_str, location, tokens, old_call=None):
         super(With_Member_Expression, self).__init__(original_str, location, tokens)
         old_call = old_call # pylint warning
+        self.gloss = None
         self.expr = tokens.expr
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as With_Member_Expression' % self)
 
     def __repr__(self):
-        return "." + safe_str_convert(self.expr)
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = "." + safe_str_convert(self.expr)
+        return self.gloss
 
     def to_python(self, context, params=None, indent=0):
         indent = indent # pylint warning
@@ -3382,6 +3398,7 @@ class Function_Call(VBA_Object):
         super(Function_Call, self).__init__(original_str, location, tokens)
 
         # Copy constructor?
+        self.gloss = None
         if (old_call is not None):
             self.name = old_call.name
             if (hasattr(old_call.params, "copy")):
@@ -3427,6 +3444,8 @@ class Function_Call(VBA_Object):
             log.debug('parsed %r as Function_Call' % self)
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         parms = ""
         first = True
         for parm in self.params:
@@ -3434,7 +3453,8 @@ class Function_Call(VBA_Object):
                 parms += ", "
             first = False
             parms += safe_str_convert(parm)
-        return '%s(%r)' % (self.name, parms)
+        self.gloss = '%s(%s)' % (self.name, parms)
+        return self.gloss
 
     def _handle_dict_access(self, f, params):
         """Handle something parsed as a call that is actually reading the
@@ -3966,6 +3986,7 @@ class Function_Call_Array_Access(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Function_Call_Array_Access, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.array = tokens.array
         self.index = tokens.index
         self.other_indices = None
@@ -3975,10 +3996,13 @@ class Function_Call_Array_Access(VBA_Object):
             log.debug('parsed %r as Function_Call_Array_Access' % self)
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         r = safe_str_convert(self.array) + "(" + safe_str_convert(self.index) + ")"
         if (self.other_indices is not None):
             r = safe_str_convert(self.array) + "(" + safe_str_convert(self.index) + ", " + safe_str_convert(self.other_indices) + ")"
-        return r
+        self.gloss = r
+        return self.gloss
 
     def eval(self, context, params=None):
         params = params # pylint warning
@@ -4147,6 +4171,7 @@ class BoolExprItem(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(BoolExprItem, self).__init__(original_str, location, tokens)
         assert (len(tokens) > 0)
+        self.gloss = None
         self.lhs = tokens[0]
         self.op = None
         self.rhs = None
@@ -4157,12 +4182,17 @@ class BoolExprItem(VBA_Object):
             log.debug('parsed %r as BoolExprItem' % self)
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         if (self.op is not None):
-            return self.lhs.__repr__() + " " + self.op + " " + self.rhs.__repr__()
+            self.gloss = self.lhs.__repr__() + " " + self.op + " " + self.rhs.__repr__()
+            return self.gloss
         elif (self.lhs is not None):
-            return self.lhs.__repr__()
+            self.gloss = self.lhs.__repr__()
+            return self.gloss
         log.error("BoolExprItem: Improperly parsed.")
-        return ""
+        self.gloss = ""
+        return self.gloss
 
     def _vba_to_python_op(self, op, context):
         """Convert a VBA boolean operator to a Python boolean operator or a
@@ -4385,6 +4415,7 @@ class BoolExpr(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(BoolExpr, self).__init__(original_str, location, tokens)
+        self.gloss = None
         tokens = tokens[0]
         # Binary boolean operator.
         if ((not hasattr(tokens, "length")) or (len(tokens) > 2)):
@@ -4418,14 +4449,20 @@ class BoolExpr(VBA_Object):
             log.debug('parsed %r as BoolExpr' % self)
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         if (self.op is not None):
             if (self.lhs is not None):
-                return self.lhs.__repr__() + " " + self.op + " " + self.rhs.__repr__()
-            return self.op + " " + self.rhs.__repr__()
+                self.gloss = self.lhs.__repr__() + " " + self.op + " " + self.rhs.__repr__()
+                return self.gloss
+            self.gloss = self.op + " " + self.rhs.__repr__()
+            return self.gloss
         elif (self.lhs is not None):
-            return self.lhs.__repr__()
+            self.gloss = self.lhs.__repr__()
+            return self.gloss
         log.error("BoolExpr: Improperly parsed.")
-        return ""
+        self.gloss = ""
+        return self.gloss
 
     def _vba_to_python_op(self, op, context):
         """Convert a VBA boolean operator to a Python boolean operator or a
@@ -4572,12 +4609,16 @@ class New_Expression(VBA_Object):
     
     def __init__(self, original_str, location, tokens):
         super(New_Expression, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.obj = tokens.expression
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as New_Expression' % self)
 
     def __repr__(self):
-        return ('New %r' % self.obj)
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = 'New %r' % self.obj
+        return self.gloss
 
     def to_python(self, context, params=None, indent=0):
         context = context # pylint warning
@@ -4614,13 +4655,17 @@ class TypeOf_Expression(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(TypeOf_Expression, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.item = tokens.item
         self.the_type = tokens.the_type
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as TypeOf_Expression' % self)
 
     def __repr__(self):
-        return "TypeOf " + safe_str_convert(self.item) + " Is " + safe_str_convert(self.the_type)
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = "TypeOf " + safe_str_convert(self.item) + " Is " + safe_str_convert(self.the_type)
+        return self.gloss
 
     def eval(self, context, params=None):
         context = context # pylint warning
@@ -4643,12 +4688,16 @@ class AddressOf_Expression(VBA_Object):
     
     def __init__(self, original_str, location, tokens):
         super(AddressOf_Expression, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.item = tokens.item
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as AddressOf_Expression' % self)
 
     def __repr__(self):
-        return "AddressOf " + safe_str_convert(self.item)
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = "AddressOf " + safe_str_convert(self.item)
+        return self.gloss
 
     def eval(self, context, params=None):
         context = context # pylint warning
@@ -4669,13 +4718,17 @@ class Excel_Expression(VBA_Object):
     
     def __init__(self, original_str, location, tokens):
         super(Excel_Expression, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.row = tokens.row
         self.col = tokens.col
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as Excel_Expression' % self)
 
     def __repr__(self):
-        return "[" + safe_str_convert(self.row) + ":" + safe_str_convert(self.col) + "]"
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = "[" + safe_str_convert(self.row) + ":" + safe_str_convert(self.col) + "]"
+        return self.gloss
 
     def eval(self, context, params=None):
         context = context # pylint warning
@@ -4699,12 +4752,16 @@ class Literal_List_Expression(VBA_Object):
     
     def __init__(self, original_str, location, tokens):
         super(Literal_List_Expression, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.item = tokens.item
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as Literal_List_Expression' % self)
 
     def __repr__(self):
-        return "[" + safe_str_convert(self.item) + "]"
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = "[" + safe_str_convert(self.item) + "]"
+        return self.gloss
 
     def eval(self, context, params=None):
         params = params # pylint warning
@@ -4729,11 +4786,14 @@ class Tuple_Expression(VBA_Object):
     
     def __init__(self, original_str, location, tokens):
         super(Tuple_Expression, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.expr_items = tokens.expr_items
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as Tuple_Expression' % self)
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         r = "("
         first = True
         for i in self.expr_items:
@@ -4742,7 +4802,8 @@ class Tuple_Expression(VBA_Object):
             first = False
             r += safe_str_convert(i)
         r += ")"
-        return r
+        self.gloss = r
+        return self.gloss
 
     def eval(self, context, params=None):
         # TODO: Fill this in if needed.

@@ -83,6 +83,7 @@ class Sub(VBA_Object):
     
     def __init__(self, original_str, location, tokens):
         super(Sub, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.name = tokens.sub_name
         self.params = tokens.params
         self.min_param_length = len(self.params)
@@ -101,7 +102,10 @@ class Sub(VBA_Object):
         log.info('parsed %r' % self)
 
     def __repr__(self):
-        return 'Sub %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = 'Sub %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
+        return self.gloss
 
     def to_python(self, context, params=None, indent=0):
 
@@ -450,6 +454,7 @@ class Function(VBA_Object):
     
     def __init__(self, original_str, location, tokens):
         super(Function, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.return_type = None
         if (hasattr(tokens, "return_type")):
             self.return_type = tokens.return_type
@@ -477,7 +482,10 @@ class Function(VBA_Object):
         log.info('parsed %r' % self)
 
     def __repr__(self):
-        return 'Function %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = 'Function %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
+        return self.gloss
 
     def to_python(self, context, params=None, indent=0):
         
@@ -823,6 +831,7 @@ class PropertyLet(Sub):
     
     def __init__(self, original_str, location, tokens):
         super(PropertyLet, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.name = tokens.property_name
         self.params = tokens.params
         self.min_param_length = len(self.params)
@@ -842,7 +851,10 @@ class PropertyLet(Sub):
         log.info('parsed %r' % self)
 
     def __repr__(self):
-        return 'Property Let %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = 'Property Let %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
+        return self.gloss
 
 # [ Public | Private | Friend ] [ Static ] Property Let name ( [ arglist ], value )
 # [ statements ]
@@ -868,6 +880,7 @@ class PropertyGet(Function):
 
     def __init__(self, original_str, location, tokens):
         super(PropertyGet, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.name = tokens.property_name
         self.params = tokens.params
         self.min_param_length = len(self.params)
@@ -887,7 +900,10 @@ class PropertyGet(Function):
         log.info('parsed %r' % self)
 
     def __repr__(self):
-        return 'Property Get %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = 'Property Get %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
+        return self.gloss
 
 property_get = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
                public_private + \

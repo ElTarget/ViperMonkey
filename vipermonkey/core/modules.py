@@ -121,6 +121,7 @@ class Module(VBA_Object):
 
         super(Module, self).__init__(original_str, location, tokens)
 
+        self.gloss = None
         self.name = None
         self.code = None  # set by ViperMonkey after parsing
         self.attributes = {}
@@ -182,6 +183,8 @@ class Module(VBA_Object):
         self.name = self.attributes.get('VB_Name', None)
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         r = 'Module %r\n' % self.name
         for sub_ in list(self.subs.values()):
             r += '  %r\n' % sub_
@@ -191,7 +194,8 @@ class Module(VBA_Object):
             r += '  %r\n' % extfunc
         for prop in list(self.props.values()):
             r += '  %r\n' % prop
-        return r
+        self.gloss = r
+        return self.gloss
 
     def eval(self, context, params=None):
 
@@ -316,15 +320,19 @@ class LooseLines(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(LooseLines, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.block = tokens.block
         log.info('parsed %r' % self)
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         s = repr(self.block)
         if (len(s) > 35):
-            s = s[:35] + " ...)"
-        return 'Loose Lines Block: %s: %s statement(s)' % (s, len(self.block))
-
+            s = s[:35] + " ...)"            
+        self.gloss = 'Loose Lines Block: %s: %s statement(s)' % (s, len(self.block))
+        return self.gloss
+        
     def to_python(self, context, params=None, indent=0):
         return to_python(self.block, context, indent=indent, statements=True)
     
