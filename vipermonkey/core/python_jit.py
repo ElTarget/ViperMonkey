@@ -652,7 +652,7 @@ def _updated_vars_to_python(loop, context, indent):
     if (log.getEffectiveLevel() == logging.DEBUG):
         save_vals += indent_str + "print(\"UPDATED VALS!!\")\n"
         save_vals += indent_str + "print(var_updates)\n"
-    save_vals += "\nfinal_var_updates = var_updates\n"
+    save_vals += "\n" + indent_str + "final_var_updates = var_updates\n"
     return save_vals
 
 def _get_all_called_funcs(item, context):
@@ -903,6 +903,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
     except Exception as e:
 
         #safe_print("REMOVE THIS!!")
+        #safe_print("-*-*-*-*-\n" + code_python + "\n-*-*-*-*-")
         #raise e
         
         # Cache the error.
