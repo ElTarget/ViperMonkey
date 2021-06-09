@@ -1806,12 +1806,7 @@ class For_Statement(VBA_Object):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
         else:
-            step = 1
-        try:
-            step = int(step)
-        except ValueError:
-            log.warn("Loop step value '" + safe_str_convert(self.step_value) + "' can't be converted to int. Assume 1.")
-            step = 1
+            step = "1"
             
         # Done.
         return (start, end, step)
@@ -1855,8 +1850,8 @@ class For_Statement(VBA_Object):
             return r
         
         # Set up doing this for loop in Python.
-        if (step < 0):
-            step = abs(step)
+        #if (step < 0):
+        #    step = abs(step)
         loop_start = indent_str + "exit_all_loops = False\n"
         loop_start += indent_str + loop_var + " = " + safe_str_convert(start) + "\n"
         loop_start += indent_str + "while (((" + loop_var + " <= coerce_to_int(" + safe_str_convert(end) + ")) and (" + safe_str_convert(step) + " > 0)) or " + \
