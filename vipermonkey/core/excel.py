@@ -44,7 +44,7 @@ https://github.com/decalage2/ViperMonkey
 __version__ = '0.03'
 
 #import traceback
-#import sys
+import sys
 from core.logger import log
 import logging
 import json
@@ -238,6 +238,7 @@ def load_excel_libreoffice(data):
     output = None
     try:
         output = subprocess.check_output(["timeout", "30", "python3", _thismodule_dir + "/../export_all_excel_sheets.py", out_dir])
+        output = safe_str_convert(output)
     except Exception as e:
         log.error("Running export_all_excel_sheets.py failed. " + safe_str_convert(e))
         os.remove(out_dir)
@@ -248,8 +249,7 @@ def load_excel_libreoffice(data):
     try:
         sheet_files = json.loads(output.replace("'", '"'))
     except Exception as e:
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Loading sheet file names failed. " + safe_str_convert(e))
+        log.error("Loading sheet file names failed. " + safe_str_convert(e))
         os.remove(out_dir)
         return None
 
@@ -350,7 +350,7 @@ def load_excel(data):
     """
 
     # Load the sheet with Libreoffice.
-    wb = load_excel_libreoffice(data)
+    wb = load_excel_libreoffice(data)    
     if (wb is not None):
 
         # Did we load sheets with libreoffice?
