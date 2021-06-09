@@ -921,20 +921,28 @@ class MemberAccessExpression(VBA_Object):
             return None
         return comments[index]
             
-    def _handle_count(self, curr_item):
+    def _handle_count(self, context, curr_item):
         """Handle references to the .Count field of the current item. Handles
         things like "foo.count".
 
         @param curr_item (any) The thing we may be getting the count
         of.
 
-        @return (any) If curr_item is a list and the current
-        expression is a .count reference, return the length of the
-        list (int), otherwise return None.
+        @return (any) If curr_item is something with a count of items
+        and the current expression is a .count reference, return the
+        length of the list (int), otherwise return None.
 
         """
+
+        # Got a list?
         if ((".count" in safe_str_convert(self).lower()) and (isinstance(curr_item, list))):
             return len(curr_item)
+
+        # Getting a count of Excel sheets?
+        if (("sheets.count" in safe_str_convert(self).lower()) and
+            (context.loaded_excel is not None)):
+            return len(context.loaded_excel.sheet_names())
+        
         return None
         
     def _handle_item(self, context, curr_item):
@@ -2865,7 +2873,7 @@ class MemberAccessExpression(VBA_Object):
                         
         # Handle getting the .Count of a data collection..
         #print("HERE: 19")
-        call_retval = self._handle_count(tmp_lhs)
+        call_retval = self._handle_count(context, tmp_lhs)
         if (call_retval is not None):
             #print("OUT: 16")
             return call_retval

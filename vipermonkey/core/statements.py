@@ -1741,8 +1741,8 @@ class For_Statement(VBA_Object):
         end = eval_arg(self.end_value, context=context)
         if (isinstance(end, str)):
             end = vba_conversion.int_convert(end)
-        if (end is None):
-            log.warning("Not emulating For loop. Loop end '" + safe_str_convert(self.end_value) + "' evaluated to None.")
+        if (not isinstance(end, int)):
+            log.warning("Not emulating For loop. Loop end '" + safe_str_convert(self.end_value) + "' evaluated to " + safe_str_convert(end))
             return (None, None, None)
 
         # The end value could be an unitialized variable. Set it here
