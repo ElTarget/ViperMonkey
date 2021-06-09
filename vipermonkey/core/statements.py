@@ -1764,7 +1764,7 @@ class For_Statement(VBA_Object):
                 log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
         else:
             step = 1
-
+            
         # Handle backwards loops.
         try:
             if ((start > end) and (step > 0)):
