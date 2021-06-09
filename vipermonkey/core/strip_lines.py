@@ -1492,7 +1492,7 @@ def replace_bad_chars(vba_code):
 
     # Characters that change how we modify the code.
     interesting_chars = [r'"', r'#', r"'", r"!", r"+", r"^",
-                         r"PAT:[\x7f-\xff]", ";", r"[", r"]", "&"]
+                         r"PAT:[^\x00-\x7e]", ";", r"[", r"]", "&"]
     
     # Replace bad characters unless they appear in a string.
     in_str = False
@@ -1841,7 +1841,7 @@ def fix_difficult_code(vba_code):
         print(vba_code)
     marker_strs = r"[!:&\^]|ElseIf|Rem|rem|REM|MultiByteToWideChar"
     if ((re.search(marker_strs, vba_code) is None) and
-        (re.search(r".*[\x7f-\xff].*", vba_code, re.DOTALL) is None) and
+        (re.search(r".*[^\x00-\x7e].*", vba_code, re.DOTALL) is None) and
         (re.search(r".*=\+.*", vba_code, re.DOTALL) is None)):
         return vba_code
 
