@@ -629,8 +629,8 @@ def _read_large_chunk(data, debug):
         chunk = _read_chunk(anchor, chunk_pat, data)
         if (chunk is not None):
             if debug:
-                print("\nCHUNK ANCHOR: '" + anchor + "'")
-                print("CHUNK PATTERN: '" + chunk_pat + "'")
+                print("\nCHUNK ANCHOR: '" + safe_str_convert(anchor) + "'")
+                print("CHUNK PATTERN: '" + safe_str_convert(chunk_pat) + "'")
             break
 
     # Did we find the value chunk?
@@ -643,7 +643,7 @@ def _read_large_chunk(data, debug):
     chunk = chunk[0]
 
     # Strip some red herring strings from the chunk.
-    chunk = chunk.replace("\x02$", "").replace("\x01@", "")
+    chunk = chunk.replace(b"\x02$", b"").replace(b"\x01@", b"")
 
     # Normalize Page object naming.
     page_name_pat = br"Page(\d+)(?:(?:\-\d+)|[a-zA-Z]+)"
@@ -680,20 +680,20 @@ def _read_raw_strs(chunk, stream_names, debug):
     for val in vals:
 
         # No wide char strings.
-        val = val.replace("\x00", "")
+        val = val.replace(b"\x00", b"")
         
         # Eliminate cruft.
         for cruft_pat in cruft_pats:
-            val = re.sub(cruft_pat, "", val)
+            val = re.sub(cruft_pat, b"", val)
             
         # Skip strings that were pure cruft.
         if (len(val) == 0):
             continue
             
         # Skip fonts and other things.
-        if ((val.startswith("Taho")) or
-            (val.startswith("PROJECT")) or
-            (val.startswith("_DELETED_NAME_"))):
+        if ((val.startswith(b"Taho")) or
+            (val.startswith(b"PROJECT")) or
+            (val.startswith(b"_DELETED_NAME_"))):
             continue
 
         # No stream names.
@@ -814,21 +814,21 @@ def _get_specific_values(chunk, stream_names, debug):
             val = tmp_val
             
         # No wide char strings.
-        val = val.replace("\x00", "")
+        val = val.replace(b"\x00", b"")
         
         # Eliminate cruft.
         for cruft_pat in cruft_pats:
-            val = re.sub(cruft_pat, "", val)
+            val = re.sub(cruft_pat, b"", val)
             
         # Skip strings that were pure cruft.
         if (len(val) == 0):
             continue
             
         # Skip fonts and other things.
-        if ((val.startswith("Taho")) or
-            (val.startswith("PROJECT")) or
-            (val.startswith("_DELETED_NAME_")) or
-            ("Normal.ThisDocument" in val)):
+        if ((val.startswith(b"Taho")) or
+            (val.startswith(b"PROJECT")) or
+            (val.startswith(b"_DELETED_NAME_")) or
+            (b"Normal.ThisDocument" in val)):
             continue
 
         # Skip duplicates.
@@ -888,7 +888,7 @@ def _get_specific_names(object_names, chunk, control_tip_var_names, debug):
     @param object_names (list) A list of the names (str) of the object fields
     referenced in the VBA code.
 
-    @param chunk (str) A chunk of OLE data containing OLE object names
+    @param chunk (bytes) A chunk of OLE data containing OLE object names
     and text values.
 
     @param control_tip_var_names (list) The names (str) of the control
@@ -904,16 +904,18 @@ def _get_specific_names(object_names, chunk, control_tip_var_names, debug):
 
     # Get names.
     name_pat1 = br"(?:(?:\x17\x00)|(?:\x00\x80))(\w{2,})"
-    name_pat = br"(?:" + name_pat1 + ")|("
+    name_pat = br"(?:" + name_pat1 + b")|("
     first = True
     for object_name in object_names:
+        if isinstance(object_name, str):
+            object_name = bytes(object_name, "latin-1")
         if (not first):
-            name_pat += "|"
+            name_pat += br"|"
         first = False
-        if ("." in object_name):
-            object_name = object_name[:object_name.index(".")]
+        if (b"." in object_name):
+            object_name = object_name[:object_name.index(b".")]
         name_pat += object_name
-    name_pat += ")"
+    name_pat += br")"
     names = re.findall(name_pat, chunk)
     if debug:
         print("\nORIG NAMES:")
@@ -926,7 +928,7 @@ def _get_specific_names(object_names, chunk, control_tip_var_names, debug):
             name = name[0]
         else:
             name = name[1]
-        if (name in control_tip_var_names):
+        if (safe_str_convert(name) in control_tip_var_names):
             continue
         # Skip duplicates.
         if (name in tmp_names):
@@ -1003,9 +1005,9 @@ def get_ole_textbox_values2(data, debug, vba_code, stream_names):
         # Real processing.
         else:
             val = var_vals[pos]
-            if (val.endswith('o')):
+            if (val.endswith(b'o')):
                 val = val[:-1]
-            elif (val.endswith("oe")):
+            elif (val.endswith(b"oe")):
                 val = val[:-2]
 
         # Save name/value mapping.
@@ -1325,7 +1327,7 @@ def _find_name_in_data(object_names, found_names, strs, debug):
             name = poss_name
             name_pos = curr_pos
             if debug:
-                print("\nFound referenced name: " + name)
+                print("\nFound referenced name: " + safe_str_convert(name))
             break
         curr_pos += 1
 
@@ -1601,7 +1603,7 @@ def get_ole_text_method_1(vba_code, data, debug=False):
     if debug1:
         print("LEN MAX STR: " + safe_str_convert(len(max_substs)))
         print("MAX REPEATS IN 1 STR: " + safe_str_convert(max_substs.count(repeated_subst)))
-        print("REPEATED STR: '" + repeated_subst + "'")
+        print("REPEATED STR: '" + safe_str_convert(repeated_subst + "'"))
     if ((len(max_substs) < 100) or (max_substs.count(repeated_subst) < 20)):
         if debug1:
             print("DONE!! TOO FEW REPEATED SUBSTRINGS!!")
@@ -1921,7 +1923,7 @@ def _guess_name_from_data(strs, field_marker, debug):
 
             # No name marker?
             if debug:
-                print("\nField: '" + safe_str_convert(field.replace("\x00", "")) + "'")
+                print("\nField: '" + safe_str_convert(field).replace("\x00", "") + "'")
             if (field.replace(b"\x00", b"") != name_marker):
                 # Move to the next field.
                 curr_pos += 1
@@ -1933,7 +1935,7 @@ def _guess_name_from_data(strs, field_marker, debug):
             # next field is not the name.                
             poss_name = strs[curr_pos + 1].replace("\x00", "")
             if debug:
-                print("\nTry: '" + poss_name + "'")
+                print("\nTry: '" + safe_str_convert(poss_name) + "'")
             if (poss_name.startswith("_") and poss_name[1:].isdigit()):
 
                 # Move to the next field.
@@ -1952,7 +1954,7 @@ def _guess_name_from_data(strs, field_marker, debug):
             name_pos = curr_pos + 1
             poss_name = strs[curr_pos + 2].replace("\x00", "")
             if debug:
-                print("\nTry: '" + poss_name + "'")
+                print("\nTry: '" + safe_str_convert(poss_name) + "'")
                             
             # Does the next field does not look something like '_1619423091'?
             if ((not poss_name.startswith("_")) or
@@ -1967,7 +1969,7 @@ def _guess_name_from_data(strs, field_marker, debug):
             if ((curr_pos + 3) < len(strs)):                                    
                 poss_name = strs[curr_pos + 3].replace("\x00", "")
                 if debug:
-                    print("\nTry: '" + poss_name + "'")
+                    print("\nTry: '" + safe_str_convert(poss_name) + "'")
 
                 # CompObj is not an object name.
                 if (poss_name != "CompObj"):
@@ -1979,7 +1981,7 @@ def _guess_name_from_data(strs, field_marker, debug):
             if ((curr_pos + 4) < len(strs)):
                 poss_name = strs[curr_pos + 4].replace("\x00", "")
                 if debug:
-                    print("\nTry: '" + poss_name + "'")
+                    print("\nTry: '" + safe_str_convert(poss_name) + "'")
 
                 # ObjInfo is not an object name.
                 if (poss_name != "ObjInfo"):
@@ -1991,7 +1993,7 @@ def _guess_name_from_data(strs, field_marker, debug):
             if ((curr_pos + 5) < len(strs)):
                 poss_name = strs[curr_pos + 5].replace("\x00", "")
                 if debug:
-                    print("\nTry: '" + poss_name + "'")
+                    print("\nTry: '" + safe_str_convert(poss_name) + "'")
 
                 # ObjInfo is not an object name.
                 if (poss_name != "ObjInfo"):
@@ -2060,7 +2062,7 @@ def _get_raw_text_for_name(name_pos, strs, chunk, debug):
                 text += poss_val.replace("\x00", "")
                 if debug:
                     print("\nValue: 3")
-                    print(poss_val.replace("\x00", ""))
+                    print(safe_str_convert(poss_val).replace("\x00", ""))
 
     # Pattern 2                    
     val_pat = r"\x00#\x00\x00\x00[^\x02]+\x02"
@@ -2162,7 +2164,7 @@ def _clean_text_for_name(chunk, name, text, object_names, stream_names, longest_
     if ((strip_name(text) in object_names) or
         (strip_name(text) in stream_names)):
         if debug:
-            print("\nBAD: Val is name '" + text + "'")
+            print("\nBAD: Val is name '" + safe_str_convert(text) + "'")
 
         # Hack. If the bad value is a Page* name and we have a really long strings from
         # the chunk, use those as the value.
@@ -2180,7 +2182,7 @@ def _clean_text_for_name(chunk, name, text, object_names, stream_names, longest_
             text = ""
         if debug:
             print(len(longest_str))
-            print("BAD: Set Val to '" + text + "'")
+            print("BAD: Set Val to '" + safe_str_convert(text) + "'")
 
     # Eliminate text values that look like binary chunks.
     text = text.replace("\x00", "")
@@ -2649,7 +2651,7 @@ def get_ole_textbox_values(obj, vba_code):
         # Remove sketchy characters from name.
         name = strip_name(name)
         if debug:
-            print("\nPossible Name: '" + name + "'")
+            print("\nPossible Name: '" + safe_str_convert(name) + "'")
         
         # Get a text value after the name if it looks like the following field
         # is not a font.
@@ -2666,7 +2668,7 @@ def get_ole_textbox_values(obj, vba_code):
         # Save the form name and text value.
         if ((text != "") or (not name.startswith(b"Page"))):
             if debug:
-                print("\nSET '" + name + "' = '" + text + "'")
+                print("\nSET '" + safe_str_convert(name) + "' = '" + safe_str_convert(text) + "'")
             r.append((name, text))
 
         # Save that we found something for this variable.
