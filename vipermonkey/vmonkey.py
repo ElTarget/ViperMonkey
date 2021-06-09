@@ -1144,7 +1144,10 @@ def main():
                       help="output also to a file in addition to standard out")
     parser.add_option("-b", "--tee-bytes", action="store", default=0, type="int",
                       help="number of bytes to limit the tee'd log to")
-
+    parser.add_option("-a", "--artifacts-dir", action="store", default=None, type="str",
+                      help="Top level Directory in which to store artifacts subdirectories containing files dropped during emulation. " +\
+                      "Default is ./ .")
+    
     (options, args) = parser.parse_args()
 
     # Print version information and exit?
@@ -1162,8 +1165,9 @@ def main():
     # logging.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(levelname)-8s %(message)s')
     colorlog.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(log_color)s%(levelname)-8s %(message)s')
 
+    # Do the emulation.
     json_results = []
-
+    curr_artifact_dir = options.artifacts_dir
     for container, filename, data in xglob.iter_files(args,
                                                       recursive=options.recursive,
                                                       zip_password=options.zip_password,
@@ -1188,7 +1192,8 @@ def main():
                          tee_log=options.tee_log,
                          tee_bytes=options.tee_bytes,
                          out_file_name=options.out_file,
-                         do_jit=options.do_jit)
+                         do_jit=options.do_jit,
+                         artifact_dir=curr_artifact_dir)
 
             # add json results to list
             if (options.out_file):
