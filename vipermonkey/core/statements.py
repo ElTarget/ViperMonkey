@@ -1726,7 +1726,7 @@ class For_Statement(VBA_Object):
         start = eval_arg(self.start_value, context=context)
         if (isinstance(start, str)):
             start = vba_conversion.int_convert(start)
-
+            
         # The start value could be an unitialized variable. Set it here
         # so that JIT generation will know it is an int.
         if isinstance(self.start_value, SimpleNameExpression):
@@ -1766,8 +1766,12 @@ class For_Statement(VBA_Object):
             step = 1
 
         # Handle backwards loops.
-        if ((start > end) and (step > 0)):
-            step = step * -1
+        try:
+            if ((start > end) and (step > 0)):
+                step = step * -1
+        except TypeError as e:
+            log.error("Cannot set loop step. " + str(e) + ". Not emulating loop.")
+            return (None, None, None)
 
         # Done.
         return (start, end, step)

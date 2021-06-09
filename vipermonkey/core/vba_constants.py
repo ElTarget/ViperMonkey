@@ -438,6 +438,32 @@ class VbaConstants(object):
         self.globals["wdUserTemplatesPath".lower()] = 2
         # Workgroup templates path.
         self.globals["wdWorkgroupTemplatesPath".lower()] = 3
+
+        # WdRevisionsMode Enum
+        #
+        # Specifies whether Microsoft Word displays balloons in the margin or inline with the document's text.
+        # Displays revisions in balloons in the left or right margin.
+        self.globals["wdBalloonRevisions".lower()] = 0	
+        # Displays revisions within the text using strikethrough for deletions and underlining for insertions. This is the default setting for prior versions of Word.
+        self.globals["wdInLineRevisions".lower()] = 1	
+        # Not supported.
+        self.globals["wdMixedRevisions".lower()] = 2	
+        
+        # WdTextFormFieldType Enum
+        #
+        # Specifies the text form field type.
+        # Calculation text field.
+        self.globals["wdCalculationText".lower()] = 5	
+        # Current date text field.
+        self.globals["wdCurrentDateText".lower()] = 3	
+        # Current time text field.
+        self.globals["wdCurrentTimeText".lower()] = 4	
+        # Date text field.
+        self.globals["wdDateText".lower()] = 2	
+        # Number text field.
+        self.globals["wdNumberText".lower()] = 1	
+        # Regular text field.
+        self.globals["wdRegularText".lower()] = 0	
         
         # WdDisableFeaturesIntroducedAfter enumeration (Word) 
         #    

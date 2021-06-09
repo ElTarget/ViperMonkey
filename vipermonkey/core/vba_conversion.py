@@ -65,7 +65,7 @@ def int_convert(arg, leave_alone=False):
         return arg
     
     # NULLs are 0.
-    if (arg == "NULL"):
+    if ((isinstance(arg, str)) and (arg.strip() == "NULL")):
         return 0
 
     # Empty strings are NULL.
