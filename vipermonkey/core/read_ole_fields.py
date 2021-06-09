@@ -1314,7 +1314,7 @@ def _find_name_in_data(object_names, found_names, strs, debug):
     name = None
     page_pat = br"(Page\d+)(?:[A-Za-z]+[A-Za-z0-9]*)?"
     for field in strs[::-1]:
-        poss_name = field.replace("\x00", "").replace("\xff", "").strip()
+        poss_name = field.replace(b"\x00", b"").replace(b"\xff", b"").strip()
         # Fix strings like "Page2M3A"
         if (re.search(page_pat, poss_name) is not None):
             poss_name = re.findall(page_pat, poss_name)[0]
@@ -1335,7 +1335,7 @@ def _find_name_in_data(object_names, found_names, strs, debug):
     name_pos = len(strs) - name_pos - 1 # handle reversed list.
     if (name is not None):
         curr_pos = -1
-        max_val = ""
+        max_val = b""
         for field in strs:
             curr_pos += 1
             if ((field == name) and
@@ -1782,7 +1782,7 @@ def _get_next_chunk(data, index, form_str, form_str_pat, end_object_marker):
     search_r = re.search(form_str_pat, data[index:])
     index = search_r.start() + index
     start = index + len(search_r.group(0))
-    while ((start < len(data)) and (ord(data[start]) in range(32, 127))):
+    while ((start < len(data)) and (ord(data[start:start+1]) in range(32, 127))):
         start += 1
 
     # More textbox forms?
@@ -1908,21 +1908,21 @@ def _guess_name_from_data(strs, field_marker, debug):
 
         # No. The name comes after an 'OCXNAME' or 'OCXPROPS' field. Figure out
         # which one.
-        name_marker = "OCXNAME"
+        name_marker = b"OCXNAME"
         for field in strs:
-            if (field.replace("\x00", "") == 'OCXPROPS'):
-                name_marker = "OCXPROPS"
+            if (field.replace(b"\x00", b"") == b'OCXPROPS'):
+                name_marker = b"OCXPROPS"
 
         # Now look for the name after the name marker.
         curr_pos = 0
         if debug:
-            print("\nName Marker: " + name_marker)
+            print("\nName Marker: " + safe_str_convert(name_marker))
         for field in strs:
 
             # No name marker?
             if debug:
-                print("\nField: '" + field.replace("\x00", "") + "'")
-            if (field.replace("\x00", "") != name_marker):
+                print("\nField: '" + safe_str_convert(field.replace("\x00", "")) + "'")
+            if (field.replace(b"\x00", b"") != name_marker):
                 # Move to the next field.
                 curr_pos += 1
                 continue
@@ -2293,7 +2293,9 @@ def _merge_ole_form_results(r, v1_vals, v1_1_vals):
         name = old_pair[0]
         val = old_pair[1]
         for cruft_pat in cruft_pats:
-            val = re.sub(cruft_pat, "", val)
+            if isinstance(val, str):
+                val = bytes(val, "latin-1")
+            val = re.sub(cruft_pat, b"", val)
         tmp.append((name, val))
     r = tmp
 

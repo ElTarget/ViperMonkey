@@ -333,7 +333,7 @@ def load_excel_xlrd(data):
         r = xlrd.open_workbook(file_contents=data)
         return r
     except Exception as e:
-        log.error("Reading in file as Excel with xlrd failed. " + safe_str_convert(e))
+        log.warning("Reading in file as Excel with xlrd failed. " + safe_str_convert(e))
         return None
 
 def load_excel(data):
