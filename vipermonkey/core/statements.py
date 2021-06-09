@@ -1850,8 +1850,6 @@ class For_Statement(VBA_Object):
             return r
         
         # Set up doing this for loop in Python.
-        #if (step < 0):
-        #    step = abs(step)
         loop_start = indent_str + "exit_all_loops = False\n"
         loop_start += indent_str + loop_var + " = " + safe_str_convert(start) + "\n"
         loop_start += indent_str + "while (((" + loop_var + " <= coerce_to_int(" + safe_str_convert(end) + ")) and (" + safe_str_convert(step) + " > 0)) or " + \
