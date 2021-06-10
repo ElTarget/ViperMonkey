@@ -92,14 +92,14 @@ def _read_sheet_from_csv(filename):
     # Open the CSV file.
     f = None
     try:
-        f = open(filename, 'r')
+        f = open(filename, 'rb')
     except Exception as e:
         log.error("Cannot open CSV file. " + safe_str_convert(e))
         return None
 
     # Read in the full CSV file contents and escape ',' in cell values
     # so the cell split works correctly. Also escape \n's in cell contents.
-    data = f.read()
+    data = safe_str_convert(f.read())
     f.close()
     in_str = False
     tmp = ""

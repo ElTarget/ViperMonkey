@@ -947,6 +947,8 @@ class Context(object):
             
             # Write out each byte.
             for b in byte_list:
+                if isinstance(b, int):
+                    b = chr(b)
                 self.open_files[fname] += b
             return True
         
