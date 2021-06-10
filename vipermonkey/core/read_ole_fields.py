@@ -860,7 +860,7 @@ def _get_specific_values(chunk, stream_names, debug):
         for s in var_vals[:5]:
             if (entropy(s) > 3.0):
                 num_random += 1
-            elif (s[0].isupper() and s[1:].islower()):
+            elif (s[0:1].isupper() and s[1:].islower()):
                 num_random += 1
         if (num_random >= 3):
             var_vals = var_vals[1:]
