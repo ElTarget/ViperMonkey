@@ -1726,6 +1726,8 @@ class For_Statement(VBA_Object):
         start = eval_arg(self.start_value, context=context)
         if (isinstance(start, str)):
             start = vba_conversion.int_convert(start)
+        if (start == "NULL"):
+            start = 0
             
         # The start value could be an unitialized variable. Set it here
         # so that JIT generation will know it is an int.
@@ -1741,6 +1743,8 @@ class For_Statement(VBA_Object):
         end = eval_arg(self.end_value, context=context)
         if (isinstance(end, str)):
             end = vba_conversion.int_convert(end)
+        if (end == "NULL"):
+            end = 0
         if (not isinstance(end, int)):
             log.warning("Not emulating For loop. Loop end '" + safe_str_convert(self.end_value) + "' evaluated to " + safe_str_convert(end))
             return (None, None, None)
@@ -1760,6 +1764,8 @@ class For_Statement(VBA_Object):
             step = eval_arg(self.step_value, context=context)
             if (isinstance(step, str)):
                 step = vba_conversion.int_convert(step)
+            if (step == "NULL"):
+                step = 0
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
         else:
