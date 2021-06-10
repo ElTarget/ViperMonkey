@@ -1783,7 +1783,14 @@ class MemberAccessExpression(VBA_Object):
         if (not context.contains(var_name)):
             context.set(var_name, b"", force_global=True)
         # Append current bytes to previously written bytes.
-        final_txt = context.get(var_name) + txt
+        var_val = context.get(var_name)
+        if isinstance(var_val, VBA_Object):
+            var_val = eval_arg(var_val, context)
+        var_val = bytes(safe_str_convert(var_val), "latin-1")
+        if isinstance(txt, VBA_Object):
+            txt = eval_arg(txt, context)
+        txt = bytes(safe_str_convert(txt), "latin-1")
+        final_txt = var_val + txt
         context.set(var_name, final_txt, force_global=True)
 
         # Save based on generic ADODB.Stream object.
