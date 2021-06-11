@@ -90,8 +90,8 @@ from random import randint
 from core import utils
 from core.utils import safe_str_convert
 
-#debug_strip = True
-debug_strip = False
+debug_strip = True
+#debug_strip = False
 
 def is_useless_dim(line):
     """See if we can skip this Dim statement and still successfully

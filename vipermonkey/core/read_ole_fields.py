@@ -1250,12 +1250,14 @@ def is_name(poss_name):
 
     # Basic check first. Must start with an alphabetic character and
     # be followed with regular printable characters.
-    name_pat = r"[a-zA-Z]\w*"
+    if isinstance(poss_name, str):
+        poss_name = bytes(poss_name, "latin-1")
+    name_pat = br"[a-zA-Z]\w*"
     if (re.match(name_pat, poss_name) is None):
         return False
 
     # Now see how many non-name garbage characters are in the string.
-    bad_chars = re.findall(r"[^A-Za-z0-9_]", poss_name)
+    bad_chars = re.findall(br"[^A-Za-z0-9_]", poss_name)
     return (len(bad_chars) < 5)
     
 def clean_names(names):
@@ -1878,6 +1880,9 @@ def _guess_name_from_data(strs, field_marker, debug):
     name_pos = None
     name = None
     curr_pos = 0
+    #print("+++++++++++")
+    #for s in strs:
+    #    print(type(s))
     for field in strs:
     
         # It might come after the 'Forms.TextBox.1' tag.
@@ -1887,10 +1892,10 @@ def _guess_name_from_data(strs, field_marker, debug):
             # next field is the name. CompObj does not count either.
             poss_name = None
             if ((curr_pos + 1) < len(strs)):
-                poss_name = strs[curr_pos + 1].replace("\x00", "").replace("\xff", "").strip()
-            skip_names = set(["contents", "ObjInfo", "CompObj"])
+                poss_name = strs[curr_pos + 1].replace(b"\x00", b"").replace(b"\xff", b"").strip()
+            skip_names = set([b"contents", b"ObjInfo", b"CompObj"])
             if ((poss_name is not None) and
-                ((not poss_name.startswith("_")) or
+                ((not poss_name.startswith(b"_")) or
                  (not poss_name[1:].isdigit())) and
                 (poss_name not in skip_names)):
     
@@ -1933,17 +1938,17 @@ def _guess_name_from_data(strs, field_marker, debug):
 
             # If the next field looks something like '_1619423091' the
             # next field is not the name.                
-            poss_name = strs[curr_pos + 1].replace("\x00", "")
+            poss_name = strs[curr_pos + 1].replace(b"\x00", b"")
             if debug:
                 print("\nTry: '" + safe_str_convert(poss_name) + "'")
-            if (poss_name.startswith("_") and poss_name[1:].isdigit()):
+            if (poss_name.startswith(b"_") and poss_name[1:].isdigit()):
 
                 # Move to the next field.
                 curr_pos += 1
                 continue
 
             # Got the name now?
-            if (poss_name != 'contents'):
+            if (poss_name != b'contents'):
 
                 # We have found the name.
                 name = poss_name
@@ -1952,12 +1957,12 @@ def _guess_name_from_data(strs, field_marker, debug):
             # If the string after 'OCXNAME' is 'contents' the actual name comes
             # after 'contents'
             name_pos = curr_pos + 1
-            poss_name = strs[curr_pos + 2].replace("\x00", "")
+            poss_name = strs[curr_pos + 2].replace(b"\x00", b"")
             if debug:
                 print("\nTry: '" + safe_str_convert(poss_name) + "'")
                             
             # Does the next field does not look something like '_1619423091'?
-            if ((not poss_name.startswith("_")) or
+            if ((not poss_name.startswith(b"_")) or
                 (not poss_name[1:].isdigit())):
 
                 # We have found the name.
@@ -1967,36 +1972,36 @@ def _guess_name_from_data(strs, field_marker, debug):
 
             # Try the next field.
             if ((curr_pos + 3) < len(strs)):                                    
-                poss_name = strs[curr_pos + 3].replace("\x00", "")
+                poss_name = strs[curr_pos + 3].replace(b"\x00", b"")
                 if debug:
                     print("\nTry: '" + safe_str_convert(poss_name) + "'")
 
                 # CompObj is not an object name.
-                if (poss_name != "CompObj"):
+                if (poss_name != b"CompObj"):
                     name = poss_name
                     name_pos = curr_pos + 3
                     break
 
             # And try the next field.
             if ((curr_pos + 4) < len(strs)):
-                poss_name = strs[curr_pos + 4].replace("\x00", "")
+                poss_name = strs[curr_pos + 4].replace(b"\x00", b"")
                 if debug:
                     print("\nTry: '" + safe_str_convert(poss_name) + "'")
 
                 # ObjInfo is not an object name.
-                if (poss_name != "ObjInfo"):
+                if (poss_name != b"ObjInfo"):
                     name = poss_name
                     name_pos = curr_pos + 4
                     break
 
             # Heaven help us all. Try the next one.
             if ((curr_pos + 5) < len(strs)):
-                poss_name = strs[curr_pos + 5].replace("\x00", "")
+                poss_name = strs[curr_pos + 5].replace(b"\x00", b"")
                 if debug:
                     print("\nTry: '" + safe_str_convert(poss_name) + "'")
 
                 # ObjInfo is not an object name.
-                if (poss_name != "ObjInfo"):
+                if (poss_name != b"ObjInfo"):
                     name = poss_name
                     name_pos = curr_pos + 5
                     break
@@ -2022,7 +2027,7 @@ def _get_raw_text_for_name(name_pos, strs, chunk, debug):
     @param debug (boolean) A flag indicating whether to print debug
     information.
     
-    @return (str) The text associated with the object with the name at
+    @return (bytes) The text associated with the object with the name at
     the given position. This will be an empty string if no associated
     text value is found.
 
@@ -2030,16 +2035,16 @@ def _get_raw_text_for_name(name_pos, strs, chunk, debug):
 
     # Get a text value after the name if it looks like the following field
     # is not a font.
-    text = ""
+    text = b""
     # This is not working quite right.
     if (name_pos + 1 < len(strs)):
-        asc_str = strs[name_pos + 1].replace("\x00", "").strip()
-        skip_names = set(["contents", "ObjInfo", "CompObj", None])
-        if (("Calibr" not in asc_str) and
-            ("OCXNAME" not in asc_str) and
+        asc_str = strs[name_pos + 1].replace(b"\x00", b"").strip()
+        skip_names = set([b"contents", b"ObjInfo", b"CompObj", None])
+        if ((b"Calibr" not in asc_str) and
+            (b"OCXNAME" not in asc_str) and
             (asc_str not in skip_names) and
-            (not asc_str.startswith("_DELETED_NAME_")) and
-            (re.match(r"_\d{10}", asc_str) is None)):
+            (not asc_str.startswith(b"_DELETED_NAME_")) and
+            (re.match(br"_\d{10}", asc_str) is None)):
             if debug:
                 print("\nValue: 1")
                 print(strs[name_pos + 1])
@@ -2052,23 +2057,23 @@ def _get_raw_text_for_name(name_pos, strs, chunk, debug):
                     print(strs[name_pos + 1])
 
     # Break out the (possible additional) value.
-    val_pat = r"(?:\x00|\xff)[\x20-\x7e]+[^\x00]*\x00+\x02\x18"
+    val_pat = br"(?:\x00|\xff)[\x20-\x7e]+[^\x00]*\x00+\x02\x18"
     vals = re.findall(val_pat, chunk)
     if (len(vals) > 0):
-        empty_pat = r"(?:\x00|\xff)#[^\x00]*\x00+\x02\x18"
+        empty_pat = br"(?:\x00|\xff)#[^\x00]*\x00+\x02\x18"
         if (len(re.findall(empty_pat, vals[0])) == 0):
-            poss_val = re.findall(r"[\x20-\x7e]+", vals[0][1:-2])[0]
+            poss_val = re.findall(br"[\x20-\x7e]+", vals[0][1:-2])[0]
             if ((poss_val != text) and (len(poss_val) > 1)):
-                text += poss_val.replace("\x00", "")
+                text += poss_val.replace(b"\x00", b"")
                 if debug:
                     print("\nValue: 3")
                     print(safe_str_convert(poss_val).replace("\x00", ""))
 
     # Pattern 2                    
-    val_pat = r"\x00#\x00\x00\x00[^\x02]+\x02"
+    val_pat = br"\x00#\x00\x00\x00[^\x02]+\x02"
     vals = re.findall(val_pat, chunk)
     if (len(vals) > 0):
-        tmp_text = re.findall(r"[\x20-\x7e]+", vals[0][2:-2])
+        tmp_text = re.findall(br"[\x20-\x7e]+", vals[0][2:-2])
         if (len(tmp_text) > 0):
             poss_val = tmp_text[0]
             if (poss_val != text):
@@ -2078,7 +2083,7 @@ def _get_raw_text_for_name(name_pos, strs, chunk, debug):
                 text += poss_val
 
     # Pattern 3
-    val_pat = r"([\x20-\x7e]{5,})\x00\x02\x0c\x00\x34"
+    val_pat = br"([\x20-\x7e]{5,})\x00\x02\x0c\x00\x34"
     vals = re.findall(val_pat, chunk)
     if (len(vals) > 0):
         for v in vals:
@@ -2088,7 +2093,7 @@ def _get_raw_text_for_name(name_pos, strs, chunk, debug):
                 print(v)
 
     # Pattern 4
-    val_pat = r"([\x20-\x7e]{5,})\x00{2,4}\x02\x0c"
+    val_pat = br"([\x20-\x7e]{5,})\x00{2,4}\x02\x0c"
     vals = re.findall(val_pat, chunk)
     if (len(vals) > 0):
         for v in vals:
@@ -2099,8 +2104,8 @@ def _get_raw_text_for_name(name_pos, strs, chunk, debug):
                 
     # Maybe big chunks of text after the name are part of the value?
     for pos in range(name_pos + 2, len(strs)):
-        curr_str = strs[pos].replace("\x00", "")
-        if ((len(curr_str) > 40) and (not curr_str.startswith("Microsoft "))):
+        curr_str = strs[pos].replace(b"\x00", b"")
+        if ((len(curr_str) > 40) and (not curr_str.startswith(b"Microsoft "))):
             text += curr_str
 
     # Done.
@@ -2110,7 +2115,7 @@ def _clean_text_for_name(chunk, name, text, object_names, stream_names, longest_
     """Clean up the text value associated with an object with a given
     name.
 
-    @param chunk (str) The OLE chunk being analyzed.
+    @param chunk (bytes) The OLE chunk being analyzed.
 
     @param name (str) The name of the object.
 
@@ -2137,63 +2142,63 @@ def _clean_text_for_name(chunk, name, text, object_names, stream_names, longest_
 
     # Pull out the size of the text.
     # Try version 1.
-    size_pat = r"\x48\x80\x2c\x03\x01\x02\x00(.{2})"
+    size_pat = br"\x48\x80\x2c\x03\x01\x02\x00(.{2})"
     tmp = re.findall(size_pat, chunk)
     if (len(tmp) == 0):
         # Try version 2.
-        size_pat = r"\x48\x80\x2c(.{2})"
+        size_pat = br"\x48\x80\x2c(.{2})"
         tmp = re.findall(size_pat, chunk)
     if (len(tmp) == 0):
         # Try version 3.
-        size_pat = r"\xf8\x00\x28\x00\x00\x00(.{2})"
+        size_pat = br"\xf8\x00\x28\x00\x00\x00(.{2})"
         tmp = re.findall(size_pat, chunk)
     if (len(tmp) == 0):
         # Try version 4.
-        size_pat = r"\x2c\x00\x00\x00\x1d\x00\x00\x00(.{2})"
+        size_pat = br"\x2c\x00\x00\x00\x1d\x00\x00\x00(.{2})"
         tmp = re.findall(size_pat, chunk)
     if (len(tmp) > 0):
         size_bytes = tmp[0]
-        size = ord(size_bytes[1]) * 256 + ord(size_bytes[0])
+        size = ord(size_bytes[1:2]) * 256 + ord(size_bytes[0:1])
         if (debug):
             print("SIZE: ")
             print(size)
-        if ((len(text) > size) and (not name.startswith("Page"))):
+        if ((len(text) > size) and (not name.startswith(b"Page"))):
             text = text[:size]
 
     # Eliminate text values that look like variable names.
-    if ((strip_name(text) in object_names) or
-        (strip_name(text) in stream_names)):
+    if ((safe_str_convert(strip_name(text)) in object_names) or
+        (safe_str_convert(strip_name(text)) in stream_names)):
         if debug:
             print("\nBAD: Val is name '" + safe_str_convert(text) + "'")
 
         # Hack. If the bad value is a Page* name and we have a really long strings from
         # the chunk, use those as the value.
-        if ((text.startswith("Page")) and (len(longest_str) > 30)):
-            tmp_str = ""
+        if ((text.startswith(b"Page")) and (len(longest_str) > 30)):
+            tmp_str = b""
             for field in orig_strs:
                 if ((len(field) > 20) and
-                    (not field.startswith("Microsoft "))):
-                    tmp_field = ""
-                    for s in re.findall(r"[\x20-\x7f]{5,}", field):
+                    (not field.startswith(b"Microsoft "))):
+                    tmp_field = b""
+                    for s in re.findall(br"[\x20-\x7f]{5,}", field):
                         tmp_field += s
                     tmp_str += tmp_field
             text = tmp_str
         else:
-            text = ""
+            text = b""
         if debug:
             print(len(longest_str))
             print("BAD: Set Val to '" + safe_str_convert(text) + "'")
 
     # Eliminate text values that look like binary chunks.
-    text = text.replace("\x00", "")
-    if (len(re.findall(r"[^\x20-\x7f]", text)) > 2):
+    text = text.replace(b"\x00", b"")
+    if (len(re.findall(br"[^\x20-\x7f]", text)) > 2):
         if debug:
             print("\nBAD: Binary in Val. Set to ''")
-        text = ""
+        text = b""
 
     # Eliminate form references.
-    if ((text.startswith("Forms.")) and (len(text) < 20)):
-        text = ""
+    if ((text.startswith(b"Forms.")) and (len(text) < 20)):
+        text = b""
 
     # Done.
     return text
