@@ -1205,11 +1205,13 @@ def main():
                         pass
 
     if (options.out_file):
-        with open(options.out_file, 'w') as json_file:
-            if (len(json_results) > 1):
-                json_file.write(json.dumps(json_results, indent=2))
+        if isinstance(json_results, list):
+            if (len(json_results) == 0):
+                json_results = {}
             else:
-                json_file.write(json.dumps(json_results[0], indent=2))
+                json_results = json_results[0]
+        with open(options.out_file, 'w') as json_file:
+            json_file.write(json.dumps(json_results, indent=2))
 
         log.info("Saved results JSON to output file " + options.out_file)
 
