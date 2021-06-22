@@ -1086,7 +1086,7 @@ def get_ole_textbox_values1(data, debug, stream_names):
 
     # Clear out some cruft that appears in the value chunk.
     ignore_pat = br"\[Host Extender Info\]\x0d\x0a&H\d+={[A-Z0-9\-]+};VBE;&H\d+\x0d\x0a&H\d+={[A-Z0-9\-]+}?"
-    chunk = re.sub(ignore_pat, "", chunk)
+    chunk = re.sub(ignore_pat, b"", chunk)
     if (b"\x00\x01\x01\x40\x80\x00\x00\x00\x00\x1b\x48\x80" in chunk):
         start = chunk.index("\x00\x01\x01\x40\x80\x00\x00\x00\x00\x1b\x48\x80")
         chunk = chunk[start+1:]
