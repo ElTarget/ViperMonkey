@@ -751,6 +751,8 @@ def _handle_control_tip_text(control_tip_var_names, vals, debug):
         print("\nCONTROL TIP PROCESSING:")
     for name in control_tip_var_names:
         pos = -1
+        if isinstance(name, str):
+            name = bytes(name, "latin-1")
         for str_val in vals:
             pos += 1
             if ((str_val.startswith(name)) and ((pos + 1) < len(vals))):
