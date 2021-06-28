@@ -4910,6 +4910,7 @@ class Redim_Statement(VBA_Object):
         indent = indent
         
         # TODO: Needs work.
+        log.warn("Python JIT of ReDim currently not supported.")
         return "ERROR: ReDim JIT generation needs work."
     # pylint: disable=pointless-string-statement
     """
