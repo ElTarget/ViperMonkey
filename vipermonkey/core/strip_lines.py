@@ -857,19 +857,23 @@ def fix_unhandled_named_params(vba_code):
                 log.warning("Named parameters are not currently handled. Commenting them out...")
                 line = line[:-1]
                 new_line = None
-
+                line_lower = line.strip().lower()
+                
                 # Is this call part of a With statement?
-                if (line.strip().lower().startswith("with ")):
+                if (line_lower.startswith("with ")):
 
                     # Replace the with line with a bogus line and hope for the best.
                     new_line = "\nWith UNHANDLED_NAMED_PARAMS_REPLACEMENT\n"
 
                 # Part of an If statement?
-                elif (line.strip().lower().startswith("if ")):
+                elif (line_lower.startswith("if ")):
 
                     # Replace the with line with a bogus line and hope for the best.
-                    new_line = "\n' UNHANDLED_NAMED_PARAMS_REPLACEMENT in If.\n'" + line.strip() + "\nIf 1=1 Then\n"                
-                
+                    if (line_lower.endswith("then")):
+                        new_line = "\n' UNHANDLED_NAMED_PARAMS_REPLACEMENT in If.\n'" + line.strip() + "\nIf 1=1 Then\n"                
+                    else:
+                        new_line = "\n' UNHANDLED_NAMED_PARAMS_REPLACEMENT in single line If.\n'" + line.strip() + "\n"
+
                 # Comment out entire line.
                 else:
                     new_line = re.sub(pat, r"\n' UNHANDLED NAMED PARAMS \1", line) + "\n"
@@ -1543,12 +1547,12 @@ def replace_bad_chars(vba_code):
             got_interesting = True
             break
 
-        #print "--------"
-        #print pos
-        #print "'" + c + "'"
-        #print got_interesting
-        #print "'" + prev_char + "'"
-        #print "'" + next_char + "'"
+        #print("--------")
+        #print(pos)
+        #print("'" + c + "'")
+        #print(got_interesting)
+        #print("'" + prev_char + "'")
+        #print("'" + next_char + "'")
         if (not got_interesting):
 
             # We are not. Fast forward to the nearest interesting character.
@@ -1567,9 +1571,9 @@ def replace_bad_chars(vba_code):
             for interesting_c in curr_interesting_chars:
 
                 # Regex comparison?
-                #print "@@@"
-                #print interesting_c
-                #print vba_code[pos:]
+                #print("@@@")
+                #print(interesting_c)
+                #print(vba_code[pos:])
                 index = None
                 if (interesting_c.startswith("PAT:")):
                     interesting_c = interesting_c[len("PAT:"):]
@@ -1591,16 +1595,16 @@ def replace_bad_chars(vba_code):
 
                 # Process the string starting at the interesting character we found.
                 poss_pos = index + pos
-                #print ">>>>>>>>>>>>>>>>>>"
-                #print "'" + interesting_c + "'"
-                #print pos
-                #print poss_pos
+                #print(">>>>>>>>>>>>>>>>>>")
+                #print("'" + interesting_c + "'")
+                #print(pos)
+                #print(poss_pos)
                 if (poss_pos < next_pos):
                     next_pos = poss_pos
 
             # Add in the chunk of characters that don't affect what we are doing.
             r += vba_code[pos:next_pos]
-            #print "ADDED: '" + vba_code[pos:next_pos] + "'"
+            #print("ADDED: '" + vba_code[pos:next_pos] + "'")
 
             # Jump to the position of the interesting character.
             pos = next_pos - 1
@@ -1610,7 +1614,7 @@ def replace_bad_chars(vba_code):
         if ((not in_comment) and (c == '"')):
             r += '"'
             in_str = not in_str
-            #print "IN_STR: " + safe_str_convert(in_str)
+            #print("IN_STR: " + safe_str_convert(in_str))
             continue
 
         # Handle entering/leaving [] expressions.
@@ -1651,16 +1655,16 @@ def replace_bad_chars(vba_code):
 
         # Handle entering/leaving comments.
         if ((not in_str) and (c == "'")):
-            #print "IN COMMENT"
+            #print("IN COMMENT")
             in_comment = True
         if (c == "\n"):
-            #print "OUT COMMENT"
+            #print("OUT COMMENT")
             in_comment = False
             r += "\n"
 
         # Don't change things in strings or comments or dates.
         if (in_str or in_comment or in_date):
-            #print "ADDED: '" + c + "'"
+            #print("ADDED: '" + c + "'")
             r += c
             continue
 
@@ -1871,6 +1875,9 @@ def fix_difficult_code(vba_code):
     # If utc_NegativeOffset Then: utc_Offset = -utc_Offset    
     vba_code = fix_weird_single_line_ifs(vba_code)
 
+    # Replace bad characters unless they appear in a string.
+    r = replace_bad_chars(vba_code)
+    
     # Replace the ':' in single line if statements so they don't get broken up.
     # Replace ':=' so they don't get modified.    
     vba_code, single_line_ifs = hide_colons(vba_code)    
@@ -1894,9 +1901,6 @@ def fix_difficult_code(vba_code):
     # multiple lines. Now fix some elseif lines if needed.
     # "ElseIf c >= 65 And c <= 90 Then f = 65"
     vba_code = fix_elseif_lines(vba_code)
-
-    # Replace bad characters unless they appear in a string.
-    r = replace_bad_chars(vba_code)
     
     # Put the #if macros back.
     r = r.replace("HASH__if", "#If")

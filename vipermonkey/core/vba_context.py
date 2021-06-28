@@ -513,7 +513,7 @@ class Context(object):
             return ""
 
         # We have the attribute. Return it.
-        r = getattr(self.metadata, var)
+        r = safe_str_convert(getattr(self.metadata, var))
 
         # Handle MS encoding of "\r" and "\n".
         r = r.replace("_x000d_.", "\r\n")
