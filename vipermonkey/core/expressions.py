@@ -749,7 +749,8 @@ class MemberAccessExpression(VBA_Object):
 
         # Pull out the table index and cell indices.
         # ActiveDocument.Tables(1).Cell(1, 1).Range
-        pat = r"\w+\.Tables\(\s*'(\w+)'\s*\)\.Cell\(\s*'(\w+)\s*,\s*(\w+)'\s*\).*"
+        # ThisDocument.Tables(((9 * 1) - 8)).Cell(z0J93ScF0e, ((9 * 7) - 62)).Range.Text
+        pat = r"\w+\.Tables\(\s*(.+)\s*\)\.Cell\(\s*([^\,]+)\s*\,\s*(.+)\s*\).*"
         indices = re.findall(pat, safe_str_convert(self))
         if (len(indices) == 0):
             return None
@@ -2732,7 +2733,14 @@ class MemberAccessExpression(VBA_Object):
         r = self._handle_usedrange_call(context)
         if (r is not None):
             return r
-            
+
+        # See if this is reading a table cell value.
+        #print "HERE: 1.1"
+        call_retval = self._handle_table_cell(context)
+        if (call_retval is not None):
+            #print "OUT: 0.1"
+            return call_retval
+        
         # 0 argument call to local function?
         #print("HERE: 2")
         r = self._handle_0_arg_call(context)
@@ -2870,14 +2878,7 @@ class MemberAccessExpression(VBA_Object):
         if (call_retval is not None):
             #print("OUT: 13")
             return call_retval
-                    
-        # See if this is reading a table cell value.
-        #print("HERE: 18")
-        call_retval = self._handle_table_cell(context)
-        if (call_retval is not None):
-            #print("OUT: 14")
-            return call_retval
-                        
+        
         # Handle getting the .Count of a data collection..
         #print("HERE: 19")
         call_retval = self._handle_count(context, tmp_lhs)
