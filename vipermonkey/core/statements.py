@@ -2317,7 +2317,7 @@ class For_Statement(VBA_Object):
                 context.throttle_logging = False
 
             # Break long running loops that appear to be generating a lot of errors.
-            if (context.get_general_errors() > (VBA_Object.loop_upper_bound/10000)):
+            if (context.get_general_errors() > (VBA_Object.loop_upper_bound/10)):
                 log.error("Loop is generating too many errors. Breaking loop.")
                 break
                 
@@ -2757,7 +2757,7 @@ class While_Statement(VBA_Object):
         
         # Set up doing this for loop in Python.
         loop_start = indent_str + "exit_all_loops = False\n"
-        loop_start += indent_str + "max_errors = " + safe_str_convert(VBA_Object.loop_upper_bound/10000) + "\n"
+        loop_start += indent_str + "max_errors = " + safe_str_convert(VBA_Object.loop_upper_bound/10) + "\n"
         loop_start += indent_str + "while " + until_pre + to_python(self.guard, context) + until_post + ":\n"
         loop_start += indent_str + " " * 4 + "if exit_all_loops:\n"
         loop_start += indent_str + " " * 8 + "break\n"
@@ -2780,7 +2780,7 @@ class While_Statement(VBA_Object):
         loop_body += "safe_print(\"Done \" + safe_str_convert(" + prog_var + ") + \" iterations of While loop '" + loop_str + "'\")\n"
         loop_body += indent_str + " " * 4 + prog_var + " += 1\n"
         # No infinite loops.
-        loop_body += indent_str + " " * 4 + "if (" + prog_var + " > " + safe_str_convert(VBA_Object.loop_upper_bound) + ") or " + \
+        loop_body += indent_str + " " * 4 + "if (" + prog_var + " > " + safe_str_convert(VBA_Object.loop_upper_bound/10) + ") or " + \
                      "(vm_context.get_general_errors() > max_errors):\n"
         loop_body += indent_str + " " * 8 + "raise ValueError('Infinite Loop')\n"
         loop_body += to_python(self.body, context, params=params, indent=indent+4, statements=True)
@@ -3329,7 +3329,7 @@ class Do_Statement(VBA_Object):
 
         # Set up doing this for loop in Python.
         loop_start = indent_str + "exit_all_loops = False\n"
-        loop_start += indent_str + "max_errors = " + safe_str_convert(VBA_Object.loop_upper_bound/10000) + "\n"
+        loop_start += indent_str + "max_errors = " + safe_str_convert(VBA_Object.loop_upper_bound/10) + "\n"
         loop_start += indent_str + "while (True):\n"
         loop_start += indent_str + " " * 4 + "if exit_all_loops:\n"
         loop_start += indent_str + " " * 8 + "break\n"
@@ -3352,7 +3352,7 @@ class Do_Statement(VBA_Object):
         loop_body += "safe_print(\"Done \" + str(" + prog_var + ") + \" iterations of Do While loop '" + loop_str + "'\")\n"
         loop_body += indent_str + " " * 4 + prog_var + " += 1\n"
         # No infinite loops.
-        loop_body += indent_str + " " * 4 + "if (" + prog_var + " > " + safe_str_convert(VBA_Object.loop_upper_bound) + ") or " + \
+        loop_body += indent_str + " " * 4 + "if (" + prog_var + " > " + safe_str_convert(VBA_Object.loop_upper_bound/10) + ") or " + \
                      "(vm_context.get_general_errors() > max_errors):\n"
         loop_body += indent_str + " " * 8 + "raise ValueError('Infinite Loop')\n"
         loop_body += to_python(self.body, context, params=params, indent=indent+4, statements=True)
