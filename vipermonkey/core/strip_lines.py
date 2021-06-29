@@ -1876,7 +1876,7 @@ def fix_difficult_code(vba_code):
     vba_code = fix_weird_single_line_ifs(vba_code)
 
     # Replace bad characters unless they appear in a string.
-    r = replace_bad_chars(vba_code)
+    vba_code = replace_bad_chars(vba_code)
     
     # Replace the ':' in single line if statements so they don't get broken up.
     # Replace ':=' so they don't get modified.    
@@ -1903,6 +1903,7 @@ def fix_difficult_code(vba_code):
     vba_code = fix_elseif_lines(vba_code)
     
     # Put the #if macros back.
+    r = vba_code
     r = r.replace("HASH__if", "#If")
     r = r.replace("HASH__else", "#Else")
     r = r.replace("HASH__endif", "#End If")
@@ -1924,7 +1925,7 @@ def fix_difficult_code(vba_code):
     r = r.replace("__COLON_EQUAL__", ":=")
     
     # Replace function calls being treated as labels.
-    vba_code = "\n" + vba_code
+    r = "\n" + r
     known_funcs = ["Randomize"]
     for func in known_funcs:
         r = r.replace("\n" + func + ":", "\n" + func)
