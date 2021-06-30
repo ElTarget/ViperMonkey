@@ -2032,6 +2032,7 @@ class Context(object):
 
                 # Something set to type "bin.hex"?
                 val = safe_str_convert(self.get(node_type)).strip()
+                conv_val = None
                 if (val.lower() == "bin.hex"):
 
                     # Try converting from hex.
@@ -2039,13 +2040,23 @@ class Context(object):
 
                         # Set the typed value of the node to the decoded value.
                         conv_val = codecs.decode(safe_str_convert(value).strip(), "hex")
-                        self.set(name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
                     except Exception as e:
                         log.warning("hex conversion of '" + safe_str_convert(value) + \
                                     "' FROM hex failed. Converting TO hex. " + safe_str_convert(e))
                         conv_val = to_hex(safe_str_convert(value).strip())
-                        self.set(name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
-                        
+
+                # Base64 conversion?
+                elif (val.lower() == "bin.base64"):
+                    conv_val = utils.b64_decode(value)
+
+                # Set the decoded value if we got one.
+                if (conv_val is not None):
+                    self.set(name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
+
+                    # Save the decoded value in the .Text field of the object.
+                    text_name = name[:name.rindex(".")] + ".Text"
+                    self.set(text_name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
+                    
             except KeyError:
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Did not find type var " + node_type)

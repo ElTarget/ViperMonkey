@@ -193,6 +193,7 @@ def get_vb_contents_from_hta(vba_code):
 
     # Fix some obfuscation if needed.
     # '&#86;'
+    vba_code = safe_str_convert(vba_code)
     if (re.search(r"&#\d{1,3};", vba_code) is not None):
         for i in range(0, 256):
             curr_c = chr(i)
@@ -213,7 +214,7 @@ def get_vb_contents_from_hta(vba_code):
             #    print(c)
             break
     if (len(code) == 0):
-        return vba_code        
+        return vba_code
 
     # We have script block VB code.    
     
@@ -624,8 +625,8 @@ def _get_vba_parser(data):
             log.debug("Creating VBA_PArser() Failed. Trying as HTA. " + safe_str_convert(e))
         
         # If that did not work see if we can pull HTA wrapped VB from the data.
-        extracted_data = get_vb_contents_from_hta(data)
-
+        extracted_data = bytes(get_vb_contents_from_hta(data), "latin-1")
+        
         # If this throws an exception it will get passed up.
         vba = VBA_Parser('', extracted_data, relaxed=True)
 

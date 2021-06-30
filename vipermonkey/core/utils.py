@@ -296,12 +296,7 @@ def b64_decode(value):
 
     try:
         # Make sure this is a potentially valid base64 string
-        tmp_str = ""
-        try:
-            tmp_str = list(filter(isascii, str(value).strip()))
-        except UnicodeDecodeError:
-            return None
-        tmp_str = tmp_str.replace(" ", "").replace("\x00", "")
+        tmp_str = safe_str_convert(value).replace(" ", "").replace("\x00", "")
         b64_pat = r"^[A-Za-z0-9+/=]+$"
         if (re.match(b64_pat, tmp_str) is not None):
             
@@ -312,7 +307,7 @@ def b64_decode(value):
         
             # Return the decoded value.
             conv_val = base64.b64decode(tmp_str)
-            return conv_val
+            return safe_str_convert(conv_val)
     
     # Base64 conversion error.
     except Exception:
