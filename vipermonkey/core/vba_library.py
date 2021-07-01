@@ -5024,8 +5024,9 @@ class Value(VbaLibraryFunc):
         r = cell
         if (isinstance(cell, dict) and ("value" in cell)):
             r = cell["value"]
-        #print "CELL VALUE!!"
-        #print r
+        #print("CELL VALUE!!")
+        #print("'" + utils.safe_str_convert(r) + "'")
+        #print(type(r))
         return r
 
 class UsedRange(VbaLibraryFunc):
@@ -5568,6 +5569,7 @@ class Print(VbaLibraryFunc):
 
         if (params[0] is not None):
             if (not context.throttle_logging):
+                data_str = utils.safe_str_convert(data_str).replace("\x00", "")
                 context.report_action("Debug Print", data_str, '')
 
 class Debug(Print):

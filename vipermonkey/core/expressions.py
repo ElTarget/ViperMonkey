@@ -83,6 +83,36 @@ from core.utils import safe_str_convert
 
 from core.logger import log
 
+def _is_numeric_op(op):
+    """See if a given VBA boolean operator expects numeric operands.
+
+    @param op (str) The VBA boolean operator.
+
+    @return (boolean) True if the argument to the op should be
+    numbers, False if they don't need to be numbers.
+
+    """
+    op_map = {
+        "Not" : False,
+        "And" : False,
+        "AndAlso" : False,
+        "Or" : False,
+        "OrElse" : False,
+        "Eqv" : False,
+        "=" : False,
+        ">" : True,
+        "<" : True,
+        ">=" : True,
+        "=>" : True,
+        "<=" : True,
+        "=<" : True,
+        "<>" : False,
+        "is" : False
+    }
+    if (op in op_map):
+        return op_map[op]
+    return False
+
 def _vba_to_python_op(op, is_boolean):
     """Convert a VBA boolean operator to a Python boolean operator or a
     Python bitwise operator.
@@ -513,7 +543,11 @@ class MemberAccessExpression(VBA_Object):
                 # This is not a VBA function call. Is it a variable reference? We can
                 # handle a variable reference if it is the last item on the stack.
                 if ((context.contains(obj_name)) and (len(obj_stack) == 0)):
+
+                    # If this is a synthetic value leave it as a variable.
                     curr_func = context.get(obj_name)
+                    if (curr_func == "__LOOP_VAR__"):
+                        curr_func = curr_obj
                 else:
                     return None
 
@@ -4233,9 +4267,12 @@ class BoolExprItem(VBA_Object):
         got_op = True
         if (self.op is not None):
             # LHS op RHS
-            expr_str = to_python(self.lhs, context, params) + " " + \
-                       self._vba_to_python_op(self.op, context) + " " + \
-                       to_python(self.rhs, context, params)
+            lhs_str = to_python(self.lhs, context, params)
+            rhs_str = to_python(self.rhs, context, params)
+            if _is_numeric_op(self.op):
+                lhs_str = "coerce_to_num(" + lhs_str + ")"
+                rhs_str = "coerce_to_num(" + rhs_str + ")"
+            expr_str = lhs_str + " " + self._vba_to_python_op(self.op, context) + " " + rhs_str
         elif (self.lhs is not None):
             got_op = False
             expr_str = to_python(self.lhs, context, params)

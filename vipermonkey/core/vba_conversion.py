@@ -298,6 +298,10 @@ def coerce_to_num(obj):
     # Do we have a string?
     if (isinstance(obj, str)):
 
+        # Strings are null terminated, so "" is 0.
+        if (len(obj) == 0):
+            return 0
+        
         # Stupid "123,456,7890" string where everything after the
         # 1st comma is ignored?
         dumb_pat = r"(?:\d+,)+\d+"
