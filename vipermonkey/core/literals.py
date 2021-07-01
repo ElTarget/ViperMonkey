@@ -125,7 +125,11 @@ class String(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(String, self).__init__(original_str, location, tokens)
         self.gloss = None
-        self.value = safe_str_convert(tokens[0]).encode("utf-8").decode("latin-1")
+        tmp_s = ""
+        #self.value = tokens[0].encode("utf-8").decode("latin-1")
+        for b in tokens[0].encode("utf-8"):
+            tmp_s += chr(b)
+        self.value = tmp_s
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed "%r" as String' % self)
 
