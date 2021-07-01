@@ -132,6 +132,7 @@ def get_ms_ascii_value(the_str):
     """
 
     # Sanity check.
+    print("ASCII!!")
     if ((not isinstance(the_str, str)) and (not isinstance(the_str, VbStr))):
         return ValueError("'" + safe_str_convert(the_str) + "' is not a string.")    
     
@@ -164,9 +165,13 @@ def get_ms_ascii_value(the_str):
             r = single_char_ord_fixes[r]
         
         # Punt and just return the code for the 1st char in the string.
+        print("PUNT!!")
+        print(r)
         return r
 
     # MS wide char. Return MS extended ASCII code.
+    print("WIDE ASC: " + the_str)
+    print("WIDE ASC: " + str(str_to_ascii_map[the_str]))
     return str_to_ascii_map[the_str]
     
 class VbStr(object):
@@ -379,6 +384,8 @@ class VbStr(object):
                     chars = ""
                     for bt in self.ascii_map[val][pos]:
                         chars += chr(bt)
+                    if (chars == '\xc3\x85'):
+                        chars = '\xc3'
                     self.vb_str.append(chars)
 
                 # ASCII char chunk.
