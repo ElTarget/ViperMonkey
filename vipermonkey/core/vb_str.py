@@ -132,7 +132,8 @@ def get_ms_ascii_value(the_str):
     """
 
     # Sanity check.
-    print("ASCII!!")
+    #print("ASCII!!")
+    #print("ASC: " + the_str)
     if ((not isinstance(the_str, str)) and (not isinstance(the_str, VbStr))):
         return ValueError("'" + safe_str_convert(the_str) + "' is not a string.")    
     
@@ -159,19 +160,22 @@ def get_ms_ascii_value(the_str):
     # Look up the MS extended ASCII code.
     if (the_str not in str_to_ascii_map):
 
+        # Hack.
+        if (the_str == "â"):
+            return 134
+        
         # Ugh. Some of these codes need to be fixed.
         r = ord(the_str[0])
         if (r in single_char_ord_fixes):
             r = single_char_ord_fixes[r]
         
         # Punt and just return the code for the 1st char in the string.
-        print("PUNT!!")
-        print(r)
+        #print("PUNT!!")
+        #print(r)
         return r
 
     # MS wide char. Return MS extended ASCII code.
-    print("WIDE ASC: " + the_str)
-    print("WIDE ASC: " + str(str_to_ascii_map[the_str]))
+    #print("WIDE ASC: " + str(str_to_ascii_map[the_str]))
     return str_to_ascii_map[the_str]
     
 class VbStr(object):
