@@ -1063,9 +1063,20 @@ class Mid(VbaLibraryFunc):
         else:
             r = vb_s.get_chunk(start - 1, start - 1 + length).to_python_str()
 
+        # Ugh. Fix some extended ASCII problems.
+        #bad_s = chr(0xc3) + chr(0x85)
+        #if (r == bad_s):
+        #    r = chr(0xc3)
+            
         # Done.
         if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug('Mid: return s[%d:%d]=%r' % (start - 1, start-1+length, r))
+            tmp_r = ""
+            for c in r:
+                if (ord(c) > 127):
+                    tmp_r += hex(ord(c)).replace("0x", "\\x")
+                else:
+                    tmp_r += c
+            log.debug('Mid: return s[%d:%d]=%r' % (start - 1, start-1+length, tmp_r))
         return r
 
     def num_args(self):

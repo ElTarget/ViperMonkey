@@ -385,7 +385,7 @@ class VbStr(object):
                 else:
                     for c in val:
                         self.vb_str.append(c)
-                
+                        
     def __repr__(self):
         r = ""
         for vb_c in self.vb_str:
