@@ -125,7 +125,7 @@ class String(VBA_Object):
     def __init__(self, original_str, location, tokens):
         super(String, self).__init__(original_str, location, tokens)
         self.gloss = None
-        self.value = tokens[0]        
+        self.value = safe_str_convert(tokens[0])
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed "%r" as String' % self)
 
