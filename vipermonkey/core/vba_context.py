@@ -881,8 +881,7 @@ class Context(object):
         if it failed.
 
         """
-        
-        
+                
         # Make sure the "file" exists.
         fname = safe_str_convert(fname)
         fname = fname.replace(".\\", "").replace("\\", "/")

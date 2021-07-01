@@ -1063,11 +1063,6 @@ class Mid(VbaLibraryFunc):
         else:
             r = vb_s.get_chunk(start - 1, start - 1 + length).to_python_str()
 
-        # Ugh. Fix some extended ASCII problems.
-        #bad_s = chr(0xc3) + chr(0x85)
-        #if (r == bad_s):
-        #    r = chr(0xc3)
-            
         # Done.
         if (log.getEffectiveLevel() == logging.DEBUG):
             tmp_r = ""
@@ -4207,7 +4202,7 @@ class WriteLine(VbaLibraryFunc):
         # TODO: Handle writing at a given file position.
 
         context.write_file(file_id, data)
-        context.write_file(file_id, b'\n')
+        context.write_file(file_id, '\n')
 
 class WriteText(VbaLibraryFunc):
     """Emulate File WriteText() method.
