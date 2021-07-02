@@ -2013,7 +2013,7 @@ class For_Statement(VBA_Object):
             return (None, None)
 
         # Are we just declaring a variable in the loop body?
-        body_raw = safe_str_convert(self.statements[0]).replace("Let ", "")
+        body_raw = safe_str_convert(self.statements[0]).replace("Let ", "").strip()
         body = body_raw.replace("(", "").replace(")", "").strip()
         if (body.startswith("Dim ")):
 
@@ -2068,7 +2068,8 @@ class For_Statement(VBA_Object):
         # Are we just modifying a single variable each loop iteration by a single literal value?
         #   VXjDxrfvbG0vUiQ = VXjDxrfvbG0vUiQ + 1
         #   v787311 = v787311 + v350504 - v979958
-        fields = body.split(" ")
+        body_raw = (body_raw + "\n").replace(")\n", "\n").replace("= (", "= ").strip()
+        fields = body_raw.split(" ")
         if (len(fields) < 5):
             return (None, None)
         op = fields[3].strip()
@@ -2078,6 +2079,10 @@ class For_Statement(VBA_Object):
         if (op not in ['+', '-', '*']):
             return (None, None)
 
+        # Skip loops that are updating an array.
+        if (("(" in var) and (")" in var)):
+            return (None, None)
+        
         # Skip loops where the computation depends on the loop
         # index.
         for f in fields[2:]:
@@ -2119,8 +2124,8 @@ class For_Statement(VBA_Object):
             init_val = 0
 
         # Figure out the # of loop iterations that will run.
-        num_iters = (end - start + 1)/step
-            
+        num_iters = int((end - start + 1)/step)
+        
         # We are just modifying a variable each time. Figure out the final
         # value of the variable modified in the loop.
         try:
