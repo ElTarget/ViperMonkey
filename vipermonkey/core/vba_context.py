@@ -1673,13 +1673,25 @@ class Context(object):
         """
 
         global num_b64_iocs
+
+        # The given value may be a list. Process each item.
+        print("TYPE!@!!")
+        print(safe_str_convert(value)[:50])
+        print(type(value))
+        if (isinstance(value, list)):
+            print("START LIST!!")
+            for v in value:
+                self.save_intermediate_iocs(v)
+            #return
+            print("DONE LIST!!")
         
         # Strip NULLs and unprintable characters from the potential IOC.
-        value = utils.strip_nonvb_chars(value)
+        value = utils.strip_nonvb_chars(safe_str_convert(value))
         if (len(re.findall(r"NULL", safe_str_convert(value))) > 20):
-            value = safe_str_convert(value).replace("NULL", "")
+            value = value.replace("NULL", "")
 
         # Is there a URL in the data?
+        pulled_iocs = set()
         got_ioc = False
         URL_REGEX = r'.*([hH][tT][tT][pP][sS]?://(([a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(:[0-9]+)?)+(/([/\?&\~=a-zA-Z0-9_\-\.](?!http))+)?)).*'
         value = safe_str_convert(value).strip()
@@ -1689,7 +1701,7 @@ class Context(object):
         if (re.match(URL_REGEX, value) is not None):
             if (value not in intermediate_iocs):
                 got_ioc = True
-                log.info("Found possible intermediate IOC (URL): '" + tmp_value + "'")
+                pulled_iocs.add(tmp_value)
 
         # Is there base64 in the data? Don't track too many base64 IOCs.
         if ((num_b64_iocs < 200) and (value not in intermediate_iocs)):
@@ -1699,24 +1711,35 @@ class Context(object):
                 if (len(curr_value) > 100):
                     got_ioc = True
                     num_b64_iocs += 1
-                    log.info("Found possible intermediate IOC (base64): '" + curr_value + "'")
+                    pulled_iocs.add(curr_value)
+                    print("B64!!!")
+                    print(curr_value)
 
         # Did we find anything?
+        print("GOT IOC 1!!")
+        print(got_ioc)
         if (not got_ioc):
             return
 
         # Is this new and interesting?
         iocs_to_delete = set()
-        got_ioc = True
+        got_ioc = False
+        tmp_iocs = set()
         for old_value in intermediate_iocs:
-            if (value.startswith(old_value)):
-                iocs_to_delete.add(old_value)
-            if ((old_value.startswith(value)) and (len(old_value) > len(value))):
-                got_ioc = False
+            for new_value in pulled_iocs:
+                if (new_value.startswith(old_value)):
+                    iocs_to_delete.add(old_value)
+                if (not ((old_value.startswith(new_value)) and (len(old_value) > len(new_value)))):
+                    got_ioc = True
+                    tmp_iocs.add(new_value)
 
+        print("GOT IOC 2!!")
+        print(got_ioc)                    
         # Add the new IOC if it is interesting.
         if (got_ioc):
-            intermediate_iocs.add(value)
+            for new_value in pulled_iocs:
+                log.info("Found possible intermediate IOC: '" + new_value + "'")
+                intermediate_iocs.add(new_value)
             
         # Delete old IOCs if needed.
         for old_ioc in iocs_to_delete:
