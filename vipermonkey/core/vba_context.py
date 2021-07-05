@@ -1675,15 +1675,10 @@ class Context(object):
         global num_b64_iocs
 
         # The given value may be a list. Process each item.
-        print("TYPE!@!!")
-        print(safe_str_convert(value)[:50])
-        print(type(value))
         if (isinstance(value, list)):
-            print("START LIST!!")
             for v in value:
                 self.save_intermediate_iocs(v)
-            #return
-            print("DONE LIST!!")
+            return
         
         # Strip NULLs and unprintable characters from the potential IOC.
         value = utils.strip_nonvb_chars(safe_str_convert(value))
@@ -1712,29 +1707,23 @@ class Context(object):
                     got_ioc = True
                     num_b64_iocs += 1
                     pulled_iocs.add(curr_value)
-                    print("B64!!!")
-                    print(curr_value)
 
         # Did we find anything?
-        print("GOT IOC 1!!")
-        print(got_ioc)
         if (not got_ioc):
             return
 
         # Is this new and interesting?
         iocs_to_delete = set()
-        got_ioc = False
+        got_ioc = (len(intermediate_iocs) == 0)
         tmp_iocs = set()
         for old_value in intermediate_iocs:
             for new_value in pulled_iocs:
-                if (new_value.startswith(old_value)):
+                if (new_value.startswith(old_value) and (new_value != old_value)):
                     iocs_to_delete.add(old_value)
                 if (not ((old_value.startswith(new_value)) and (len(old_value) > len(new_value)))):
                     got_ioc = True
                     tmp_iocs.add(new_value)
 
-        print("GOT IOC 2!!")
-        print(got_ioc)                    
         # Add the new IOC if it is interesting.
         if (got_ioc):
             for new_value in pulled_iocs:

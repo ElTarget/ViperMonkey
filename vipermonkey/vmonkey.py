@@ -580,9 +580,6 @@ def _remove_duplicate_iocs(iocs):
     for ioc1 in iocs:
         
         # Does this IOC look like straight up garbage?
-        print("IOC!!")
-        print(ioc1)
-        print(type(ioc1))
         ioc1 = safe_str_convert(ioc1)
         if (read_ole_fields.is_garbage_vba(ioc1, test_all=True, bad_pct=.25)):
             skip.add(ioc1)
