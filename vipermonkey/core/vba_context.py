@@ -1203,7 +1203,8 @@ class Context(object):
                 log.debug('Found %r in globals (%r)' % (name, type(self.globals[name])))
             if is_change_handler: self.has_change_handler[change_name] = True
             self.name_cache[orig_name] = name
-            return self.globals[name]
+            r = self.globals[name]
+            return r
 
         # next, search in the global VBA library:
         elif ((not local_only) and (name in VBA_LIBRARY)):
@@ -1685,18 +1686,23 @@ class Context(object):
         if (len(re.findall(r"NULL", safe_str_convert(value))) > 20):
             value = value.replace("NULL", "")
 
+        # If the value is too short or it is an integer we are not interested in it.
+        if ((len(value) < 10) or (value.isdigit())):
+            return
+            
         # Is there a URL in the data?
         pulled_iocs = set()
         got_ioc = False
-        URL_REGEX = r'.*([hH][tT][tT][pP][sS]?://(([a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(:[0-9]+)?)+(/([/\?&\~=a-zA-Z0-9_\-\.](?!http))+)?)).*'
-        value = safe_str_convert(value).strip()
-        tmp_value = value
-        if (len(tmp_value) > 100):
-            tmp_value = tmp_value[:100] + " ..."
-        if (re.match(URL_REGEX, value) is not None):
-            if (value not in intermediate_iocs):
-                got_ioc = True
-                pulled_iocs.add(tmp_value)
+        if ("http" in value.lower()):
+            URL_REGEX = r'.*([hH][tT][tT][pP][sS]?://(([a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(:[0-9]+)?)+(/([/\?&\~=a-zA-Z0-9_\-\.](?!http))+)?)).*'
+            value = safe_str_convert(value).strip()
+            tmp_value = value
+            if (len(tmp_value) > 100):
+                tmp_value = tmp_value[:100] + " ..."
+            if (re.match(URL_REGEX, value) is not None):
+                if (value not in intermediate_iocs):
+                    got_ioc = True
+                    pulled_iocs.add(tmp_value)
 
         # Is there base64 in the data? Don't track too many base64 IOCs.
         if ((num_b64_iocs < 200) and (value not in intermediate_iocs)):

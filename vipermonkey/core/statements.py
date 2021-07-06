@@ -1449,7 +1449,7 @@ class Let_Statement(VBA_Object):
                 if (value != "NULL"):
 
                     # Parse the expression to see if it can be resolved to an integer.
-                    num = "not an integer"
+                    num = "not an integer"                    
                     try:
                         expr = expression.parseString(value, parseAll=True)[0]
                         num = safe_str_convert(expr)
@@ -1485,7 +1485,7 @@ class Let_Statement(VBA_Object):
 
                 # Not a goofy function call. Assume this is an undefined array variable.
                 arr_var = []
-                
+
             if ((not isinstance(arr_var, list)) and (not isinstance(arr_var, str))):
 
                 # We are wiping out whatever value this had.
