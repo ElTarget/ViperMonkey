@@ -4371,8 +4371,10 @@ class BoolExprItem(VBA_Object):
 
         # Always evaluate to true if comparing against a wildcard.
         # We will treat logic looking at the current file name as a wildcard also.
-        rhs = utils.strip_nonvb_chars(rhs)
-        lhs = utils.strip_nonvb_chars(lhs)
+        if hasattr(rhs, "strip"):
+            rhs = utils.strip_nonvb_chars(rhs)
+        if hasattr(rhs, "strip"):
+            lhs = utils.strip_nonvb_chars(lhs)
         rhs_str = safe_str_convert(rhs)
         lhs_str = safe_str_convert(lhs)
         if (("**MATCH ANY**" in lhs_str) or
@@ -4406,7 +4408,7 @@ class BoolExprItem(VBA_Object):
             return context.wildcard_match_value
 
         # Evaluate the expression.
-        r = False
+        r = False        
         if ((self.op.lower() == "=") or
             (self.op.lower() == "is")):            
             r = lhs == rhs
