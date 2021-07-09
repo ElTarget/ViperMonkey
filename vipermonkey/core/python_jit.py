@@ -833,7 +833,10 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
         ("Eval(" in code_vba)):
         log.warning("Loop Execute()s dynamic code. Not JIT emulating.")
         return False
-
+    if (".Item(" in code_vba):
+        log.warning("Loop references forms with .Item(). Not JIT emulating.")
+        return False
+        
     # The emulation of .WriteText() uses a synthetic variable in the context,
     # so it does not work cleanly in the Python JIT code.
     if ('.WriteText(' in code_vba):
