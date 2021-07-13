@@ -15,7 +15,7 @@ and [video](https://youtu.be/l5sMPGjtKn0?list=PLH15HpR5qRsXiPOP3gxN6ultoj0rAR6Yn
 ViperMonkey was created by [Philippe Lagadec](https://github.com/decalage2) in 2015-2016, and the project
 is maintained in the repository https://github.com/decalage2/ViperMonkey. 
 Since November 2017, most of the development is done by [Kirk Sayre](https://github.com/kirk-sayre-work) 
-and other contributors in the repository https://github.com/kirk-sayre-work/ViperMonkey. 
+and other contributors in the repository https://github.com/kirk-sayre-work/ViperMonkey/tree/python3_port. 
 The main repository is synchronised regularly, but cutting edge improvements are usually
 available first in Kirk's version.
 
@@ -55,7 +55,7 @@ For performance reasons, it is highly recommended to use PyPy (5x faster), but i
 also possible to run Vipermonkey with the normal Python interpreter
 (CPython) if you cannot use PyPy.
 
-1. If PyPy is not installed on your system, see http://pypy.org/download.html and download **PyPy 2.7**. (not 3.x)
+1. If PyPy is not installed on your system, see http://pypy.org/download.html and download **PyPy 3.7**. (not 2.x)
 2. Check if pip is installed for pypy: run `pypy -m pip`
 3. If pip is not installed yet, run `pypy -m ensurepip` on Windows, or `sudo -H pypy -m ensurepip` on Linux/Mac
 4. Make sure pip is up-to-date, by running `pypy -m pip install -U pip`
@@ -67,9 +67,9 @@ also possible to run Vipermonkey with the normal Python interpreter
 
 **Installation using CPython**
 
-1. Make sure you have the latest Python 2.7 installed: https://www.python.org/downloads/
-2. If you have both Python 2 and 3 versions installed, use `pip2` instead of `pip` in the 
-   following commands, to install in Python 2 and not 3.
+1. Make sure you have the latest Python 3.7 installed: https://www.python.org/downloads/
+2. If you have both Python 2 and 3 versions installed, use `pip3` instead of `pip` in the 
+   following commands, to install in Python 3 and not 2.
 4. Make sure pip is up-to-date, by running `pip install -U pip`
 2. Use pip to download and install vipermonkey with all its dependencies,
    by running the following command on Windows:
