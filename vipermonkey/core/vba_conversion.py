@@ -287,10 +287,13 @@ def coerce_to_num(obj):
     converted to a number.
 
     """
-    # in VBA, Null/None is equivalent to 0
-    if ((obj is None) or (obj == "NULL")):
-        return 0
 
+    # in VBA, Null/None is equivalent to 0
+    if ((obj is None) or
+        (obj == "NULL") or
+        (safe_str_convert(obj).strip() == "")):
+        return 0
+    
     # Already have float or int?
     if isinstance(obj, (float, int)):
         return obj

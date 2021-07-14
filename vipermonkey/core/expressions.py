@@ -100,12 +100,12 @@ def _is_numeric_op(op):
         "OrElse" : False,
         "Eqv" : False,
         "=" : False,
-        ">" : True,
-        "<" : True,
-        ">=" : True,
-        "=>" : True,
-        "<=" : True,
-        "=<" : True,
+        ">" : "|gt|",
+        "<" : "|lt|",
+        ">=" : "|gte|",
+        "=>" : "|gte|",
+        "<=" : "|lte|",
+        "=<" : "|lte|",
         "<>" : False,
         "is" : False
     }
