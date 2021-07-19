@@ -603,7 +603,6 @@ def fix_skipped_1st_arg2(vba_code):
 
     # Skipped this if unneeded.
     plus_pat = r"\+ *\+"
-    print(re.findall(plus_pat, vba_code))
     if ((re.search(r".*\n\s*([0-9a-zA-Z_\.\(\)]+)\s*,.*", vba_code, re.DOTALL) is None) and
         (re.search(plus_pat, vba_code) is None)):
         #print "SKIPPED!!"
