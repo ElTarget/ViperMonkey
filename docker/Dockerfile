@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y \
 	git\
 	wget=1.19.4-1ubuntu2.2\
 	build-essential \
+        zip\
 	file\
 	libpython-dev\
 	zlib1g-dev\
@@ -61,3 +62,10 @@ RUN cd /opt/ && git clone -b python3_port https://github.com/kirk-sayre-work/Vip
 
 # Install the pypy3 ViperMonkey packages.
 RUN pypy3 -m pip install -r /opt/ViperMonkey/requirements.txt
+
+# Get rid of old get-pip.py file.
+RUN rm -f /opt/get-pip.py
+
+# For testing. Keeps the container up and running so you can shell
+# into it. Comment this out for prod.
+#RUN bash -c "while true; do echo 'Keeping container alive ...'; sleep 10; done"
