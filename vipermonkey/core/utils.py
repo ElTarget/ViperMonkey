@@ -60,12 +60,16 @@ from logging import FileHandler
 def _test_char(c):
     if isinstance(c, int):
         c = chr(c)
-    return isprint(c)
+    return (isprint(c) or (c in "\t\n"))
         
-def safe_str_convert(s):
+def safe_str_convert(s, strict=False):
     """Convert a string to ASCII without throwing a unicode decode error.
 
     @param s (any) The thing to convert to a str.
+
+    @param strict (boolean) If True make sure that there are no
+    unprintable characters in the given string (if s is a str). If
+    False do no modification of a given str.
 
     @return (str) The given thing as a string.
 
@@ -81,7 +85,14 @@ def safe_str_convert(s):
         # Handle bytes-like objects.
         if isinstance(s, bytes):
             s = s.decode('latin-1')            
+
+        # Strip unprintable characters if needed.
+        if (strict and isinstance(s, str)):
+            s = ''.join(list(filter(_test_char, s)))
+
+        # Done.
         return str(s)
+    
     except (UnicodeDecodeError, UnicodeEncodeError, SystemError):
         if isinstance(s, bytes):
             r = ""

@@ -15,6 +15,9 @@ ENV PYTHONPATH=/opt/ViperMonkey/vipermonkey
 #
 # Package list needed for python3-uno taken from https://pypi.org/project/unotools/
 RUN apt-get update && apt-get install -y \
+        apt-utils \
+	git\
+	wget=1.19.4-1ubuntu2.2\
 	build-essential \
 	file\
 	libpython-dev\

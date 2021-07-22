@@ -1069,7 +1069,11 @@ class Context(object):
         if isinstance(raw_data, bytes):
             file_hash = sha256(raw_data).hexdigest()
         else:
-            file_hash = sha256(bytes(raw_data, "latin-1")).hexdigest()
+            try:
+                file_hash = sha256(bytes(raw_data, "latin-1")).hexdigest()
+            except UnicodeEncodeError:
+                raw_data = safe_str_convert(raw_data, strict=True)
+                file_hash = sha256(bytes(raw_data, "latin-1")).hexdigest()
 
         # TODO: Set a flag to control whether to dump file contents.
 
