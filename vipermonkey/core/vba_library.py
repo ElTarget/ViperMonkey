@@ -5142,7 +5142,7 @@ class Range(VbaLibraryFunc):
             col_incr = (end_col - start_col)/abs(end_col - start_col)
         curr_row = start_row
         #print "=========== READ CELLS!!! ================"
-        while (curr_row != end_row):
+        while True:
             curr_col = start_col
             while True:
                 val = None
