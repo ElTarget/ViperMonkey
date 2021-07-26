@@ -1623,7 +1623,7 @@ def get_ole_text_method_1(vba_code, data, debug=False):
     if debug1:
         print("LEN MAX STR: " + safe_str_convert(len(max_substs)))
         print("MAX REPEATS IN 1 STR: " + safe_str_convert(max_substs.count(repeated_subst)))
-        print("REPEATED STR: '" + safe_str_convert(repeated_subst + "'"))
+        print("REPEATED STR: '" + safe_str_convert(repeated_subst) + "'")
     if ((len(max_substs) < 100) or (max_substs.count(repeated_subst) < 20)):
         if debug1:
             print("DONE!! TOO FEW REPEATED SUBSTRINGS!!")
@@ -3564,6 +3564,41 @@ def _read_doc_vars(data, fname):
     # TODO: implement read_doc_vars for those formats
     return _make_elems_str(r)
 
+def _get_embedded_files(data, vm):
+    """Pull out what appear to be embedded files from the given
+    document. This gets the original short file name, original long
+    file name, and file contents for each embedded file.
+
+    @param data (bytes) The read in Office file (data).
+
+    @param vm (ViperMonkey object) The ViperMonkey emulation engine
+    object that will do the emulation. The read values will be saved
+    in the given emulation engine.
+
+    The results are saved in the engine's embedded_files field as a
+    list of 3 element tuples where the 1st element is the original
+    short name (str) of the embedded file, the 2nd element is the
+    original long name (str) of the embedded file, and the 3rd element
+    is the file contents.
+
+    """
+
+    # Ugly ugly regex to pull this info from an Office 97 file.
+    log.info("Finding embedded files...")
+    embedded_file_pat = rb"\x02\x00\x02\x00([ -~]{10,200})[^ -~]{1,20}([ -~]{10,200})[^ -~]{1,20}(?:[ -~]?[^ -~]{1,20}){0,5}(?:[ -~]{1,9}?[^ -~]{1,20}){0,5}([ -~]{4,200})" + \
+    rb"[^ -~]{1,20}(?:[ -~]{1,9}?[^ -~]{1,20}){0,5}((?:[ -~]|\n|\r|\t){30,})"
+
+    # Get any file information.
+    matches = re.findall(embedded_file_pat, data)
+    vm.embedded_files = []
+    for info in matches:
+        short_name = info[0]
+        long_name = info[1]
+        embed_contents = info[3][:-1]
+        vm.embedded_files.append((short_name, long_name, embed_contents))
+
+    # Done.
+    
 def _get_inlineshapes_text_values(data):
     """Read in the text associated with InlineShape objects in the
     document. NOTE: This currently is a hack.
@@ -4562,6 +4597,9 @@ def read_payload_hiding_places(data, orig_filename, vm, vba_code, vba):
     # Pull text associated with Shapes() objects.
     _read_payload_shape_text(data, vm)
 
+    # Pull embedded files.
+    _get_embedded_files(data, vm)
+    
     # Pull text associated with InlineShapes() objects.
     _read_payload_inline_shape_text(data, vm)
                     
