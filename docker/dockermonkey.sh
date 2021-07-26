@@ -40,11 +40,11 @@ if [ $1 == "--upgrade" ]; then
 fi
 
 echo "[*] Checking for local ViperMonkey docker image..."
-#docker image inspect haroldogden/vipermonkey:latest > /dev/null
-#if [ $? -ne 0 ]; then
-#    echo "[*] Pulling container..."
-#    docker pull haroldogden/vipermonkey:latest
-#fi
+docker image inspect kirksayre/vipermonkey:latest > /dev/null
+if [ $? -ne 0 ]; then
+    echo "[*] Pulling container..."
+    docker pull kirksayre/vipermonkey:latest
+fi
 echo "[*] Starting container..."
 docker_id=$(docker run --rm -d -t kirksayre/vipermonkey:latest)
 

@@ -154,7 +154,7 @@ def safe_plus(x,y):
     # Loosely typed languages are terrible. 1 + "3" == 4 while "1" + 3
     # = "13". The type of the 1st argument drives the dynamic type
     # casting (I think) minus variable type information (Dim a as
-    # String:a = 1 + "3" gets "13", we're ignoring that here). Pure
+    # String: a = 1 + "3" gets "13", we're ignoring that here). Pure
     # garbage.
     from core import vba_conversion
     if (isinstance(x, str) and (not isinstance(y, str))):
