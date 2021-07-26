@@ -1,7 +1,7 @@
-FROM ubuntu:bionic
+FROM ubuntu:focal
 
 # Label the image appropriately
-LABEL description="Docker container for running ViperMonkey" maintainer="Kirk Sayre"
+LABEL description="Docker container for running Python 3 ViperMonkey" maintainer="Kirk Sayre"
 
 # Hack to get pypy3 and python3 to install packages in the same place.
 RUN mkdir /usr/local/lib/pypy3.7
@@ -11,24 +11,28 @@ RUN ln -s /usr/local/lib/pypy3.7 /usr/local/lib/python3.6
 ENV PATH=/opt/ViperMonkey/vipermonkey:$PATH
 ENV PYTHONPATH=/opt/ViperMonkey/vipermonkey
 
+# Set timezone to avoid timezone setup needing interaction.
+RUN ln -snf /usr/share/zoneinfo/US /etc/localtime && echo "US" > /etc/timezone
+
 # Run apt-get update and install needed packages
 #
 # Package list needed for python3-uno taken from https://pypi.org/project/unotools/
 RUN apt-get update && apt-get install -y \
         apt-utils \
 	git\
-	wget=1.19.4-1ubuntu2.2\
+	wget\
 	build-essential \
         zip\
 	file\
-	libpython-dev\
+	libpython2-dev\
+      	libpython3-dev\
 	zlib1g-dev\
 	python3\
 	python3-pip\
 	software-properties-common\
         libreoffice\
         libreoffice-script-provider-python\
-        uno-libs3\
+        libuno-cppu3\
         python3-uno\
         python3\
         unzip\

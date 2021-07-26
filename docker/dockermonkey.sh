@@ -46,10 +46,8 @@ echo "[*] Checking for local ViperMonkey docker image..."
 #    docker pull haroldogden/vipermonkey:latest
 #fi
 echo "[*] Starting container..."
-#docker_id=$(docker run --rm -d -t haroldogden/vipermonkey:latest)
-docker_id=$(docker run --rm -d -t vipermonkey_p3:latest)
+docker_id=$(docker run --rm -d -t kirksayre/vipermonkey:latest)
 
-    
 echo "[*] Attempting to copy file $1 into container ID $docker_id"
 
 file_basename=$(basename "$1")
