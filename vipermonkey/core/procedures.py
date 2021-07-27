@@ -546,7 +546,7 @@ class Function(VBA_Object):
 
         # Done.
         return r
-
+        
     def eval(self, context, params=None):
 
         # create a new context for this execution:
@@ -769,7 +769,13 @@ class Function(VBA_Object):
             # context so global updates are tracked.
             for global_var in list(context.globals.keys()):
                 caller_context.globals[global_var] = context.globals[global_var]
-                    
+
+            # Try to identify string decode functions. We are looking
+            # for functions that are called multiple times and always
+            # return a string value.
+            context.track_possible_decoded_str(self.name, return_value)
+                
+            # Done. Return the function result.
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Returning from func " + safe_str_convert(self))
             return return_value
