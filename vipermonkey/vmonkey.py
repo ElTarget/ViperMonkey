@@ -822,8 +822,13 @@ def _save_embedded_files(out_dir, vm):
     @param out_dir (str) The artifact directory.
     """
 
-    # Save each file.
+    # Make the output directory if needed.
     out_dir = safe_str_convert(out_dir)
+    if (not os.path.exists(out_dir)):
+        log.info("Making dropped sample directory ...")
+        os.mkdir(out_dir)
+    
+    # Save each file.
     for file_info in vm.embedded_files:
         short_name = safe_str_convert(file_info[0])
         long_name = safe_str_convert(file_info[1])
