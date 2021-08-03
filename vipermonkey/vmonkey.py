@@ -340,7 +340,11 @@ def parse_stream(subfilename,
 
     # Check for timeouts.
     core.vba_object.limits_exceeded(throw_error=True)
-        
+
+    # Differentiate between no macros and macros that failed to parse.
+    if (m is None):
+        m = "empty"
+    
     # Return the parsed macro.
     return m
 
@@ -393,12 +397,25 @@ def parse_streams(vba, strip_useless=False):
     
     # Parse the VBA streams.
     r = []
+    got_vba = False
     for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
+        got_vba = True
         m = parse_stream(subfilename, stream_path, vba_filename, vba_code, strip_useless, local_funcs)
         if (m is None):
             continue
-        r.append((m, stream_path))
-    if (len(r) == 0): return None
+        r.append((m, stream_path))    
+
+    # Did we parse any VBA?
+    if (len(r) == 0):
+
+        # No VBA macros?
+        if (not got_vba):
+            return "empty"
+
+        # Got VBA, but cannot parse.
+        return None
+
+    # Got parsed VBA.
     return r
 
 # === Top level utility functions ================================================================================
@@ -743,9 +760,10 @@ def _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file
         core.vba_context.num_b64_iocs += 1
 
     # Print table of all recorded actions
-    safe_print('\nRecorded Actions:')
-    safe_print(vm.dump_actions())
-    safe_print('')
+    if (len(vm.actions) > 0):
+        safe_print('\nRecorded Actions:')
+        safe_print(vm.dump_actions())
+        safe_print('')
 
     # Report intermediate IOCs.
     tmp_iocs = []
@@ -772,8 +790,9 @@ def _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file
     pull_embedded_pe_files(data, core.vba_context.out_dir)
 
     # Report VBA builtin fingerprint.
-    safe_print('VBA Builtins Called: ' + safe_str_convert(vm.external_funcs))
-    safe_print('')
+    if (len(vm.external_funcs) > 0):
+        safe_print('VBA Builtins Called: ' + safe_str_convert(vm.external_funcs))
+        safe_print('')
 
     # Report decoded strings.
     if (len(vm.decoded_strs) > 0):
@@ -977,8 +996,20 @@ def _process_file (filename,
             # Parse the VBA streams.
             log.info("Parsing VB...")
             comp_modules = parse_streams(vba, strip_useless)
+
+            # Do we have something to analyze?
             if (comp_modules is None):
+                # Parse error.
                 return None
+            if (comp_modules == "empty"):
+                # No VBA.
+                safe_print("")
+                _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file_name)
+                safe_print('No VBA macros found.')
+                safe_print('')
+                return ([], [], [], [])
+
+            # We have VB. Analyze it.
             got_code = False
             for module_info in comp_modules:
                 m = module_info[0]
@@ -1028,7 +1059,8 @@ def _process_file (filename,
 
         # No VBA/VBScript found?
         else:
-            safe_print('Finished analyzing ' + safe_str_convert(orig_filename) + " .\n")
+            safe_print("")
+            _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file_name)
             safe_print('No VBA macros found.')
             safe_print('')
             return ([], [], [], [])

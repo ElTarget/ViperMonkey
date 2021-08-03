@@ -284,7 +284,8 @@ class ViperMonkey(StubbedEngine):
         # list of actions (stored as tuples by report_action)
         self.actions = []
         self.vba = None
-
+        self.external_funcs = []
+        
         # Figure out whether this is VBScript or VBA.
         vba_pointer = self.filename
         is_data = False
