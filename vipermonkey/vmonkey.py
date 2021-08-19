@@ -1,4 +1,5 @@
-#!/usr/bin/env -S pypy3 -E
+#!/usr/bin/env pypy3
+##!/usr/bin/env -S pypy3 -E
 
 """@package vipermonkey.vmonkey
 

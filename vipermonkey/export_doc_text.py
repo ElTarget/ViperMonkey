@@ -1,4 +1,5 @@
-#!/usr/bin/env -S python3 -E
+#!/usr/bin/env python3
+##!/usr/bin/env -S python3 -E
 
 """@package vipermonkey.export_doc_text Export the document
 text/tables of a Word document via unotools.  This is Python 3.
