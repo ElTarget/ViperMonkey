@@ -3816,7 +3816,7 @@ def _read_doc_text_libreoffice(data):
     # Dump all the text using soffice.
     output = None
     try:
-        output = subprocess.check_output(["timeout", "30", "python3", _thismodule_dir + "/../export_doc_text.py",
+        output = subprocess.check_output(["timeout", "30", "python3", "-E", _thismodule_dir + "/../export_doc_text.py",
                                           "--text", "-f", out_dir])
         output = safe_str_convert(output)
     except Exception as e:
@@ -3853,7 +3853,7 @@ def _read_doc_text_libreoffice(data):
     # Dump all the tables using soffice.
     output = None
     try:
-        output = subprocess.check_output(["python3", _thismodule_dir + "/../export_doc_text.py",
+        output = subprocess.check_output(["python3", "-E", _thismodule_dir + "/../export_doc_text.py",
                                           "--tables", "-f", out_dir])
         output = safe_str_convert(output)
     except Exception as e:

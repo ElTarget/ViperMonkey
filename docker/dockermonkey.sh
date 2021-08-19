@@ -34,7 +34,7 @@ fi
 
 if [ $1 == "--upgrade" ]; then
     echo "[*] Pulling container..."
-    docker pull haroldogden/vipermonkey:latest
+    docker pull kirksayre/vipermonkey:latest
     echo "[+] Done. You now have the latest docker image."
     exit
 fi
