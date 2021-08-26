@@ -49,6 +49,7 @@ import hashlib
 import traceback
 import re
 import sys
+import datetime
 
 from core.curses_ascii import isprint
 import pyparsing
@@ -539,6 +540,12 @@ def to_python(arg, context, params=None, indent=0, statements=False):
          (safe_str_convert(type(arg.to_python)) == "<class 'instancemethod'>"))):
         r = arg.to_python(context, params=params, indent=indent)
 
+    # Datetime object?
+    elif (isinstance(arg, datetime.datetime)):
+
+        # For now just treat this as a string.
+        r = '"' + str(arg) + '"'
+        
     # String literal?
     elif (isinstance(arg, str)):
 
@@ -910,6 +917,9 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
             if (var_updates == "ERROR"):
                 log.error("Previous run of Python JIT loop emulation failed. Using fallback emulation for loop.")
                 return False
+            if (var_updates == "INFINITE"):
+                log.error("Previous run of Python JIT loop was an infinite loop. Skipping loop.")
+                return True
 
         # No cached results. Run the loop.
         elif (namespace is None):
@@ -958,19 +968,20 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
 
     except Exception as e:
 
-        #safe_print("REMOVE THIS!!")
-        #safe_print("-*-*-*-*-\n" + code_python + "\n-*-*-*-*-")
+        safe_print("REMOVE THIS!!")
+        safe_print("-*-*-*-*-\n" + code_python + "\n-*-*-*-*-")
         #raise e
-        
-        # Cache the error.
-        jit_cache[code_python] = "ERROR"
-        
+                
         # If we bombed out due to a potential infinite loop we
         # are done.
         if ("Infinite Loop" in safe_str_convert(e)):
+            jit_cache[code_python] = "INFINITE"
             log.warning("Detected infinite loop. Terminating loop.")
             return True
 
+        # Cache the error.
+        jit_cache[code_python] = "ERROR"
+        
         # We had some other error. Emulating the loop in Python failed.
         log.error("Python JIT emulation of loop failed. " + safe_str_convert(e) + ". Using fallback emulation method for loop...")
         if (log.getEffectiveLevel() == logging.DEBUG):

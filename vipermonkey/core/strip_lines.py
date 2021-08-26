@@ -603,14 +603,14 @@ def fix_skipped_1st_arg2(vba_code):
 
     # Skipped this if unneeded.
     plus_pat = r"\+ *\+"
-    if ((re.search(r".*\n\s*([0-9a-zA-Z_\.\(\)]+)\s*,.*", vba_code, re.DOTALL) is None) and
-        (re.search(plus_pat, vba_code) is None)):
-        #print "SKIPPED!!"
+    if ((re2.search(r".*\n\s*([0-9a-zA-Z_\.\(\)]+)\s*,.*", vba_code, re.DOTALL) is None) and
+        (re2.search(plus_pat, vba_code) is None)):
+        #print("SKIPPED!!")
         return vba_code
     
     # We don't want to replace things like this in string literals. Temporarily
     # pull out the string literals from the line.
-
+    
     # Find all the string literals and make up replacement names.
     strings = {}
     in_str = False
@@ -692,8 +692,6 @@ def fix_skipped_1st_arg2(vba_code):
     # Replace the paren exprs.
     for paren_name in parens:
         tmp_code = tmp_code.replace(parens[paren_name], paren_name)
-    #print "HERE: 2"
-    #print tmp_code
         
     # Replace the skipped 1st arguments in calls.
     vba_code = re.sub(r"\n\s*([0-9a-zA-Z_\.]+)\s*,", r"\n\1 SKIPPED_ARG,", tmp_code)

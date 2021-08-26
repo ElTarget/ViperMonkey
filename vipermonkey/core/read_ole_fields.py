@@ -263,8 +263,8 @@ def get_drawing_titles(data):
     # Return the text as Shapes(NN) variables.
     r = []
     for drawing_info in drawings:
-        drawing_id = drawing_info[0]
-        drawing_text = _clean_2007_text(drawing_info[2])
+        drawing_id = safe_str_convert(drawing_info[0])
+        drawing_text = safe_str_convert(_clean_2007_text(drawing_info[2]))
         var_name = "Shapes('" + drawing_id + "')"
         r.append((var_name, drawing_text))
 

@@ -527,9 +527,6 @@ class Context(object):
             # Did this return a decent number of different strings?
             curr_strs = self.decoded_str_info[func_name]
             if (len(curr_strs) > 5):
-                print("STR DECODE FUNC!!!")
-                print(func_name)
-                print(curr_strs)
                 r.update(curr_strs)
 
         # Done.
