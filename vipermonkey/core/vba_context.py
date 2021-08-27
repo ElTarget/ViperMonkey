@@ -1432,13 +1432,23 @@ class Context(object):
                     return r
                 except KeyError:
                     pass
+
+        # Does the variable end with a trailing '$'?
+        if (name.endswith("$")):
+
+            # Try it without the trailing '$'.
+            return self.__get(safe_str_convert(name)[:-1],
+                              case_insensitive=case_insensitive,
+                              local_only=local_only,
+                              global_only=global_only)
             
         # See if the variable was initially defined with a trailing '$'.
-        return self.__get(safe_str_convert(name) + "$",
-                          case_insensitive=case_insensitive,
-                          local_only=local_only,
-                          global_only=global_only)
-
+        else:
+            return self.__get(safe_str_convert(name) + "$",
+                              case_insensitive=case_insensitive,
+                              local_only=local_only,
+                              global_only=global_only)
+        
     def _get_all_metadata(self, name):
         """Return all items in ActiveDocument.BuiltInDocumentProperties or
         ThisDocument.BuiltInDocumentProperties. For each metadata item
