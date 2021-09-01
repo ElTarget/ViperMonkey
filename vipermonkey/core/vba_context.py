@@ -905,7 +905,7 @@ class Context(object):
             self.file_id_map[file_id] = fname
         log.info("Opened file " + fname)
         
-    def write_file(self, fname, data):
+    def write_file(self, fname, data, binary=False):
         """Simulate writing to a file.
 
         @see get_interesting_fileid
@@ -921,6 +921,10 @@ class Context(object):
         to simulate a write.
         
         @param data (str) The data to write.
+
+        @param binary (boolean) Set to True if the given data is
+        binary data that should be left unmodified, False if the data
+        is a string that can be modified.
 
         @return (boolean) True if the simulated write succeeded, False
         if it failed.
@@ -958,7 +962,10 @@ class Context(object):
             # Hex string?
             if ((len(data.strip()) == 4) and (re.match('&H[0-9A-F]{2}', data, re.IGNORECASE))):
                 data = chr(int(data.strip()[-2:], 16))
-            self.open_files[fname] += safe_str_convert(data)
+            write_data = data
+            if not binary:
+                write_data = safe_str_convert(data)
+            self.open_files[fname] += write_data
             return True
 
         # Are we writing a list?

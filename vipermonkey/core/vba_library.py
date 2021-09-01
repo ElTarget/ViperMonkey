@@ -180,7 +180,72 @@ def run_external_function(func_name, context, params, lib_info):
     call_str = utils.safe_str_convert(func_name) + "(" + utils.safe_str_convert(params) + ")"
     context.report_action('External Call', call_str, lib_info)
     return 1
+
+def _is_constant(context, params):
+    """Check to see if the given parameters are all constant values.
+
+    @param func_name (str) The name of the function.
     
+    @param context (Context object) The current program state. This
+    will not be updated.
+    
+    @param params (list) The function call parameters.
+    
+    @return (boolean) True if all the parameters are constants, False
+    if not.
+
+    """
+
+    # Is each parameter a constant?
+    for param in params:
+
+        # Numeric?
+        val = eval_arg(param, context=context)
+        if (val.isdigit() or val.startswith("&H")):
+            return True
+
+        # String?
+        if (val.startswith('"')):
+            return True
+
+    # Not all parameters are constants.
+    return False
+    
+def _valid_jit_params(func_name, context, params):
+
+    """Check to see if the given VB function can be safely executed in
+    Python JIT code execution. For example, eval() can only be run on
+    constant expressions like numbers in Python JIT code.
+
+    @param func_name (str) The name of the function.
+    
+    @param context (Context object) The current program state. This
+    will not be updated.
+    
+    @param params (list) The function call parameters.
+    
+    @return (boolean) True if the function can be run, False if not
+    (has invalid parameters).
+
+    """
+
+    # Most VB functions have no JIT execution constraints. Here are
+    # the ones that do. This maps from the func name to the function to use
+    # to check the function parameters.
+    funcs = {
+        "execute" : _is_constant,
+        "executeglobal" : _is_constant,
+        "eval" : _is_constant
+    }
+
+    # Do we need to check this function?
+    func_name = func_name.lower().strip()
+    if (func_name not in funcs):
+        return True
+
+    # Return the result of the parameter check.
+    return funcs[func_name](context, params)
+
 def run_function(func_name, context, params):
     """Run an emulated VBA library function with the given
     parameters. Used in Python JIT code.
@@ -200,7 +265,13 @@ def run_function(func_name, context, params):
     func_name = func_name.lower()
     if (func_name == "run"):
         func_name = "runshell"
-    
+
+    # Some VB functions (mainly functions that dynamically execute
+    # code) can only be used in python JIT code on simple
+    # arguments. Check that here.
+    if not _valid_jit_params(func_name, context, params):
+        raise RuntimeError("Cannot run VB function with given parameters.")
+        
     # Create an object for emulating the function.
     if (func_name not in VBA_LIBRARY):
         return None
@@ -1449,9 +1520,26 @@ class Eval(VbaLibraryFunc):
         # we execute the string. Maybe?
         expr = expr.replace('""', '"')
 
+        # Short circuit some easy things to eval.
+
+        # Int.
+        if expr.isdigit():
+            try:
+                return int(expr)
+            except:
+                pass
+
+        # Hex.
+        if (expr.lower().startswith("&h")):
+            expr = "0x" + expr[2:]
+            try:
+                return int(expr, 16)
+            except:
+                pass
+        
         # Parse it. Assume this is an expression.
         r = None
-        try:    
+        try:
             obj = expressions.expression.parseString(expr, parseAll=True)[0]
             
             # Evaluate the expression in the current context.
@@ -1533,6 +1621,24 @@ class Execute(VbaLibraryFunc):
         if ((params is None) or
             (len(params) == 0) or
             (isinstance(params[0], (VBA_Object, VbaLibraryFunc)))):
+            return "NULL"
+
+        # Based on some VBScript malware samples it looks like you can
+        # call Execute() on a PE EXE in memory and have it run. Does
+        # the "command" look like a PE file?
+        command = params[0]
+        if (isinstance(command, str) and
+            command.startswith("MZ") and
+            ("This program cannot be run in DOS mode." in command)):
+
+            # Save the (probable) PE to a file.
+            context.report_action('Execute() PE', "---", 'Execute()', strip_null_bytes=True)
+            fname = "exec_pe" + str(context.get_num_open_files()) + ".exe"
+            context.open_file(fname, "")
+            context.write_file(fname, command, binary=True)
+            context.close_file(fname)
+
+            # Done.
             return "NULL"
         
         # Save the command.

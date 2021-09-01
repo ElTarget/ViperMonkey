@@ -606,6 +606,10 @@ def to_python(arg, context, params=None, indent=0, statements=False):
             else:
                 # If we are not in a loop pass the exception along.
                 r += indent_str + " " * 4 + "raise(e)\n"
+            r += indent_str + "except RuntimeError as e:\n"
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                r += indent_str + " " * 4 + "safe_print(\"ERROR: \" + safe_str_convert(e))\n"
+            r += indent_str + " " * 4 + "raise(e)\n"
             r += indent_str + "except Exception as e:\n"
             if (log.getEffectiveLevel() == logging.DEBUG):
                 r += indent_str + " " * 4 + "safe_print(\"ERROR: \" + safe_str_convert(e))\n"
@@ -840,11 +844,11 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
     short_code_vba = code_vba.replace("\n", "\\n")[:20]
     if (not context.throttle_logging):
         log.info("Starting JIT emulation of '" + short_code_vba + "...' ...")
-    if (("Execute(".lower() in code_vba_lower) or
-        ("ExecuteGlobal(".lower() in code_vba_lower) or
-        ("Eval(".lower() in code_vba_lower)):
-        log.warning("Loop Execute()s dynamic code. Not JIT emulating.")
-        return False
+    #if (("Execute(".lower() in code_vba_lower) or
+    #    ("ExecuteGlobal(".lower() in code_vba_lower) or
+    #    ("Eval(".lower() in code_vba_lower)):
+    #    log.warning("Loop Execute()s dynamic code. Not JIT emulating.")
+    #    return False
     if (".Item(".lower() in code_vba_lower):
         log.warning("Loop references forms with .Item(). Not JIT emulating.")
         return False

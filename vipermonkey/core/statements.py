@@ -1763,6 +1763,8 @@ class For_Statement(VBA_Object):
             end = vba_conversion.int_convert(end)
         if (end == "NULL"):
             end = 0
+        if isinstance(end, float):
+            end = int(end)
         if (not isinstance(end, int)):
             log.warning("Not emulating For loop. Loop end '" + safe_str_convert(self.end_value) + "' evaluated to " + safe_str_convert(end))
             return (None, None, None)
@@ -1875,7 +1877,7 @@ class For_Statement(VBA_Object):
         
         # Set up doing this for loop in Python.
         loop_start = indent_str + "exit_all_loops = False\n"
-        loop_start += indent_str + loop_var + " = " + safe_str_convert(start) + "\n"
+        loop_start += indent_str + loop_var + " = coerce_to_num(" + safe_str_convert(start) + ")\n"
         loop_start += indent_str + "while (((" + loop_var + " <= coerce_to_int(" + safe_str_convert(end) + ")) and (" + safe_str_convert(step) + " > 0)) or " + \
                       "((" + loop_var + " >= coerce_to_int(" + safe_str_convert(end) + ")) and (" + safe_str_convert(step) + " < 0))):\n"
         loop_start += indent_str + " " * 4 + "if exit_all_loops:\n"
