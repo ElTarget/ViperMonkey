@@ -197,11 +197,13 @@ def _clean_2007_text(s):
     """Replace special 2007 formatting strings (XML escaped, etc.) with
     actual text.
 
-    @param s (str) The string to clean.
+    @param s (str or bytes) The string to clean.
 
-    @return (str) The cleaned string.
+    @return (bytes) The cleaned string.
 
-    """    
+    """
+    if isinstance(s, str):
+        s = s.encode("latin-1")
     s = s.replace(b"&amp;", b"&")\
          .replace(b"&gt;", b">")\
          .replace(b"&lt;", b"<")\
@@ -2951,6 +2953,7 @@ def _parse_activex_chunk(data):
         return None
     start = data.rindex(anchor) + len(anchor) + pad
     pat = r"([\x20-\x7e]+)"
+    data = safe_str_convert(data)
     text = re.findall(pat, data[start:])
     if (len(text) == 0):
         return None
@@ -2997,7 +3000,7 @@ def _parse_activex_rich_edit(data):
     """
 
     # No wide char null padding.
-    data = data.replace("\x00", "")
+    data = safe_str_convert(data).replace("\x00", "")
 
     # Pull out the data.
     pat = r"\\fs\d{1,4} (.+)\\par"
@@ -3218,7 +3221,7 @@ def get_shapes_text_values_2007(fname):
     for shape in var_info:
         if (shape[0] not in id_name_map):
             continue
-        id_activex_map[shape[0]] = shape[1].replace(".xml", ".bin")
+        id_activex_map[shape[0]] = safe_str_convert(shape[1]).replace(".xml", ".bin")
     #print id_activex_map
 
     # Read in the activeX objects.
