@@ -129,8 +129,8 @@ def is_office_xml_file(fname, is_data):
         contents = fname
     else:
         try:
-            f = open(fname, "r")
-            contents = f.read()
+            f = open(fname, "rb")
+            contents = safe_str_convert(f.read())
             f.close()
         except IOError as e:
             log.error("Cannot read file " + safe_str_convert(fname) + ". " + safe_str_convert(e))
