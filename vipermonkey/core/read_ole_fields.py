@@ -1107,7 +1107,7 @@ def get_ole_textbox_values1(data, debug, stream_names):
     for val in vals:
 
         # Skip fonts.
-        if (val.startswith("Taho")):
+        if (safe_str_convert(val).startswith("Taho")):
             continue
         # Skip stream names.
         if (val in stream_names):
