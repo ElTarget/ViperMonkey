@@ -4433,21 +4433,32 @@ class BoolExprItem(VBA_Object):
         # Ugh. VBA autoconverts strings and ints.
         if (isinstance(lhs, str) and isinstance(rhs, int)):
 
+            # Handle NULL strings.
+            if (len(lhs) == 0):
+                lhs = "0"
+            
             # Convert both to ints, if possible.
             try:
                 lhs = int(lhs)
-            # pylint: disable=bare-except
             except:
-                pass
+                # Can't convert argument to an int. Punt by converting the
+                # other argument to a str.
+                rhs = str(rhs)
 
         if (isinstance(rhs, str) and isinstance(lhs, int)):
 
+            # Handle NULL strings.
+            if (len(rhs) == 0):
+                rhs = "0"
+            
             # Convert both to ints, if possible.
             try:
                 rhs = int(rhs)
             # pylint: disable=bare-except
             except:
-                pass
+                # Can't convert argument to an int. Punt by converting the
+                # other argument to a str.
+                lhs = str(lhs)
 
         # Blah. Handle float autoconversion.
         if (isinstance(lhs, float) and isinstance(rhs, int)):
