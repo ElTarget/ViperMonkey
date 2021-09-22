@@ -1847,9 +1847,9 @@ def fix_difficult_code(vba_code):
         print("HERE: 9")
         print(vba_code)
     marker_strs = r"[!:&\^]|ElseIf|Rem|rem|REM|MultiByteToWideChar"
-    if ((re.search(marker_strs, vba_code) is None) and
-        (re.search(r".*[^\x00-\x7e].*", vba_code, re.DOTALL) is None) and
-        (re.search(r".*=\+.*", vba_code, re.DOTALL) is None)):
+    if ((re2.search(marker_strs, vba_code) is None) and
+        (re2.search(r".*[^\x00-\x7e].*", vba_code, re.DOTALL) is None) and
+        (re2.search(r".*=\+.*", vba_code, re.DOTALL) is None)):
         return vba_code
 
     # Modify MultiByteToWideChar() calls so ViperMonkey can emulate them.
