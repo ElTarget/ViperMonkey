@@ -1003,12 +1003,16 @@ def _process_file (filename,
                 # Parse error.
                 return None
             if (comp_modules == "empty"):
+
                 # No VBA.
-                safe_print("")
-                _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file_name)
-                safe_print('No VBA macros found.')
-                safe_print('')
-                return ([], [], [], [])
+                if (not display_int_iocs):
+                    safe_print("")
+                    _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file_name)
+                    safe_print('No VBA macros found.')
+                    safe_print('')
+                    return ([], [], [], [])
+                else:
+                    comp_modules = []
 
             # We have VB. Analyze it.
             got_code = False

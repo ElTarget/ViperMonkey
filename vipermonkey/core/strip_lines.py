@@ -2652,13 +2652,30 @@ def strip_difficult_tuple_lines(vba_code):
     if (vba_code is None):
         return vba_code
     r = ""
-    tuple_pat = r"[\w_]{1,40}(?:\.[\w_]{1,40})+ +\( *[\w_\d\.]+ *(?:, *[\w_\d]+ *)+\ *\) *[-\+\*/]"
+    #tuple_pat = r"[\w_]{1,40}(?:\.[\w_]{1,40})+ +\( *[\w_\d\.]+ *(?:, *[\w_\d]+ *)+\ *\) *[-\+\*/]"
+    tuple_pat = r"[\w_]{1,40}(?:\.[\w_]{1,40})+ +\( *[\w_\d\.]+ *(?:, *[\w_\d]+ *)+ *\) *[-\+\*/]"
+    simple_tuple_pat = r"\( *[\w_\d\.]+ *(?:, *[\w_\d]+ *)+ *\)"
     for line in vba_code.split("\n"):
+
+        # Does this line have any tuples?
         line = line.strip()
+        if (re2.search(simple_tuple_pat, line) is None):
+
+            # No, leave it untouched.
+            r += line + "\n"
+            continue
+
+        # Does the line have one of these hard to parse tuple expressions?
         if (re.search(tuple_pat, line)):
+
+            # Yes, skip it.
             log.warning("Difficult member access expression with tuple arg not handled. Stripping '" + line.strip() + "'.")
             continue
+
+        # No hard to parse line. Leave it as-is.
         r += line + "\n"
+
+    # Done
     return r
         
 
@@ -2680,10 +2697,10 @@ def strip_useless_code(vba_code, local_funcs):
     # Preprocess the code to make it easier to parse.
     log.info("Modifying VB code...")
     vba_code = fix_vba_code(vba_code)
-
+    
     # Wipe out all comments.
     vba_code = strip_comments(vba_code)
-
+    
     # No hard to parse calls with tuple arguments.
     vba_code = strip_difficult_tuple_lines(vba_code)
     
