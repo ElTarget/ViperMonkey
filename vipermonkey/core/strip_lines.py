@@ -86,7 +86,7 @@ except ImportError:
 from core.logger import log
 from core import vba_context
 from random import randint
-
+from core.vba_conversion import coerce_to_int
 from core import utils
 from core.utils import safe_str_convert
 
@@ -1487,6 +1487,73 @@ def fix_elseif_lines(vba_code):
     # Done.
     return vba_code
 
+def reduce_chr_obfuscation(vba_code):
+    """Replace Chr() expressions like 'chr(3662922/CLng("&H8c47"))' with
+    the resolved character string.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+    """
+
+    # Sanity check.
+    if ("chr(" not in vba_code.lower()):
+        return vba_code
+    
+    # Find chr() expressions we can reduce.
+    chr_pat1a = r'[Cc][Hh][Rr] *\( *(\-?\d{1,10}) *([\+\-/\*]) *(?:(?:[Cc][Ll][Nn][Gg])|(?:[Cc][Ii][Nn][Tt])) *\( *"?((?:&[Hh])?[0-9A-fa-f]{1,10}(?:\.\d{1,10})?)"? *\) *\)'
+    chr_pat0a = r'[Cc][Hh][Rr] *\( *\-?\d{1,10} *[\+\-/\*] *(?:(?:[Cc][Ll][Nn][Gg])|(?:[Cc][Ii][Nn][Tt])) *\( *"?(?:&[Hh])?[0-9A-fa-f]{1,10}(?:\.\d{1,10})?"? *\) *\)'
+    chr_pat0b = r'[Cc][Hh][Rr] *\( *(?:(?:[Cc][Ll][Nn][Gg])|(?:[Cc][Ii][Nn][Tt])) *\( *"?(?:&[Hh])?[0-9A-fa-f]{1,10}(?:\.\d{1,10})?"? *\) *[\+\-/\*] *\-?\d{1,10} *\)'
+    chr_pat1b = r'[Cc][Hh][Rr] *\( *(?:(?:[Cc][Ll][Nn][Gg])|(?:[Cc][Ii][Nn][Tt])) *\( *"?((?:&[Hh])?[0-9A-fa-f]{1,10}(?:\.\d{1,10})?)"? *\) *([\+\-/\*]) *(\-?\d{1,10}) *\)'
+    chr_pat0 = "(?:" + chr_pat0a + ")|(?:" + chr_pat0b + ")"
+    for chr_exp in re2.findall(chr_pat0, vba_code):
+
+        # Pull out the pieces of the expression.
+        pieces = re2.findall(chr_pat1a, chr_exp)
+        if (len(pieces) == 0):
+            pieces = re2.findall(chr_pat1b, chr_exp)
+        pieces = pieces[0]
+        lhs = coerce_to_int(pieces[0])
+        op = pieces[1]
+        rhs = coerce_to_int(pieces[2])
+
+        # Compute the ASCII value for the char.
+        val = None
+        if (op == "-"):
+            val = lhs - rhs
+        elif (op == "+"):
+            val = lhs + rhs
+        elif (op == "*"):
+            val = lhs * rhs        
+        elif (op == "/"):
+            val = int(lhs / rhs)
+        else:
+            continue
+
+        # Replace the chr() expression with the resolved character.
+        if ((val < 0) or (val > 255)):
+            continue
+        curr_char = ' "' + chr(val) + '" '
+        if (val == 13):
+            curr_char = " vbCr "
+        elif (val == 12):
+            curr_char = " vbFormFeed "
+        elif (val == 10):
+            curr_char = " vbLf "
+        elif (val == 0):
+            curr_char = " vbNullChar "
+        elif (val == 9):
+            curr_char = " vbTab "
+        elif (val == 11):
+            curr_char = " vbVerticalTab "
+        elif (val == 34):
+            curr_char = ' """" '
+
+        vba_code = vba_code.replace(chr_exp, curr_char)
+
+    # Done.
+    return vba_code
+    
 def replace_bad_chars(vba_code):
     """Replace/modify certain hard to parse characters (unless the
     character constructs appear in a string).
@@ -1834,6 +1901,15 @@ def fix_difficult_code(vba_code):
         print(vba_code)
     vba_code = fix_varptr_calls(vba_code)
 
+    # Precompute certain Chr() results that are just there for obfuscation.
+    if debug_strip:
+        print("HERE: 2.7.1")
+        print(vba_code)
+    vba_code = reduce_chr_obfuscation(vba_code)
+    if debug_strip:
+        print("HERE: 2.7.2")
+        print(vba_code)
+    
     # Not handling this weird CopyHere() call.
     # foo.NameSpace(bar).CopyHere(baz), fubar    
     vba_code = fix_weird_copyhere(vba_code)
@@ -1936,7 +2012,7 @@ def fix_difficult_code(vba_code):
     if debug_strip:
         print("HERE: 19")
         print(r)
-
+    
     return r
 
 def strip_comments(vba_code):

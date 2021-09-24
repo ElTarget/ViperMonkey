@@ -1167,6 +1167,10 @@ class Context(object):
                 else:
                     f.write(bytes(raw_data, "latin-1"))
             log.info("Wrote dumped file (hash " + safe_str_convert(file_hash) + ") to " + safe_str_convert(file_path) + ".")
+
+            # Pull IOCs from file data.
+            self.save_intermediate_iocs(raw_data)
+            
         except Exception as e:
             log.error("Writing file " + safe_str_convert(fname) + " failed with error: " + safe_str_convert(e))
 
@@ -1751,7 +1755,9 @@ class Context(object):
         value = utils.strip_nonvb_chars(safe_str_convert(value))
         if (len(re.findall(r"NULL", safe_str_convert(value))) > 20):
             value = value.replace("NULL", "")
-
+        # ` is not interesting for b64 or URLs.
+        value = value.replace("`", "")
+            
         # If the value is too short or it is an integer we are not interested in it.
         if ((len(value) < 10) or (value.isdigit())):
             return
