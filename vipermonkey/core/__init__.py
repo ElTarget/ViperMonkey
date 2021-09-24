@@ -167,10 +167,11 @@ def pull_urls_excel_sheets(workbook):
         except UnicodeEncodeError:
             value = ''.join([x for x in cell["value"] if x in string.printable]).strip()
 
-        if (len(value) == 0):
+        if ((value is None) or (len(value) == 0) or (value == "None")):
             continue
 
         # Handle some basic XLM 4.0 string concatenation.
+        print(value)
         value = value.replace('"', "").replace("&", "")
         
         # Add http:// for cells that look like they might be URLs
