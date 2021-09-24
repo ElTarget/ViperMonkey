@@ -65,6 +65,9 @@ docker exec $docker_id sh -c "cd /opt;for d in *; do cd \$d; git pull > /dev/nul
 echo "[*] Installing pyxlsb2..."
 docker exec $docker_id sh -c "cd /opt;git clone https://github.com/wmetcalf/pyxlsb2; cd /opt/pyxlsb2/; pypy3 setup.py install > /dev/null 2>&1; cd /opt"
 
+echo "[*] Installing exiftool..."
+docker exec $docker_id sh -c "apt-get install -y libimage-exiftool-perl > /dev/null 2>&1"
+
 echo "[*] Disabling network connection for container ID $docker_id"
 docker network disconnect bridge $docker_id
 
