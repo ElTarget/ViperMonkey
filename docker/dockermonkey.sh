@@ -62,6 +62,9 @@ docker exec $docker_id sh -c '/usr/lib/libreoffice/program/soffice.bin --headles
 echo "[*] Checking for ViperMonkey and dependency updates..."
 docker exec $docker_id sh -c "cd /opt;for d in *; do cd \$d; git pull > /dev/null 2>&1; cd /opt; done"
 
+echo "[*] Installing pyxlsb2..."
+docker exec $docker_id sh -c "cd /opt;git clone https://github.com/DissectMalware/pyxlsb2.git; cd /opt/pyxlsb2/; pypy3 setup.py install > /dev/null 2>&1; cd /opt"
+
 echo "[*] Disabling network connection for container ID $docker_id"
 docker network disconnect bridge $docker_id
 

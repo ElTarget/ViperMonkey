@@ -59,7 +59,7 @@ try:
 except ImportError:
     log.warning("xlrd2 Python package not installed. Falling back to xlrd.")
     import xlrd
-
+    
 from core.utils import safe_str_convert
     
 _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
@@ -336,6 +336,84 @@ def load_excel_xlrd(data):
         log.warning("Reading in file as Excel with xlrd failed. " + safe_str_convert(e))
         return None
 
+def load_excel_pyxlsb2(data):
+    """Read in an Excel file into an ExcelBook object with the pyxlsb2
+    Excel library.
+
+    @param data (str) The Excel file contents.
+
+    @return (core.excel.ExceBook object) On success return the Excel
+    spreadsheet as an ExcelBook object. Returns None on error.
+
+    """
+    
+    # Only use this on Office 2007+ Excel files.
+    if (not filetype.is_office2007_file(data, True)):
+        log.warning("File is not an Excel 2007+ file. Not reading with pyxlsb2.")
+        return None
+
+    # Make sure pyxlsb2 is installed.
+    try:
+        from pyxlsb2 import open_workbook
+    except ModuleNotFoundError:
+        log.error("pyxlsb2 is not installed. Not loading Excel with pyxlsb2.")
+        return None
+    
+    # Save the Excel data to a temporary file.
+    out_dir = "/tmp/tmp_excel_file_" + safe_str_convert(random.randrange(0, 10000000000))
+    f = open(out_dir, 'wb')
+    f.write(data)
+    f.close()
+    
+    # Try to read with pyxlsb2.
+    vmbook = None
+    try:
+        # Open the Excel workbook.
+        with open_workbook(out_dir) as wb:
+
+            # Cycle through all the sheets.
+            vm_book = ExcelBook()
+            for name1 in wb.sheets:
+
+                # Get the sheet name.
+                name = name1.name
+                
+                # Temporary map of (row, col) to cell values.
+                cell_map = {}
+
+                # Now get the actual sheet object.
+                with wb.get_sheet_by_name(name) as sheet:
+
+                    # Cycle through the rows.
+                    curr_row = -1
+                    for row in sheet.rows():
+                        curr_row += 1
+
+                        # Cycle through the columns.
+                        curr_col = -1
+                        for c in row:
+                            curr_col += 1
+                            cell_map[(curr_row, curr_col)] = c.v
+
+                    # Make an ExcelSheet object for the cells.
+                    vm_sheet = ExcelSheet(cell_map, name)
+
+                    # Add the sheet to the workbook.
+                    vm_book.sheets.append(vm_sheet)
+                            
+    except AttributeError as e:
+        # Delete the temporary Excel file.
+        if os.path.isfile(out_dir):
+            os.remove(out_dir)
+        return None
+
+    # Delete the temporary Excel file.
+    if os.path.isfile(out_dir):
+        os.remove(out_dir)
+
+    # Done.
+    return vm_book
+        
 def load_excel(data):
     """Load the cells from a given Excel spreadsheet. This first tries
     getting the sheet contents with LibreOffice if it is installed,
@@ -355,10 +433,27 @@ def load_excel(data):
 
         # Did we load sheets with libreoffice?
         if (len(wb.sheet_names()) > 0):
-            return wb
+
+            # Do the sheets contain any cell values?
+            got_cell = False
+            for cell in wb.get_all_cells():
+                val = safe_str_convert(cell["value"]).strip()
+                if (len(val) > 0):
+                    got_cell = True
+                    break
+
+            # Only return the LibreOffice Excel workbook if we have at least
+            # 1 cell with a value.
+            if got_cell:
+                return wb
 
     # Next try loading the sheets with xlrd2.
     wb = load_excel_xlrd(data)
+    if (wb is not None):
+        return wb
+
+    # Next try loading the sheets with pyxlsb2.
+    wb = load_excel_pyxlsb2(data)
     if (wb is not None):
         return wb
 
