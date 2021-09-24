@@ -151,9 +151,11 @@ def pull_urls_excel_sheets(workbook):
 
     # Got an Excel workbook?
     if (workbook is None):
+        log.info("No Excel workbook loaded. Not pulling IOCs from cells.")
         return set()
 
     # Look through each cell.
+    log.info("Excel workbook loaded. Pulling IOCs from cells.")
     all_cells = excel.pull_cells_workbook(workbook)
     r = set()
     for cell in all_cells:
