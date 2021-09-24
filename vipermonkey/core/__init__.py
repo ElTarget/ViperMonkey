@@ -171,7 +171,7 @@ def pull_urls_excel_sheets(workbook):
             continue
 
         # Handle some basic XLM 4.0 string concatenation.
-        #print(value)
+        print(value)
         value = value.replace('"', "").replace("&", "")
         
         # Add http:// for cells that look like they might be URLs
