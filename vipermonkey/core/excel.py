@@ -224,6 +224,7 @@ def load_excel_libreoffice(data):
     """
     
     # Don't try this if it is not an Office file.
+    log.info("Trying to load Excel with LibreOffice...")
     if (not filetype.is_office_file(data, True)):
         log.warning("The file is not an Office file. Not extracting sheets with LibreOffice.")
         return None
@@ -322,6 +323,7 @@ def load_excel_xlrd(data):
     """
     
     # Only use this on Office 97 Excel files.
+    log.info("Trying to load Excel with xlrd2...")
     if (not filetype.is_office97_file(data, True)):
         log.warning("File is not an Excel 97 file. Not reading with xlrd2.")
         return None
@@ -348,6 +350,7 @@ def load_excel_pyxlsb2(data):
     """
     
     # Only use this on Office 2007+ Excel files.
+    log.info("Trying to load Excel with pyxlsb2...")
     if (not filetype.is_office2007_file(data, True)):
         log.warning("File is not an Excel 2007+ file. Not reading with pyxlsb2.")
         return None
