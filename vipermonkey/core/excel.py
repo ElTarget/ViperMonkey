@@ -373,9 +373,12 @@ def load_excel_pyxlsb2(data):
 
             # Cycle through all the sheets.
             vm_book = ExcelBook()
+            num_sheets = 0
+            num_cells = 0
             for name1 in wb.sheets:
 
                 # Get the sheet name.
+                num_sheets += 1
                 name = name1.name
                 
                 # Temporary map of (row, col) to cell values.
@@ -393,6 +396,7 @@ def load_excel_pyxlsb2(data):
                         curr_col = -1
                         for c in row:
                             curr_col += 1
+                            num_cells += 1
                             cell_map[(curr_row, curr_col)] = c.v
 
                     # Make an ExcelSheet object for the cells.
@@ -405,6 +409,7 @@ def load_excel_pyxlsb2(data):
         # Delete the temporary Excel file.
         if os.path.isfile(out_dir):
             os.remove(out_dir)
+        log.warning("Loading Excel with pyxlsb2 failed. " + safe_str_convert(e))
         return None
 
     # Delete the temporary Excel file.
@@ -412,6 +417,7 @@ def load_excel_pyxlsb2(data):
         os.remove(out_dir)
 
     # Done.
+    log.info("Loaded " + str(num_sheets) + " Excel sheets containing " + str(num_cells) + " cells with pyxlsb2.")
     return vm_book
         
 def load_excel(data):
