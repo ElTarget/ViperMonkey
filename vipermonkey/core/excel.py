@@ -433,7 +433,12 @@ def load_excel(data):
 
     """
 
-    # Load the sheet with Libreoffice.
+    # Try loading the sheets with pyxlsb2.
+    wb = load_excel_pyxlsb2(data)
+    if (wb is not None):
+        return wb
+    
+    # Try loading the sheets with Libreoffice.
     wb = load_excel_libreoffice(data)    
     if (wb is not None):
 
@@ -453,13 +458,8 @@ def load_excel(data):
             if got_cell:
                 return wb
 
-    # Next try loading the sheets with xlrd2.
+    # Try loading the sheets with xlrd2.
     wb = load_excel_xlrd(data)
-    if (wb is not None):
-        return wb
-
-    # Next try loading the sheets with pyxlsb2.
-    wb = load_excel_pyxlsb2(data)
     if (wb is not None):
         return wb
 
