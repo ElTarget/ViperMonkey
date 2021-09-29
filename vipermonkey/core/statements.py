@@ -1374,7 +1374,7 @@ class Let_Statement(VBA_Object):
 
             # Try converting the text from base64.
             try:
-                tmp_str = list(filter(isprint, safe_str_convert(value).strip()))
+                tmp_str = safe_str_convert(value).strip()
                 value = base64.b64decode(tmp_str)
             except Exception as e:
                 log.warning("base64 conversion of '" + safe_str_convert(value) + "' failed. " + safe_str_convert(e))
