@@ -1968,7 +1968,7 @@ class Context(object):
         # Does the name make sense?
         orig_name = name
         if (not isinstance(name, str)):
-            log.warning("context.set() " + safe_str_convert(name) + " is improper type. " + safe_str_convert(type(name)))
+            log.warning("context.set() var name " + safe_str_convert(name) + " is improper type. " + safe_str_convert(type(name)))
             name = safe_str_convert(name)
 
         # Does the value make sense?
@@ -2151,10 +2151,13 @@ class Context(object):
                     log.debug("Did not find type var " + node_type)
 
         # Handle after the fact data conversion with VBA objects.
-        if (name.endswith(".datatype")):
+        if (name.lower().endswith(".datatype")):
 
             # Handle doing conversions on the existing data.
-            node_value_name = name.replace(".datatype", ".nodetypedvalue")
+            if (name.endswith(".datatype")):
+                node_value_name = name.replace(".datatype", ".nodetypedvalue")
+            else:
+                node_value_name = name[:name.rindex(".")] + ".NodeTypedValue"
             try:
 
                 # Do we have data to convert from type "bin.hex"?
