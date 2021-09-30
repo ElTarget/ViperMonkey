@@ -1910,7 +1910,45 @@ class Context(object):
 
         # Handled property assignment.
         return True
-    
+
+    def _handle_privateprofilestring(self, name, value):
+        """Handle setting a registry key using
+        System.PrivateProfileString().
+
+        @param name (??) The item being assigned a value.
+        
+        @param value (??) The value to which the item is being set.
+
+        @return (boolean) True if this is a property
+        System.PrivateProfileString(), False if not.
+
+        """
+
+        # This should be a MemberAccessExpression if it is a
+        # System.PrivateProfileString() assignment.
+        from core import expressions
+        if (not isinstance(name, expressions.MemberAccessExpression)):
+            return False
+
+        # Is it a System.PrivateProfileString() assignment?
+        if (not str(name).strip().startswith("System.PrivateProfileString(")):
+            return False
+
+        # We have one. Pull out the registry key.
+        if ((not isinstance(name.rhs, list)) or
+            (len(name.rhs) == 0) or
+            (not isinstance(name.rhs[0], expressions.Function_Call)) or
+            (len(name.rhs[0].params) < 2)):
+            return False
+        key = safe_str_convert(name.rhs[0].params[1])
+        value = safe_str_convert(value)
+
+        # Track the registry write.
+        self.report_action("Registry Write", key + " = " + value, "System.PrivateProfileString()", strip_null_bytes=True)
+
+        # Done.
+        return True
+        
     def set(self,
             name,
             value,
@@ -1957,6 +1995,10 @@ class Context(object):
 
         # Are we assigning a Property? If so we will call the property handler?
         if (self._handle_property_assignment(name, value)):
+            return
+
+        # Are we assigning a registry key using System.PrivateProfileString()?
+        if (self._handle_privateprofilestring(name, value)):
             return
 
         # We might have a vipermonkey simple name expression. Convert to a string

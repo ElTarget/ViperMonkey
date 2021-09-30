@@ -1220,8 +1220,8 @@ class PrivateProfileString(VbaLibraryFunc):
 
     def eval(self, context, params=None):
         context = context # pylint
-        params = params # pylint
 
+        context.report_action("Registry Read", utils.safe_str_convert(params), "Registry Read", strip_null_bytes=True)
         return "**MATCH ANY**"
 
     def num_args(self):
