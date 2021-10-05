@@ -1168,9 +1168,12 @@ class MemberAccessExpression(VBA_Object):
         """
 
         # ActiveDocument.BuiltInDocumentProperties("liclrm('U1ViamVjdA==')").Value
+        # ActiveWorkbook.BuiltinDocumentProperties("Title").Value
         # ThisDocument.BuiltInDocumentProperties('Manager').Value
         # Is this an ActiveDocument.BuiltInDocumentProperties() instance?
         if ((not safe_str_convert(self).startswith("ActiveDocument.BuiltInDocumentProperties(")) and
+            (not safe_str_convert(self).startswith("ActiveWorkbook.BuiltinDocumentProperties(")) and
+            (not safe_str_convert(self).startswith("NULL.BuiltInDocumentProperties(")) and
             (not safe_str_convert(self).startswith("ThisDocument.BuiltInDocumentProperties("))):
             return None
 

@@ -2006,7 +2006,11 @@ class Context(object):
         from core import expressions
         if (isinstance(name, expressions.SimpleNameExpression)):
             name = safe_str_convert(name)
-        
+
+        # Report on setting the language of a ScriptControl object.
+        if (name.endswith(".Language")):
+            self.report_action('Set Dynamic Script Language', safe_str_convert(value), "ScriptControl Object")
+            
         # Does the name make sense?
         orig_name = name
         if (not isinstance(name, str)):

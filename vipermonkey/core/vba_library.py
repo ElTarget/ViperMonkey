@@ -1765,7 +1765,14 @@ class AddCode(Execute):
     """Emulate Visual Basic script control AddCode() method.
 
     """
-    pass
+
+    def eval(self, context, params=None):
+
+        # Track what was added to the ScriptControl object.
+        context.report_action('Added Code', utils.safe_str_convert(params), "ScriptControl Object")
+        
+        # See if we can emulate the added code.
+        return super(AddCode, self).eval(context, params)
 
 class AddFromString(Execute):
     """Emulate Office programmatic macro editing method.

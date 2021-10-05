@@ -802,11 +802,13 @@ def _handle_form_variable_read(arg, context, got_constant_math):
 
         # Are we trying to load some document data?
         if ((tmp.startswith("thisdocument.builtindocumentproperties(")) or
+            (tmp.startswith("null.builtindocumentproperties(")) or
             (tmp.startswith("activeworkbook.builtindocumentproperties("))):
 
             # Try to pull the result from the document data.
             var = tmp.replace("thisdocument.builtindocumentproperties(", "").replace(")", "").replace("'","").strip()
             var = var.replace("activeworkbook.builtindocumentproperties(", "")
+            var = var.replace("null.builtindocumentproperties(", "")
             val = context.get_doc_var(var)
             if (val is not None):
                 return val
