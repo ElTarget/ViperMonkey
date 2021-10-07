@@ -73,12 +73,42 @@ def excel_col_letter_to_index(x):
 
     @param x (str) The Excel alphabetic column.
     
-    @return (int) The column as a nueric index.
+    @return (int) The column as a numeric index.
 
     """
     x = x.upper()
     return (reduce(lambda s,a:s*26+ord(a)-ord('A')+1, x, 0) - 1)
 
+def excel_convert_letter_index(cell_index):
+    """Convert an excel cell index like "CF161" to a (row, column)
+    integer tuple.
+
+    @param cell_index (str) The cell index.
+
+    @return (tuple) A 2 element tuple of the form (row, column) (both
+    integers).
+
+    """
+
+    # Pull out the cell index.
+    cell_index = safe_str_convert(cell_index).replace('"', "").replace("'", "")
+
+    # Pull out the cell column and row.
+    col = ""
+    row = ""
+    for c in cell_index:
+        if (c.isalpha()):
+            col += c
+        else:
+            row += c
+                    
+    # Convert the row and column to numeric indices.
+    row = int(row) - 1
+    col = excel_col_letter_to_index(col)
+
+    # Done.
+    return (row, col)
+    
 def _read_sheet_from_csv(filename):
     """Read in an Excel sheet from a CSV file.
 
