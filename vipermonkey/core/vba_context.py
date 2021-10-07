@@ -2001,21 +2001,15 @@ class Context(object):
         if (self._handle_privateprofilestring(name, value)):
             return
 
-        # We might have a vipermonkey simple name expression. Convert to a string
-        # so we can use it.
-        from core import expressions
-        if (isinstance(name, expressions.SimpleNameExpression)):
-            name = safe_str_convert(name)
-
-        # Report on setting the language of a ScriptControl object.
-        if (name.endswith(".Language")):
-            self.report_action('Set Dynamic Script Language', safe_str_convert(value), "ScriptControl Object")
-            
         # Does the name make sense?
         orig_name = name
         if (not isinstance(name, str)):
             log.warning("context.set() var name " + safe_str_convert(name) + " is improper type. " + safe_str_convert(type(name)))
             name = safe_str_convert(name)
+        
+        # Report on setting the language of a ScriptControl object.
+        if (name.endswith(".Language")):
+            self.report_action('Set Dynamic Script Language', safe_str_convert(value), "ScriptControl Object")
 
         # Does the value make sense?
         if (value is None):
