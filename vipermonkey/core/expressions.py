@@ -501,6 +501,9 @@ class MemberAccessExpression(VBA_Object):
 
         """
 
+        #print("_convert_nested_methods_to_func_call")
+        #print(self)
+        
         # Sheets(d).UsedRange.SpecialCells(xlCellTypeConstants)
         # SpecialCells(xlCellTypeConstants)
         # SpecialCells(xlCellTypeConstants, UsedRange())
@@ -518,6 +521,7 @@ class MemberAccessExpression(VBA_Object):
 
         # See if every component of the member access expression has
         # a corresponding emulation function in ViperMonkey.
+        unneeded_vars = set(["ActiveWorkbook".lower()])
         prev_func = None
         curr_func = None
         res_func = None
@@ -528,15 +532,20 @@ class MemberAccessExpression(VBA_Object):
             obj_name = None
             curr_func = curr_obj
             if isinstance(curr_obj, SimpleNameExpression):
-                obj_name = safe_str_convert(curr_obj)
+                obj_name = safe_str_convert(curr_obj).strip()
                 curr_func = function_call.parseString(obj_name + "()", parseAll=True)[0]
                 curr_func.params = []
             elif isinstance(curr_obj, Function_Call):
-                obj_name = safe_str_convert(curr_obj.name)
+                obj_name = safe_str_convert(curr_obj.name).strip()
                 curr_func = Function_Call(None, None, None, old_call=curr_obj)
             else:
+                #print("BOO: 1")
                 return None
-                
+
+            # Skip some unneeded variables.
+            if (obj_name.lower() in unneeded_vars):
+                continue
+            
             # Do we have an emulation function for this member item?
             if (obj_name.lower() not in vba_library.VBA_LIBRARY):
 
@@ -549,6 +558,8 @@ class MemberAccessExpression(VBA_Object):
                     if (curr_func == "__LOOP_VAR__"):
                         curr_func = curr_obj
                 else:
+                    #print("BOO: 2")
+                    #print(obj_name)
                     return None
 
             # Add the current call as an argument to the previous call.
@@ -559,6 +570,8 @@ class MemberAccessExpression(VBA_Object):
             prev_func = curr_func
             
         # Done.
+        #print("BOO: 3")
+        #print(res_func)
         return res_func
         
     def _to_python_nested_methods(self, context, indent):
