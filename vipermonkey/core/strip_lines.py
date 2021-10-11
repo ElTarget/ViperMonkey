@@ -2728,9 +2728,9 @@ def strip_difficult_tuple_lines(vba_code):
     if (vba_code is None):
         return vba_code
     r = ""
-    #tuple_pat = r"[\w_]{1,40}(?:\.[\w_]{1,40})+ +\( *[\w_\d\.]+ *(?:, *[\w_\d]+ *)+\ *\) *[-\+\*/]"
-    tuple_pat = r"[\w_]{1,40}(?:\.[\w_]{1,40})+ +\( *[\w_\d\.]+ *(?:, *[\w_\d]+ *)+ *\) *[-\+\*/]"
-    simple_tuple_pat = r"\( *[\w_\d\.]+ *(?:, *[\w_\d]+ *)+ *\)"
+    # .Range(strCellSelect).RemoveDuplicates (aColsArr), xlYes
+    tuple_pat = r"\.?[\w_\(\)]{1,40}(?:\.[\w_\(\)]{1,40})+ +\( *[\w_\d\.]+ *(?:, *[\w_\d]+ *)* *\) *[-\+\*/,]"
+    simple_tuple_pat = r"\( *[\w_\d\.]+ *(?:, *[\w_\d]+ *)* *\)"
     for line in vba_code.split("\n"):
 
         # Does this line have any tuples?

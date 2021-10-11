@@ -2129,6 +2129,7 @@ class Context(object):
 
                 # Is this a Microsoft.XMLDOM object?
                 from core import vba_object
+                from core import expressions
                 node_type = orig_name
                 if (isinstance(orig_name, expressions.MemberAccessExpression)):
                     node_type = orig_name.lhs
