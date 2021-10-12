@@ -2842,6 +2842,64 @@ class MemberAccessExpression(VBA_Object):
         # Return the text.
         r = context.get(var_name)
         return r
+
+    def _handle_doc_find_replace(self, context):
+        """Handle ActiveDocument.Content.Find.Execute() calls (find/replace
+        on Word doc text contents).
+
+        @param context (Context object) Current emulation context.
+
+        @return (str) "done" on success, None if this is not a
+        find/replace call.
+
+        """
+
+        # Is this a Word find/replace call?
+        if (".Content.Find.Execute(".lower() not in str(self).lower()):
+
+            # No.
+            return None
+
+        # Sanity check.
+        if ((not isinstance(self.rhs, list)) or (len(self.rhs) == 0)):
+            return None
+        rep_op = self.rhs[-1]
+        if ((not isinstance(rep_op, Function_Call)) or
+            (rep_op.name != "Execute")):
+            log.warning("Weird find/replace Execute() call. Skipping.")
+            return None
+        
+        # Pull out the string replace arguments.
+        find = None
+        replace = None
+        # Look for named arguments. All the examples I found used named args.
+        for p in rep_op.params:            
+            if isinstance(p, NamedArgument):
+                if (p.name == "FindText"):
+                    find = safe_str_convert(p.value)
+                if (p.name == "ReplaceWith"):
+                    replace = safe_str_convert(p.value)
+
+        # Got the find and replace values?
+        if ((find is None) or (replace is None)):
+            log.warning("Missing named arguments for find/replace Execute() call. Skipping.")
+            return None
+
+        # TODO: We are assuming a global find/replace.
+        find = find[1:-1]
+        replace = replace[1:-1]
+        try:
+            paragraphs = context.get("ActiveDocument.Paragraphs".lower())
+            new_paragraphs = []
+            for p in paragraphs:
+                new_paragraphs.append(p.replace(find, replace))
+            context.set("ActiveDocument.Paragraphs", new_paragraphs)
+        except KeyError:
+            log.warning("Can't find ActiveDocument.Paragraphs. Skipping find/replace Execute() call.")
+            return None
+
+        # Did the find/replace on the doc paragraphs.
+        return "done"
         
     def eval(self, context, params=None):
         params = params # pylint warning
@@ -2866,7 +2924,13 @@ class MemberAccessExpression(VBA_Object):
 
         # Always emulate WScriptShell() Exec() methods.
         self._handle_exec(context)
-            
+
+        # Word find/replace on the document text?
+        #print("HERE: .5")
+        r = self._handle_doc_find_replace(context)
+        if (r is not None):
+            return r
+        
         # Excel UsedRange call?
         #print("HERE: 1")
         r = self._handle_usedrange_call(context)
