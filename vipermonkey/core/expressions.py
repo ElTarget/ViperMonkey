@@ -2900,6 +2900,31 @@ class MemberAccessExpression(VBA_Object):
 
         # Did the find/replace on the doc paragraphs.
         return "done"
+
+    def _handle_excel_get_sheet_name(self, context):
+        """Handle calls like Sheets.Item(3).Name for getting a sheet name.
+
+        @param context (Context object) Current emulation context.
+
+        @return (str) The sheet name on success, None on failure.
+
+        """
+
+        # Is this a supported sheet name call? Currently only literal
+        # values for the sheet index are supported.
+        pat = r"Sheets\.Item\((\d{1,100})\)\.Name"
+        obj_str = str(self).strip()
+        if (re.search(pat, obj_str) is None):
+            return None
+
+        # It is a supported call. Get the sheet index.
+        index = int(re.findall(pat, obj_str)[0]) - 1
+        
+        # Get the sheet name if we have loaded Excel.
+        if ((context.loaded_excel is None) or
+            (index >= len(context.loaded_excel.sheet_names()))):
+            return None
+        return context.loaded_excel.sheet_names()[index]
         
     def eval(self, context, params=None):
         params = params # pylint warning
@@ -2928,6 +2953,12 @@ class MemberAccessExpression(VBA_Object):
         # Word find/replace on the document text?
         #print("HERE: .5")
         r = self._handle_doc_find_replace(context)
+        if (r is not None):
+            return r
+
+        # Getting the name of an Excel sheet?
+        #print("HERE: .6")
+        r = self._handle_excel_get_sheet_name(context)
         if (r is not None):
             return r
         
