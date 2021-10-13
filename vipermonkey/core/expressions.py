@@ -4266,10 +4266,16 @@ class Function_Call_Array_Access(VBA_Object):
         self.gloss = r
         return self.gloss
 
+    def to_python(self, context, params=None, indent=0):
+        func_code = to_python(self.array, context)
+        index_code = to_python(self.index, context)
+        r = func_code + "[" + index_code + "]"
+        return r
+    
     def eval(self, context, params=None):
         params = params # pylint warning
 
-        # Evaluate the value of the function returing the array.
+        # Evaluate the value of the function returning the array.
         array_val = eval_arg(self.array, context=context)
         # Evaluate the index to read.
         array_index = vba_conversion.coerce_to_int(eval_arg(self.index, context=context))
