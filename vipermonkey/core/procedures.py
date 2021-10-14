@@ -523,6 +523,12 @@ class Function(VBA_Object):
         func_args += ")"
         r += indent_str + "def " + safe_str_convert(self.name) + func_args + ":\n"
 
+        # Print debug info.
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            r += indent_str + " " * 4 + "print(\"CALLING: " + safe_str_convert(self.name) + "\")\n"
+            r += indent_str + " " * 4 + "print(\"PARAMS:\")\n"
+            r += indent_str + " " * 4 + "print(" + func_args + ")\n"
+        
         # Init return value.
         r += indent_str + " " * 4 + "import core.vba_library\n"
         r += indent_str + " " * 4 + "global vm_context\n\n"
@@ -540,6 +546,12 @@ class Function(VBA_Object):
 
         # Check for IOCs.
         r += "\n" + _check_for_iocs(self, tmp_context, indent=indent+4)
+
+        # Print debug info.
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            r += indent_str + " " * 4 + "print(\"RETURN:\")\n"
+            r += indent_str + " " * 4 + "print(\"" + safe_str_convert(self.name) + "\")\n"
+            r += indent_str + " " * 4 + "print(" + safe_str_convert(self.name) + ")\n"
         
         # Return the function return val.
         r += "\n" + indent_str + " " * 4 + "return " + safe_str_convert(self.name) + "\n"

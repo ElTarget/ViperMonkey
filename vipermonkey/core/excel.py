@@ -360,8 +360,6 @@ def load_excel_xlrd(data):
 
     # It is Office 97. See if we can read it with xlrd2.
     try:
-        if (log.getEffectiveLevel() == logging.DEBUG):
-            log.debug("Trying to load with xlrd...")
         r = xlrd.open_workbook(file_contents=data)
         return r
     except Exception as e:

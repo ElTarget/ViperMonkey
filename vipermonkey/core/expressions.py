@@ -649,9 +649,10 @@ class MemberAccessExpression(VBA_Object):
         
     def to_python(self, context, params=None, indent=0):
 
-        # Handle Scripting.Dictionary.Add() calls.
         #print("TO_PYTHON!!")
         #print(self)
+
+        # Handle Scripting.Dictionary.Add() calls.
         add_code = self._to_python_handle_add(context, indent)
         if (add_code is not None):
             #print("OUT: 1")
@@ -4085,6 +4086,8 @@ class Function_Call(VBA_Object):
         # not 1st class objects in VB).
         if (context.contains(func_name)):
             ref = context.get(func_name)
+            if (ref == "__ALREADY_SET__"):
+                ref = None
             ref1 = None
             try:
                 ref1 = context.get("__ORIG__" + func_name)
@@ -4092,9 +4095,10 @@ class Function_Call(VBA_Object):
                 pass
             if ((isinstance(ref, list)) or
                 (isinstance(ref1, list)) or
+                (isinstance(ref1, str)) or
                 (ref == "__FUNC_ARG__")):
 
-                # Do the array access.
+                # Do the array/string access.
                 acc_str = ""
                 for p in py_params:
                     acc_str += "[coerce_to_int(" + p + ")]"

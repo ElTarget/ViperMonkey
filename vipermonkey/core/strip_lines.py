@@ -2618,7 +2618,7 @@ def find_var_assigns(vba_code, change_callbacks, local_funcs):
     
     # Find all assigned variables and track what line the variable was assigned on.
     # Dim statements are counted as assignments.
-    assign_re = re2.compile("(?:\s*(\w+(?:\([^\)]*\))?(\.\w+)*)\s*=\s*)|(?:Dim\s+(\w+(\.\w+)*))")
+    assign_re = re2.compile(r"(?:\s*(\w+(?:\([^\)]*\))?(\.\[?\w+\]?)*)\s*=\s*)|(?:Dim\s+(\w+(\.\w+)*))")
     assigns = {}
     line_num = 0
     bool_statements = set(["If", "For", "Do"])
@@ -2695,6 +2695,10 @@ def find_var_assigns(vba_code, change_callbacks, local_funcs):
 
                     # Keep object creations.
                     if ("CreateObject" in val):
+                        continue
+
+                    # Keep Excel sheet references.
+                    if (b"Sheets" in var):
                         continue
                     
                     # Keep updates of the LHS where the LHS appears on the RHS

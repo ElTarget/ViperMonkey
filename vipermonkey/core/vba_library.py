@@ -296,6 +296,21 @@ class ExecuteExcel4Macro(VbaLibraryFunc):
 
     def num_args(self):
         return 1
+
+class ExcelFormula(VbaLibraryFunc):
+    """Set Excel formula.
+
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) == 0)):
+            return
+        formula = utils.safe_str_convert(params[0])
+        r = "Sheet(??).Cell(??, ??) = '" + formula + "'"
+        context.report_action('Set Cell Formula', r, "Formula", strip_null_bytes=True)
+
+    def num_args(self):
+        return 1
     
 class GetSaveAsFilename(VbaLibraryFunc):
     """Emulate GetSaveAsFilename() function (stubbed).
@@ -938,8 +953,14 @@ class Len(VbaLibraryFunc):
     def eval(self, context, params=None):
         if (isinstance(params[0], int)):
             return len(utils.safe_str_convert(params[0]))
+
+        # Handle Excel cells.
         val = params[0]
-        if (hasattr(params[0], '__len__')):
+        if excel.is_cell_dict(val):
+            val = val["value"]
+
+        # Get the length.
+        if (hasattr(val, '__len__')):
 
             # Is this a string?            
             if (isinstance(val, str)):
@@ -1074,7 +1095,12 @@ class Mid(VbaLibraryFunc):
         if (len(params) not in (2,3)):
             log.error("Invalid arguments " + utils.safe_str_convert(params) + " to Mid().")
             return ""
+
+        # Handle Excel cells.
         s = params[0]
+        if excel.is_cell_dict(s):
+            s = s["value"]
+        
         # "If String contains the data value Null, Null is returned."
         if ((s is None) or (s == "NULL")): return "\x00"
         # If start is NULL, NULL is also returned.
@@ -1878,7 +1904,12 @@ class UBound(VbaLibraryFunc):
 
         if ((params is None) or (len(params) == 0)):
             return "NULL"
+
+        # Handle Excel cells.
         arr = params[0]
+        if excel.is_cell_dict(arr):
+            arr = arr["value"]
+        
         # TODO: Handle multidimensional arrays.
         if ((arr is None) or (not hasattr(arr, '__len__'))):
             log.error("UBound(" + utils.safe_str_convert(arr) + ") cannot be computed.")
@@ -2318,8 +2349,13 @@ class Split(VbaLibraryFunc):
         if ((params is None) or (len(params) == 0)):
             return "NULL"
 
+        # Handle Excel cells.
+        string = params[0]
+        if excel.is_cell_dict(string):
+            string = string["value"]
+        
         # TODO: Actually implement this properly.
-        string = utils.safe_str_convert(params[0])
+        string = utils.safe_str_convert(string)
         sep = " "
         if ((len(params) > 1) and
             (isinstance(params[1], str)) and
@@ -2337,8 +2373,6 @@ class Split(VbaLibraryFunc):
         r = string.split(sep)
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Split: return %r" % r)
-        #print "SPLIT!!"
-        #print r
         return r
     
 class Int(VbaLibraryFunc):
@@ -4923,8 +4957,8 @@ def _read_cell(sheet, row, col):
     
     # Read and process the cell.
     try:
-        raw_cell = sheet.cell(row, col)
-        r = utils.safe_str_convert(raw_cell).replace("text:", "")
+        raw_cell = utils.safe_str_convert(sheet.cell(row, col)).replace("\\\\", "\\")
+        r = raw_cell.replace("text:", "")
         if (r.startswith("u'")):
             r = r[1:]
         if (r.startswith("'") and r.endswith("'") and (len(r) >= 2)):
@@ -6252,7 +6286,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                RtlMoveMemory, OnTime, AddItem, Rows, DatePart, FileLen, Sheets, Choose,
                Worksheets, Value, IsObject, Filter, GetRef, BuildPath, CreateFolder,
                Arguments, DateDiff, SetRequestHeader, SetOption, SetTimeouts, DefaultFilePath,
-               SubFolders, Files, Name):
+               SubFolders, Files, Name, ExcelFormula):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

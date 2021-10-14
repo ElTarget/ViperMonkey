@@ -900,6 +900,29 @@ class Let_Statement(VBA_Object):
         self.gloss = 'Let %s(%r) %s %r' % (self.name, self.index, self.op, self.expression)
         return self.gloss
 
+    def _handle_excel_formula_assign(self, context):
+        """Handle 'Sheets(1). ... .Formula = VVV' assignments.
+
+        @param context (Context object) The context containing the
+        current variable state.
+
+        @return (str) The Python code for the formula assignment if it
+        is one, None if it is not.
+
+        """
+
+        # Is this a formula assignment?
+        lhs_str = safe_str_convert(self.name).strip()
+        if ((not lhs_str.startswith("Sheets(")) or
+            (not lhs_str.endswith(".Formula"))):
+            return None
+
+        # We are setting a formula. Call the Formula() emulator to
+        # save the formula.
+        args = to_python(self.expression, context)
+        r = "core.vba_library.run_function(\"ExcelFormula\", vm_context, [" + args + "])"
+        return r
+        
     def to_python(self, context, params=None, indent=0):        
 
         # If we are not assigning to a boolean variable, assume that any
@@ -907,7 +930,13 @@ class Let_Statement(VBA_Object):
         old_in_bitwise = context.in_bitwise_expression
         if (context.get_type(self.name) != "Boolean"):
             context.in_bitwise_expression = True        
-        
+
+        # Handle Excel cell formula assignments.
+        spaces = " " * indent
+        code = self._handle_excel_formula_assign(context)
+        if (code is not None):
+            return spaces + code
+            
         # Are we updating a global variable?
         r = ""
         try:
@@ -919,7 +948,6 @@ class Let_Statement(VBA_Object):
                 (var_val != "__ALREADY_SET__")):
                 
                 # It's global and not a func. Treat as global in Python.
-                spaces = " " * indent
                 r += "global " + utils.fix_python_overlap(safe_str_convert(self.name)) + \
                      "\n" + spaces
 

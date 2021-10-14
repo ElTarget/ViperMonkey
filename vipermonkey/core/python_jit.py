@@ -76,8 +76,9 @@ def _boilerplate_to_python(indent):
 
     """
     indent_str = " " * indent
-    boilerplate = indent_str + "import core.vba_library\n"
-    boilerplate = indent_str + "import core.vba_context\n"
+    boilerplate = indent_str + "import traceback\n\n"
+    boilerplate += indent_str + "import core.vba_library\n"
+    boilerplate += indent_str + "import core.vba_context\n"
     boilerplate += indent_str + "from core.utils import safe_print\n"
     boilerplate += indent_str + "from core.utils import safe_str_convert\n"
     boilerplate += indent_str + "from core.utils import plus\n"
@@ -598,6 +599,8 @@ def to_python(arg, context, params=None, indent=0, statements=False):
                 #sys.exit(0)
                 return "ERROR! to_python failed! " + safe_str_convert(e)
             r += indent_str + "except IndexError as e:\n"
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                r += indent_str + " " * 4 + "traceback.print_exc()\n"
             r += indent_str + " " * 4 + "safe_print(\"VB ERROR: \" + safe_str_convert(e))\n"
             if in_loop:
                 # If we are in a loop break out of the loop and track that we have an error.
@@ -612,6 +615,7 @@ def to_python(arg, context, params=None, indent=0, statements=False):
             r += indent_str + " " * 4 + "raise(e)\n"
             r += indent_str + "except Exception as e:\n"
             if (log.getEffectiveLevel() == logging.DEBUG):
+                r += indent_str + " " * 4 + "traceback.print_exc()\n"
                 r += indent_str + " " * 4 + "safe_print(\"ERROR: \" + safe_str_convert(e))\n"
             else:
                 r += indent_str + " " * 4 + "pass\n"
@@ -972,8 +976,8 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
 
     except Exception as e:
 
-        safe_print("REMOVE THIS!!")
-        safe_print("-*-*-*-*-\n" + code_python + "\n-*-*-*-*-")
+        #safe_print("REMOVE THIS!!")
+        #safe_print("-*-*-*-*-\n" + code_python + "\n-*-*-*-*-")
         #raise e
                 
         # If we bombed out due to a potential infinite loop we
