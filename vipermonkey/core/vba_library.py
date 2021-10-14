@@ -3514,6 +3514,10 @@ class Name(VbaLibraryFunc):
         context = context # pylint
         params = params # pylint
 
+        # Getting the name of an Excel sheet?
+        if ((len(params) > 0) and (isinstance(params[0], excel.ExcelSheet))):
+            return params[0].name
+        
         # Lets have this match any logic and see what the VB does.
         return "SOME_FILE_NAME"
     

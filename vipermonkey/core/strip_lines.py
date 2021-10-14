@@ -2700,6 +2700,8 @@ def find_var_assigns(vba_code, change_callbacks, local_funcs):
                     # Keep Excel sheet references.
                     if (b"Sheets" in var):
                         continue
+                    if (b"Cells" in var):
+                        continue
                     
                     # Keep updates of the LHS where the LHS appears on the RHS
                     # (ex. a = a + 1).
