@@ -1685,15 +1685,23 @@ class Prop_Assign_Statement(VBA_Object):
         super(Prop_Assign_Statement, self).__init__(original_str, location, tokens)
         self.gloss = None
         self.prop = tokens.prop
-        self.param = tokens.param
-        self.value = tokens.value
+        self.args = []
+        self.args.append((tokens.param1, tokens.value1))
+        for i in tokens.more_values:
+            self.args.append((i[0], i[1]))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as Prop_Assign_Statement' % self)
 
     def __repr__(self):
         if (self.gloss is not None):
             return self.gloss
-        self.gloss = safe_str_convert(self.prop) + " " + safe_str_convert(self.param) + ":=" + safe_str_convert(self.value)
+        self.gloss = safe_str_convert(self.prop) + " "
+        first = True
+        for arg in self.args:
+            if not first:
+                self.gloss += ", "
+            first = False
+            self.gloss += safe_str_convert(arg[0]) + ":=" + safe_str_convert(arg[1])
         return self.gloss
         
     def to_python(self, context, params=None, indent=0):
@@ -1703,7 +1711,53 @@ class Prop_Assign_Statement(VBA_Object):
         context = context
         
         return " " * indent + "pass"
-    
+
+    def _handle_doc_find_replace(self, context):
+        """Handle ActiveDocument.Content.Find.Execute() calls (find/replace
+        on Word doc text contents).
+
+        @param context (Context object) Current emulation context.
+
+        """
+
+        # Do we have a doc find/replace call?
+        if ((safe_str_convert(self.prop).strip() != "Execute") or
+            (len(self.args) != 3)):
+            return
+
+        # Maybe we have one. Pull out the arguments.
+        find = None
+        replace = None
+        # Look for named arguments. All the examples I found used named args.
+        for p in self.args:
+            if (p[0] == "FindText"):
+                find = safe_str_convert(p[1])
+            if (p[0] == "ReplaceWith"):
+                replace = safe_str_convert(p[1])
+
+        # Got the find and replace values?
+        if ((find is None) or (replace is None)):
+            log.warning("Missing named arguments for find/replace Execute() call. Skipping.")
+            return
+
+        # TODO: We are assuming a global find/replace.
+        find = eval_arg(find, context)
+        if (find.startswith('"') and find.endswith('"')):
+            find = find[1:-1]
+        replace = eval_arg(replace, context)
+        if (replace.startswith('"') and replace.endswith('"')):
+            replace = replace[1:-1]
+        try:
+            paragraphs = context.get("ActiveDocument.Paragraphs".lower())
+            new_paragraphs = []
+            for p in paragraphs:
+                new_paragraphs.append(p.replace(find, replace))
+            context.set("ActiveDocument.Paragraphs", new_paragraphs)
+        except KeyError:
+            log.warning("Can't find ActiveDocument.Paragraphs. Skipping find/replace Execute() call.")
+
+        log.info("Performed Word doc find/replace.")
+        
     def eval(self, context, params=None):
 
         # pylint.
@@ -1713,14 +1767,17 @@ class Prop_Assign_Statement(VBA_Object):
         if (context.exit_func):
             return
 
+        # Special handling for Word Find/Replaceall functionality.
+        self._handle_doc_find_replace(context)
+
 
 prop_assign_statement = (
     Optional(Suppress("."))
     + (member_access_expression("prop") ^ lex_identifier("prop"))
-    + lex_identifier('param')
+    + lex_identifier('param1')
     + Suppress(':=')
-    + expression('value')
-    + ZeroOrMore(',' + lex_identifier('param') + Suppress(':=') + expression('value'))
+    + expression('value1')
+    + ZeroOrMore(Suppress(',') + Group(lex_identifier('param2') + Suppress(':=') + expression('value2')))('more_values')
 )
 prop_assign_statement.setParseAction(Prop_Assign_Statement)
 
