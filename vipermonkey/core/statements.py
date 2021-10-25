@@ -1731,9 +1731,9 @@ class Prop_Assign_Statement(VBA_Object):
         # Look for named arguments. All the examples I found used named args.
         for p in self.args:
             if (p[0] == "FindText"):
-                find = safe_str_convert(p[1])
+                find = safe_str_convert(eval_arg(p[1], context))
             if (p[0] == "ReplaceWith"):
-                replace = safe_str_convert(p[1])
+                replace = safe_str_convert(eval_arg(p[1], context))
 
         # Got the find and replace values?
         if ((find is None) or (replace is None)):
@@ -1741,10 +1741,8 @@ class Prop_Assign_Statement(VBA_Object):
             return
 
         # TODO: We are assuming a global find/replace.
-        find = eval_arg(find, context)
         if (find.startswith('"') and find.endswith('"')):
             find = find[1:-1]
-        replace = eval_arg(replace, context)
         if (replace.startswith('"') and replace.endswith('"')):
             replace = replace[1:-1]
         try:

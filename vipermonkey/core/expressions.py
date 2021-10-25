@@ -2882,9 +2882,9 @@ class MemberAccessExpression(VBA_Object):
         for p in rep_op.params:            
             if isinstance(p, NamedArgument):
                 if (p.name == "FindText"):
-                    find = safe_str_convert(p.value)
+                    find = safe_str_convert(eval_arg(p.value, context))
                 if (p.name == "ReplaceWith"):
-                    replace = safe_str_convert(p.value)
+                    replace = safe_str_convert(eval_arg(p.value, context))
 
         # Got the find and replace values?
         if ((find is None) or (replace is None)):
@@ -2892,8 +2892,10 @@ class MemberAccessExpression(VBA_Object):
             return None
 
         # TODO: We are assuming a global find/replace.
-        find = find[1:-1]
-        replace = replace[1:-1]
+        if (find.startswith('"') and find.endswith('"')):
+            find = find[1:-1]
+        if (replace.startswith('"') and replace.endswith('"')):            
+            replace = replace[1:-1]
         try:
             paragraphs = context.get("ActiveDocument.Paragraphs".lower())
             new_paragraphs = []
