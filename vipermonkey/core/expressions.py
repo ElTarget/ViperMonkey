@@ -106,12 +106,17 @@ def _is_numeric_op(op):
         "=>" : "|gte|",
         "<=" : "|lte|",
         "=<" : "|lte|",
-        "<>" : False,
+        "<>" : "|neq|",
         "is" : False
     }
-    if (op in op_map):
-        return op_map[op]
+
+    # TODO: It looks like we have loosely typed Python overrides for things
+    # that typically take numeric arguments (<, >=. etc.), so for now have this
+    # return false. We are leaving this method here in case this needs to be revisited.
     return False
+    #if (op in op_map):
+    #    return op_map[op]
+    #return False
 
 def _vba_to_python_op(op, is_boolean):
     """Convert a VBA boolean operator to a Python boolean operator or a
@@ -131,12 +136,12 @@ def _vba_to_python_op(op, is_boolean):
         "OrElse" : "or",
         "Eqv" : "|eq|",
         "=" : "|eq|",
-        ">" : ">",
-        "<" : "<",
-        ">=" : ">=",
-        "=>" : ">=",
-        "<=" : "<=",
-        "=<" : "<=",
+        ">" : "|gt|",
+        "<" : "|lt|",
+        ">=" : "|gte|",
+        "=>" : "|gte|",
+        "<=" : "|lte|",
+        "=<" : "|lte|",
         "<>" : "|neq|",
         "is" : "|eq|"
     }

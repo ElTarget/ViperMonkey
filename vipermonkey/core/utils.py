@@ -273,11 +273,15 @@ def safe_gt(x,y):
         
     # Since we are doing > both values should be numbers.
     try:
-        from vba_conversion import coerce_to_num
+        from core.vba_conversion import coerce_to_num
         x = coerce_to_num(x)
         y = coerce_to_num(y)
     except ValueError:
-        return False
+
+        # One of them can't be converted to a number. Convert both to strings
+        # and hope for the best.
+        x = safe_str_convert(x)
+        y = safe_str_convert(y)
 
     # Return the numeric comparison.
     return (x > y)
@@ -285,7 +289,7 @@ def safe_gt(x,y):
 # Safe > and < infix operators. Ugh. Loosely typed languages are terrible.
 # pylint: disable=unnecessary-lambda
 gt=Infix(lambda x,y: safe_gt(x, y))
-lt=Infix(lambda x,y: (not safe_gt(x, y)))
+lt=Infix(lambda x,y: (not safe_gt(x, y)) and (not safe_equals(x,y)))
 gte=Infix(lambda x,y: (safe_gt(x, y) or safe_equals(x,y)))
 lte=Infix(lambda x,y: (not safe_gt(x, y) or safe_equals(x,y)))
 
