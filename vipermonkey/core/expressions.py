@@ -2896,6 +2896,8 @@ class MemberAccessExpression(VBA_Object):
             find = find[1:-1]
         if (replace.startswith('"') and replace.endswith('"')):            
             replace = replace[1:-1]
+        if (replace == "NULL"):
+            replace = ""
         try:
             paragraphs = context.get("ActiveDocument.Paragraphs".lower())
             new_paragraphs = []
