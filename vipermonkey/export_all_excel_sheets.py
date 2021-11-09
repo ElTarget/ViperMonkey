@@ -18,6 +18,7 @@ import string
 
 # sudo pip3 install unotools
 # sudo apt install libreoffice-calc, python3-uno
+# NOTE: unotools does not work in pypy3, so python3 needed to run this.
 from unotools import Socket, connect
 from unotools.component.calc import Calc
 from unotools.unohelper import convert_path_to_url
