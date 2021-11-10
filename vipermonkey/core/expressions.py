@@ -773,10 +773,15 @@ class MemberAccessExpression(VBA_Object):
 
         """
 
+        # Sanity check.
+        expr_str = safe_str_convert(self)
+        if (("Pages(" not in expr_str) or (".Caption" not in expr_str)):
+            return None
+        
         # Do we have an indexed page caption reference?
         # Bnrdytkzyupr.Feoubcbnti.Pages('0').Caption
         page_pat = r".+\.Pages\('(\d+)'\)\.Caption"
-        index = re.findall(page_pat, safe_str_convert(self))
+        index = re.findall(page_pat, expr_str)
         if (len(index) == 0):
             return None
         index = int(index[0]) + 1
@@ -2026,36 +2031,45 @@ class MemberAccessExpression(VBA_Object):
         if (not os.path.isdir(out_dir)):
             os.makedirs(out_dir)
         
-        # Dump the data to a file.
+        # Compute the hash of the data being written.
+        raw_data = None
+        if isinstance(val, bytes):
+            raw_data = array.array('B', val).tostring()
+        else:
+            raw_data = array.array('B', bytes(val, "latin-1")).tostring()
+        h = sha256()
+        h.update(raw_data)
+        file_hash = h.hexdigest()
+            
+        # Get the name of the file to drop.
         if ("/" in filename):
             filename = filename[filename.rindex("/") + 1:]
         if ("\\" in filename):
             filename = filename[filename.rindex("\\") + 1:]        
+        if (len(filename) > 50):
+            filename = "REALLY_LONG_NAME_" + safe_str_convert(file_hash) + ".dat"
+            log.warning("Filename of dropped file is too long, replacing with " + filename)
         fname = out_dir + "/" + filename
         fname = fname.replace("\x00", "").replace("..", "")
         fname = ''.join([x for x in fname if x in string.printable])
         fname = re.sub(r"[^ -~]", "__", fname)
+            
+        # Dump the data to the file.            
         try:
 
             # Write out the file.
             #print("WRITE TO: " + fname)
             f = open(fname, 'wb')
-            raw_data = None
             if isinstance(val, bytes):
-                raw_data = array.array('B', val).tostring()
                 f.write(val)
             else:
-                raw_data = array.array('B', bytes(val, "latin-1")).tostring()
                 f.write(bytes(val, "latin-1"))
             f.close()
             context.report_action('Write File', filename, 'ADODB.Stream SaveToFile()', strip_null_bytes=True)
 
             # Save the hash of the written file.
-            h = sha256()
-            h.update(raw_data)
-            file_hash = h.hexdigest()
             context.report_action("Dropped File Hash", file_hash, 'File Name: ' + filename)
-
+            
             # Consider this ADODB stream to be finished, so clear the ReadText variable.
             context.set(var_name, "")
             
@@ -2979,22 +2993,22 @@ class MemberAccessExpression(VBA_Object):
             return r
 
         # See if this is reading a table cell value.
-        #print "HERE: 1.1"
+        #print("HERE: 1.1")
         call_retval = self._handle_table_cell(context)
         if (call_retval is not None):
-            #print "OUT: 0.1"
+            #print("OUT: 0.1")
             return call_retval
 
         # Getting the count of controls in a form?
         call_retval = self._handle_controls_count(context)
         if (call_retval is not None):
-            #print "OUT: 0.2"
+            #print("OUT: 0.2")
             return call_retval
 
         # Getting the text of a form control?
         call_retval = self._handle_control_text(context)
         if (call_retval is not None):
-            #print "OUT: 0.3"
+            #print("OUT: 0.3")
             return call_retval
         
         # 0 argument call to local function?

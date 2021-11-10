@@ -4584,11 +4584,11 @@ class Call_Statement(VBA_Object):
             func_call_str += safe_str_convert(p_eval)
         func_call_str += ")"
         try:
-            #print("CALL STR: '" + func_call_str + "'")
             memb_exp = member_access_expression.parseString(func_call_str, parseAll=True)[0]
-
+            
             # Evaluate the call as a member access expression.
-            return memb_exp.eval(context)
+            r = memb_exp.eval(context)
+            return r
         except ParseException as e:
 
             if (log.getEffectiveLevel() == logging.DEBUG):

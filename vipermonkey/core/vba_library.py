@@ -82,6 +82,8 @@ from core.logger import log
 
 # TODO: Word 2013 object model reference: https://msdn.microsoft.com/EN-US/library/office/ff837519.aspx
 
+URL_REGEX = r'.*([hH][tT][tT][pP][sS]?://(([a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(:[0-9]+)?)+(/([/\?&\~=a-zA-Z0-9_\-\.](?!http))+)?)).*'
+
 def member_access(var, field, globals_calling_scope=None):
     """Read a field from an object. Used in Python JIT code.
 
@@ -2688,7 +2690,7 @@ class SaveToFile(VbaLibraryFunc):
         # Save that we are saving a file.
         fname = utils.safe_str_convert(params[0])
         context.report_action('Write File', fname, 'SaveToFile', strip_null_bytes=True)
-        
+
         # Just return the file name. This is used in
         # expressions.MemberAccessExpression._handle_savetofile().        
         context.last_saved_file = fname
@@ -4336,7 +4338,8 @@ class WriteLine(VbaLibraryFunc):
         # Save writes that look like they are writing URLs.
         data_str = utils.safe_str_convert(data)
         if (("http:" in data_str) or ("https:" in data_str)):
-            context.report_action('Write URL', data_str, 'File Write')
+            urls = utils.safe_str_convert(re.findall(URL_REGEX, data_str))
+            context.report_action('Write URL', urls, 'File Write')
         
         # TODO: Currently the object on which WriteLine() is being called is not
         # being tracked. We will only handle the WriteLine() if there is only 1
@@ -6151,7 +6154,8 @@ class Write(VbaLibraryFunc):
 
         # Save writes that look like they are writing URLs.
         if (("http:" in data) or ("https:" in data)):
-            context.report_action('Write URL', data, 'File Write', strip_null_bytes=True)
+            urls = utils.safe_str_convert(re.findall(URL_REGEX, utils.safe_str_convert(data)))
+            context.report_action('Write URL', urls, 'File Write', strip_null_bytes=True)
 
         # TODO: Currently the object on which Write() is being called is not
         # being tracked. We will only handle the Write() if there is only 1
