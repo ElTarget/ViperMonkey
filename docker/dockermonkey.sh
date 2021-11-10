@@ -5,6 +5,7 @@ if [[ $1 == "-h" || $# -eq 0 ]]; then
    echo "FILE is the VBA/VBScript file to analyze."
    echo "If JSON_FILE is given JSON analysis results will be saved in JSON_FILE."
    echo "If '-i ENTRY' is given emulation will start with VBA/VBScript function ENTRY."
+   echo "When vmonkey extracts artifact files, they are stored in a zip file <File>_artifacts.zip, with password 'infected'."
    echo ""
    echo "Give the --upgrade option to download the latest docker image."
    exit
