@@ -90,6 +90,7 @@ from core import loop_transform
 from core import utils
 from core.utils import safe_str_convert
 from core import vba_conversion
+from core.expressions import expression
 
 import traceback
 from core.logger import log
@@ -1755,6 +1756,47 @@ class Prop_Assign_Statement(VBA_Object):
             log.warning("Can't find ActiveDocument.Paragraphs. Skipping find/replace Execute() call.")
 
         log.info("Performed Word doc find/replace.")
+
+    def _handle_saveas2(self, context):
+        """Handle SaveAs2() calls (save Word document).
+
+        @param context (Context object) Current emulation context.
+
+        """
+
+        # Do we have a doc find/replace call?
+        if ((safe_str_convert(self.prop).strip() != "SaveAs2") or
+            (len(self.args) != 2)):
+            return
+
+        # Maybe we have one. Pull out the arguments.
+        fname = None
+        fmt = None
+        # Look for named arguments.
+        for p in self.args:
+            if (p[0] == "FileName"):
+                fname = safe_str_convert(eval_arg(p[1], context))
+            if (p[0] == "FileFormat"):
+                fmt = vba_conversion.coerce_to_int(safe_str_convert(eval_arg(p[1], context)))
+
+        # Got the file name and format?
+        if ((fname is None) or (fmt is None)):
+            log.warning("Missing named arguments for SaveAs2() call. Skipping.")
+            return
+
+        # Make the SaveAs2() call as an actual call.
+        call_str = "SaveAs2(\"" + fname + "\", " + safe_str_convert(fmt) + ")"
+        
+        # Parse it. Assume this is an expression.
+        r = None
+        try:
+            obj = expression.parseString(call_str, parseAll=True)[0]
+            
+            # Evaluate the expression in the current context.
+            obj.eval(context, params=None)
+
+        except ParseException:
+            log.error("Failed to parse SaveAs2() call.")
         
     def eval(self, context, params=None):
 
@@ -1767,6 +1809,9 @@ class Prop_Assign_Statement(VBA_Object):
 
         # Special handling for Word Find/Replaceall functionality.
         self._handle_doc_find_replace(context)
+
+        # Special handling for SaveAs2() call.
+        self._handle_saveas2(context)
 
 
 prop_assign_statement = (

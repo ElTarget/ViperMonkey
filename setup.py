@@ -41,7 +41,7 @@ entry_points = {
 
 setup(
     name="vipermonkey",
-    version="1.0.2",
+    version="2.0.0",
     description=(
         "ViperMonkey is a VBA Emulation engine written in Python, designed to "
         "analyze and deobfuscate malicious VBA Macros contained in Microsoft "
@@ -58,7 +58,7 @@ setup(
         "colorlog",
         "colorama",
         "pyparsing==2.2.0", # pyparsing 2.4.0 triggers a MemoryError on some samples (issue #58). pyparsing 2.3.0 parses some constructs differently and breaks things.
-        "unidecode",
+        "unidecode==1.2.0",
         "xlrd",
         "regex",
     ],
