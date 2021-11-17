@@ -1,7 +1,7 @@
 FROM ubuntu:focal
 
 # Label the image appropriately
-LABEL description="Docker container for running Python 3 ViperMonkey" maintainer="Kirk Sayre"
+LABEL description="Docker container for running Python 3 ViperMonkey" maintainer="Kirk Sayre" 
 
 # Hack to get pypy3 and python3 to install packages in the same place.
 RUN mkdir /usr/local/lib/pypy3.7

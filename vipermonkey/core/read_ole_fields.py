@@ -760,7 +760,7 @@ def _handle_control_tip_text(control_tip_var_names, vals, debug):
             if ((str_val.startswith(name)) and ((pos + 1) < len(vals))):
 
                 # Skip values that are not valid.
-                if (vals[pos + 1].startswith("ControlTipText")):
+                if (vals[pos + 1].startswith(b"ControlTipText")):
                     continue
                 
                 # Save the current name/value pair.

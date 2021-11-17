@@ -1,7 +1,7 @@
 # Overview
 
 This dockerfile takes the base ubuntu docker image and layers on
-software necessary to run ViperMonkey.
+software necessary to run ViperMonkey. 
 
 Note for running docker commands: the following commands use sudo, but
 you can also add your user to the docker group to avoid this.
