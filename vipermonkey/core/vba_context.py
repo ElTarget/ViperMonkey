@@ -1774,8 +1774,8 @@ class Context(object):
             URL_REGEX = r'.*([hH][tT][tT][pP][sS]?://(([a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(:[0-9]+)?)+(/([/\?&\~=a-zA-Z0-9_\-\.](?!http))+)?)).*'
             value = safe_str_convert(value).strip()
             tmp_value = value
-            if (len(tmp_value) > 200):
-                tmp_value = tmp_value[:200] + " ..."
+            if (len(tmp_value) > 800):
+                tmp_value = tmp_value[:800] + " ..."
             if (re.match(URL_REGEX, value) is not None):
                 if (value not in intermediate_iocs):
                     got_ioc = True
