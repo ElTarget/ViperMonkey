@@ -67,6 +67,7 @@ import struct
 from core import vba_constants
 from core import utils
 from core.utils import safe_str_convert
+from core import excel
 
 def to_hex(s):
     """Convert a string to a VBA hex string.
@@ -930,7 +931,11 @@ class Context(object):
         if it failed.
 
         """
-                
+
+        # Handle Excel cell data structures.
+        if excel.is_cell_dict(data):
+            data = data["value"]
+        
         # Make sure the "file" exists.
         fname = safe_str_convert(fname)
         fname = fname.replace(".\\", "").replace("\\", "/")
