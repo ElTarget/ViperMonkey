@@ -644,6 +644,8 @@ class ViperMonkey(StubbedEngine):
         # Reset the actions list, in case it is called several times
         if regular_emulation:
             self.actions = []
+            # Reset the time the emulated program has "slept".
+            vba_library.reset_time_slept()
 
         # Track whether wild card values have been checked in boolean expressions.
         tested_wildcard = False
@@ -671,6 +673,8 @@ class ViperMonkey(StubbedEngine):
                 done_emulation = context.got_actions
                 tested_wildcard = tested_wildcard or context.tested_wildcard
                 self.decoded_strs.update(context.get_decoded_strs())
+                # Reset the time the emulated program has "slept".
+                vba_library.reset_time_slept()
 
         # Only start from user specified entry points if we have any.
         tmp_entry_points = self.entry_points
@@ -699,6 +703,9 @@ class ViperMonkey(StubbedEngine):
                 done_emulation = True
                 tested_wildcard = tested_wildcard or tmp_context.tested_wildcard
 
+                # Reset the time the emulated program has "slept".
+                vba_library.reset_time_slept()
+
         # Stop analysis at the user specified analysis points if we have some.
         if only_user_entry_points:
             if (tested_wildcard and regular_emulation):
@@ -720,6 +727,7 @@ class ViperMonkey(StubbedEngine):
 
                         # Emulate it.
                         context.report_action('Found Entry Point', safe_str_convert(name), '')
+
                         # We will be trying multiple entry points, so make a copy
                         # of the context so we don't accumulate stage changes across
                         # entry points.
@@ -727,9 +735,13 @@ class ViperMonkey(StubbedEngine):
                         item.eval(context=tmp_context)
                         tmp_context.dump_all_files(autoclose=True)
                         self.decoded_strs.update(tmp_context.get_decoded_strs())
+
                         # Save whether we got actions from this entry point.
                         context.got_actions = tmp_context.got_actions
                         tested_wildcard = tested_wildcard or tmp_context.tested_wildcard
+
+                        # Reset the time the emulated program has "slept".
+                        vba_library.reset_time_slept()
                         
         # Did we find a proper entry point?
         if (not done_emulation):
@@ -748,6 +760,7 @@ class ViperMonkey(StubbedEngine):
             for only_sub in zero_arg_subs:
                 sub_name = only_sub.name
                 context.report_action('Found Heuristic Entry Point', safe_str_convert(sub_name), '')
+
                 # We will be trying multiple entry points, so make a copy
                 # of the context so we don't accumulate stage changes across
                 # entry points.
@@ -756,6 +769,9 @@ class ViperMonkey(StubbedEngine):
                 tmp_context.dump_all_files(autoclose=True)
                 self.decoded_strs.update(tmp_context.get_decoded_strs())
                 tested_wildcard = tested_wildcard or tmp_context.tested_wildcard
+
+                # Reset the time the emulated program has "slept".
+                vba_library.reset_time_slept()
 
         # If we used some wildcard boolean values in boolean expressions we now have
         # an opportunity to do some really simple speculative emulation. We just
@@ -779,6 +795,8 @@ class ViperMonkey(StubbedEngine):
                                       loaded_excel=self.loaded_excel)
         # reset the actions list, in case it is called several times
         self.actions = []
+        # Reset the time the emulated program has "slept".
+        vba_library.reset_time_slept()
         e = expressions.expression.parseString(expr)[0]
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('e=%r - type=%s' % (e, type(e)))

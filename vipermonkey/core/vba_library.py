@@ -50,6 +50,8 @@ __version__ = '0.02'
 
 import logging
 from datetime import datetime
+# Hooray for name collisions!
+import datetime as datetime_module
 from datetime import date
 import time
 import math
@@ -1003,15 +1005,34 @@ class LenB(VbaLibraryFunc):
 
     def num_args(self):
         return 1
-        
+
+# Track the number of seconds the program has "slept" so we can modify
+# the result that Timer returns to look closer to real.
+time_slept = 0
+def reset_time_slept():
+    global time_slept
+    time_slept = 0
+    
 class Sleep(VbaLibraryFunc):
-    """Emulate Sleep() function (stubbed). Does nothing.
+    """Emulate Sleep() function (stubbed). Just updates the number of seconds slept.
     
     """
 
     def eval(self, context, params=None):
-        pass
 
+        # Get the number of milliseconds slept. Assume a sleep time of 1
+        # second if we don't have a valid parameter.
+        sleep_time = 1000
+        if ((params is not None) and (len(params) > 0)):
+            try:
+                sleep_time = vba_conversion.coerce_to_int(params[0])
+            except:
+                pass
+
+        # Update the number of seconds the program has "slept".
+        global time_slept
+        time_slept += math.ceil(sleep_time / 1000)
+            
     def num_args(self):
         return 1
     
@@ -5931,7 +5952,9 @@ class Timer(VbaLibraryFunc):
         context = context # pylint
         params = params # pylint
 
-        return int(time.mktime(datetime.now().timetuple()))
+        today = datetime_module.date.today()
+        seconds_since_midnight = time.time() - time.mktime(today.timetuple())
+        return int(seconds_since_midnight + time_slept)
 
 class Unescape(VbaLibraryFunc):
     """Emulate Unescape() string unescaping method (stubbed).
