@@ -3380,6 +3380,35 @@ class Atn(VbaLibraryFunc):
             log.debug("Atn: %r returns %r" % (self, r))
         return r
 
+class Tables(VbaLibraryFunc):
+    """Emulate Tables() Word table access method.
+
+    """
+
+    def eval(self, context, params=None):
+        context = context # pylint
+
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
+
+        # Get the index of the table to get.
+        table_index = eval_arg(params[0], context=context)
+        if (not isinstance(table_index, int)):
+            return "NULL"
+        table_index -= 1
+
+        # Get the table if the index is valid.
+        tables = context.get("__DOC_TABLE_CONTENTS__")
+        if (table_index >= len(tables)):
+            return "NULL"
+        table = tables[table_index]
+
+        # Return the table.
+        return table
+
+    def num_args(self):
+        return 1
+    
 class Tan(VbaLibraryFunc):
     """Emulate Tan() math function.
 
@@ -5010,7 +5039,50 @@ def _read_cell(sheet, row, col):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Failed to read cell exception: " + utils.safe_str_convert(e))
         return None
-    
+
+class Cell(VbaLibraryFunc):
+    """Emulate Word table Cell() method.
+
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) < 3)):
+            log.error("Cell() called with < 3 parameters.")
+            return "NULL"
+
+        # 1st arg should be the row.
+        row = eval_arg(params[0], context)
+        if (not isinstance(row, int)):
+            log.error("Cell(x, _, _) row arg not an int.")
+            return "NULL"
+        row -= 1
+        
+        # 2nd arg should be the column.
+        col = eval_arg(params[1], context)
+        if (not isinstance(col, int)):
+            log.error("Cell(_, x, _) column arg not an int.")
+            return "NULL"
+        col -= 1
+
+        # 3rd arg should be the table data.
+        table = params[2]
+        if (not isinstance(table, list)):
+            log.error("Cell(_, _, x) table arg not a list.")
+            return "NULL"
+        
+        # Are the indices valid?
+        if (row >= len(table)):
+            log.error("Cell() row arg out of range.")
+            return "NULL"
+        if (col >= len(table[row])):
+            log.error("Cell() column arg out of range.")
+            return "NULL"
+
+        # Return the cell value.
+        return table[row][col]
+            
 class Cells(VbaLibraryFunc):
     """Emulate Excel Cells() function.  Currently only handles Cells(x,
     y) calls.
@@ -6317,7 +6389,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                RtlMoveMemory, OnTime, AddItem, Rows, DatePart, FileLen, Sheets, Choose,
                Worksheets, Value, IsObject, Filter, GetRef, BuildPath, CreateFolder,
                Arguments, DateDiff, SetRequestHeader, SetOption, SetTimeouts, DefaultFilePath,
-               SubFolders, Files, Name, ExcelFormula):
+               SubFolders, Files, Name, ExcelFormula, Tables, Cell):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
