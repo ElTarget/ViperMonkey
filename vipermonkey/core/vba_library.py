@@ -59,6 +59,7 @@ import re
 import random
 from core.from_unicode_str import from_unicode_str
 import decimal
+import urllib.parse
 #import sys
 #import traceback
 
@@ -1604,12 +1605,26 @@ class Eval(VbaLibraryFunc):
                 obj = expressions.expression.parseString(orig_expr, parseAll=True)[0]
                 r = obj
             except ParseException:
-                log.error("Parse error. Cannot evaluate '" + orig_expr + "'")
-                return "NULL"
+
+                # Hmm, maybe we have strings delimited with ' rather than ".
+                if ("'" in orig_expr):
+                    expr = orig_expr.replace("'", '"')
+                    try:
+                        obj = expressions.expression.parseString(expr, parseAll=True)[0]
+                        r = obj
+                        
+                    except ParseException:                        
+                        log.error("Parse error. Cannot evaluate '" + orig_expr + "'")
+                        return "NULL"
+
+                else:
+                    log.error("Parse error. Cannot evaluate '" + orig_expr + "'")
+                    return "NULL"
 
         # Do any final evaulation needed.
         if (isinstance(r, VBA_Object)):
-            r = r.eval(context)
+            #r = r.eval(context)
+            r = eval_arg(r, context=context)
         return r
 
     def return_type(self):
@@ -1695,7 +1710,8 @@ class Execute(VbaLibraryFunc):
         context.report_action('Execute Command', command, 'Execute() String', strip_null_bytes=True)
         command += "\n"
 
-        # Fix invalid string assignments.
+        # Fix invalid string assignments.        
+        full_orig_command = command
         command = strip_lines.fix_vba_code(command)
 
         # Save original command string.
@@ -1769,6 +1785,18 @@ class Execute(VbaLibraryFunc):
                     obj = modules.module.parseString(command, parseAll=True)[0]
                 except ParseException:
                     pass
+
+            # Was is parsed?
+            if (obj is None):
+
+                # Hmm, maybe we have strings delimited with ' rather than ".
+                if ("'" in full_orig_command):
+                    log.warning("Parsing failed on rewritten command. Trying original command with ' replaced with \" ...")
+                    command = full_orig_command.replace("'", '"')
+                    try:
+                        obj = modules.module.parseString(command, parseAll=True)[0]
+                    except ParseException:
+                        pass
                 
             # Cannot ever parse this. Punt.
             if (obj is None):
@@ -5852,6 +5880,28 @@ class Echo(Print):
     """
     pass
 
+class DecodeURIComponent(VbaLibraryFunc):
+    """Emulate DecodeURIComponent() call.
+
+    """
+
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+
+        # Get the string to decode.
+        enc_str = utils.safe_str_convert(params[0])
+
+        # Make sure it is URI encoded.
+        pat = r"(?:%[0-9a-fA-F][0-9a-fA-F])+"
+        if (not re.match(pat, enc_str)):
+            return enc_str
+
+        # Decode it.
+        return urllib.parse.unquote(enc_str)
+
 class DeleteFile(VbaLibraryFunc):
     """Emulate File delete DeleteFile() call.
 
@@ -6389,7 +6439,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                RtlMoveMemory, OnTime, AddItem, Rows, DatePart, FileLen, Sheets, Choose,
                Worksheets, Value, IsObject, Filter, GetRef, BuildPath, CreateFolder,
                Arguments, DateDiff, SetRequestHeader, SetOption, SetTimeouts, DefaultFilePath,
-               SubFolders, Files, Name, ExcelFormula, Tables, Cell):
+               SubFolders, Files, Name, ExcelFormula, Tables, Cell, DecodeURIComponent):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

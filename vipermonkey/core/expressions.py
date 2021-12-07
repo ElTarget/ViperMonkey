@@ -4947,8 +4947,8 @@ class New_Expression(VBA_Object):
         context = context # pylint warning
         params = params # pylint warning
         
-        # TODO: Not sure how to handle this. For now just return what is being created.
-        return self.obj
+        # Looks like maybe we have to eval the object being created.
+        return eval_arg(self.obj, context)
 
 
 # pylint: disable=expression-not-assigned
