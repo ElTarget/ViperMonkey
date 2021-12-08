@@ -1759,14 +1759,15 @@ class Prop_Assign_Statement(VBA_Object):
         log.info("Performed Word doc find/replace.")
 
     def _handle_saveas2(self, context):
-        """Handle SaveAs2() calls (save Word document).
+        """Handle SaveAs2() and SaveAs() calls (save Word document).
 
         @param context (Context object) Current emulation context.
 
         """
 
         # Do we have a doc find/replace call?
-        if ((safe_str_convert(self.prop).strip() != "SaveAs2") or
+        if (((safe_str_convert(self.prop).strip() != "SaveAs2") and
+             (safe_str_convert(self.prop).strip() != "SaveAs")) or
             (len(self.args) != 2)):
             return
 
