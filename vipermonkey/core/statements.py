@@ -948,9 +948,10 @@ class Let_Statement(VBA_Object):
                 (var_val != "__FUNC_ARG__") and
                 (var_val != "__ALREADY_SET__")):
                 
-                # It's global and not a func. Treat as global in Python.
-                r += "global " + utils.fix_python_overlap(safe_str_convert(self.name)) + \
-                     "\n" + spaces
+                # It's global and not a func. Treat as global in Python if we are in a function body.
+                if (procedures.function_depth > 0):
+                    r += "global " + utils.fix_python_overlap(safe_str_convert(self.name)) + \
+                        "\n" + spaces
 
         # Not a global.
         except KeyError:
@@ -6298,7 +6299,7 @@ class EnumStatement(VBA_Object):
             context.set(enum_val[0], enum_val[1], force_global=True)
 
 
-enum_value = Group((lex_identifier | enum_val_id)("name") + Optional(Suppress(Literal("=")) + integer("value")))
+enum_value = Group((lex_identifier ^ enum_val_id)("name") + Optional(Suppress(Literal("=")) + integer("value")))
 enum_statement = Suppress(Optional(CaselessKeyword('Public') | CaselessKeyword('Private'))) + \
                  Suppress(CaselessKeyword("Enum")) + lex_identifier("enum_name") + Suppress(EOS) + \
                  Group(ZeroOrMore(enum_value + Suppress(EOS))("enum_values")) + \

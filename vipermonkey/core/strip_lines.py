@@ -1565,14 +1565,13 @@ def replace_bad_chars(vba_code):
     """
 
     # Characters that change how we modify the code.
-    interesting_chars = [r'"', r'#', r"'", r"!", r"+", r"^",
-                         r"PAT:[^\x00-\x7e]", ";", r"[", r"]", "&"]
+    interesting_chars = [r'"', r'#', r"'", r"!", r"+", r"^", r"PAT:[^\x00-\x7e]", ";", "&"]
     
     # Replace bad characters unless they appear in a string.
     in_str = False
     in_comment = False
     in_date = False    
-    num_square_brackets = 0
+    #num_square_brackets = 0
     prev_char = ""
     next_char = ""
     r = ""
@@ -1688,11 +1687,12 @@ def replace_bad_chars(vba_code):
             continue
 
         # Handle entering/leaving [] expressions.
-        if ((not in_comment) and (not in_str)):
-            if (c == '['):
-                num_square_brackets += 1
-            if (c == ']'):
-                num_square_brackets -= 1
+        # Not sure what this was for.
+        #if ((not in_comment) and (not in_str)):
+        #    if (c == '['):
+        #        num_square_brackets += 1
+        #    if (c == ']'):
+        #        num_square_brackets -= 1
             
         # Handle entering/leaving date constants.
         if ((not in_comment) and (not in_str) and (c == '#')):
@@ -1761,7 +1761,6 @@ def replace_bad_chars(vba_code):
             r += c
             continue
             
-
         # Need to eliminate bogus &; string concatenations.
         if ((c == ";") and (prev_char == "&")):
 
@@ -1942,26 +1941,44 @@ def fix_difficult_code(vba_code):
         vba_code = re.sub(strptr_pat, r'\1"&\2"\3', vba_code)
 
     # Break out labels that are not on their own line.
+    if debug_strip:
+        print("HERE: 10.1")
+        print(vba_code)
     vba_code = break_out_labels(vba_code)
 
     # Temporarily replace macro #if, etc. with more unique strings. This is needed
     # to handle tracking '#...#' delimited date strings in the next loop.
     #
     # Same thing with Put and Close of file descriptors.
+    if debug_strip:
+        print("HERE: 10.2")
+        print(vba_code)
     vba_code = hide_strings(vba_code)
 
     # Rewrite some weird single line if statements.
     # If utc_NegativeOffset Then: utc_Offset = -utc_Offset    
+    if debug_strip:
+        print("HERE: 10.3")
+        print(vba_code)
     vba_code = fix_weird_single_line_ifs(vba_code)
 
     # Replace bad characters unless they appear in a string.
+    if debug_strip:
+        print("HERE: 10.4")
+        print(vba_code)
     vba_code = replace_bad_chars(vba_code)
     
     # Replace the ':' in single line if statements so they don't get broken up.
     # Replace ':=' so they don't get modified.    
+    if debug_strip:
+        print("HERE: 10.5")
+        print(vba_code)
     vba_code, single_line_ifs = hide_colons(vba_code)    
 
     # Replace 'Rem fff' style comments with "' fff" comments.    
+    if debug_strip:
+        print("HERE: 10.6")
+        print(vba_code)
     vba_code = replace_rem_comments(vba_code)
 
     # Replace ':' with new lines.

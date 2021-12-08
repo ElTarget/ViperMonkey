@@ -618,12 +618,20 @@ class ViperMonkey(StubbedEngine):
 
         # Break out document words.
         doc_words = []
-        for word in re.split(r"[ \n]", "\n".join(self.doc_text)):
+        # Looks like newlines are counted as a word for some reason.
+        word_txt = ("\n".join(self.doc_text)).replace("\n", "\n\\n\n")
+        # Word indexing starts at 1, so add an empty string at the start of
+        # the ViperMonkey word list.
+        doc_words.append("")
+        for word in re.split(r"[ \n]", word_txt):
             word = word.strip()
+            if (word.startswith(chr(0x0c))):
+                word = word[1:]
             if (word.startswith("-")):
                 word = word[1:]
                 doc_words.append("-")
-            doc_words.append(word.strip())
+            word = word.replace(" ", "").replace("\\n", "\n")
+            doc_words.append(word)
         context.globals["ActiveDocument.Words".lower()] = doc_words
         context.globals["ThisDocument.Words".lower()] = doc_words
             

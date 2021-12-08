@@ -176,4 +176,4 @@ base_attrib_loose = Combine(
 
 TODO_identifier_or_object_attrib_loose = base_attrib_loose ^ Suppress(Literal("{")) + base_attrib_loose + Suppress(Literal("}"))
 
-enum_val_id = Regex(re.compile(r"\[[^\]]+\]"))
+enum_val_id = Regex(re.compile(r"\[ *[^\]]+ *\]"))

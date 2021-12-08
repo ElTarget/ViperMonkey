@@ -5295,6 +5295,36 @@ class Worksheets(Sheets):
     """
     pass
 
+class Words(VbaLibraryFunc):
+    """Emulate ThisDocument.Words() references.
+
+    """
+        
+    def eval(self, context, params=None):
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return "NULL"
+
+        # Get the word index.
+        try:
+            index = vba_conversion.coerce_to_int(params[0])
+        except Exception as e:
+            log.error("Word index is not an int.")
+            return "NULL"
+
+        # Get the list of words from the doc.
+        word_list = context.get("ThisDocument.Words")
+        if (not isinstance(word_list, list)):
+            log.error("Cached word list is not a Python list.")
+            return "NULL"
+        if ((index >= len(word_list)) or (index < 1)):
+            log.error("Word index is out of bounds.")
+            return "NULL"
+
+        # Return the word.
+        return word_list[index]
+
 class Value(VbaLibraryFunc):
     """Emulate Excel cell Value() function (actually field).
 
@@ -5837,6 +5867,8 @@ class Print(VbaLibraryFunc):
         fileid = "#" + utils.safe_str_convert(params[0])
 
         # 2nd arg should be data to write.
+        print("!! PRINT !!")
+        print(params[1])
         data = utils.safe_str_convert(params[1])
 
         # Try writing the file.
@@ -6439,7 +6471,8 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                RtlMoveMemory, OnTime, AddItem, Rows, DatePart, FileLen, Sheets, Choose,
                Worksheets, Value, IsObject, Filter, GetRef, BuildPath, CreateFolder,
                Arguments, DateDiff, SetRequestHeader, SetOption, SetTimeouts, DefaultFilePath,
-               SubFolders, Files, Name, ExcelFormula, Tables, Cell, DecodeURIComponent):
+               SubFolders, Files, Name, ExcelFormula, Tables, Cell, DecodeURIComponent,
+               Words):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

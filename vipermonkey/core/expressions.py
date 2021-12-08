@@ -285,7 +285,7 @@ class SimpleNameExpression(VBA_Object):
 
 
 simple_name_expression = Optional(CaselessKeyword("ByVal").suppress()) + \
-                         (TODO_identifier_or_object_attrib('name') | enum_val_id('name'))
+                         (TODO_identifier_or_object_attrib('name') ^ enum_val_id('name'))
 simple_name_expression.setParseAction(SimpleNameExpression)
 
 unrestricted_name_expression = unrestricted_name('name')
@@ -4357,6 +4357,7 @@ expr_item <<= (
         | float_literal
         | named_argument
         | l_expression
+        | enum_val_id
         | (chr_ ^ function_call ^ func_call_array_access)
         | simple_name_expression
         | asc

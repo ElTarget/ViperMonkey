@@ -74,6 +74,11 @@ from core.vba_object import VBA_Object, eval_arg
 from core.python_jit import to_python, _check_for_iocs, _get_var_vals
 from core import vba_conversion
 
+# Track the depth of functions we are working on in to_python() calls.
+# This is used to figure out whether we need to add python global statements
+# or not for certain variables.
+function_depth = 0
+
 # --- SUB --------------------------------------------------------------------
 
 class Sub(VBA_Object):
@@ -157,8 +162,11 @@ class Sub(VBA_Object):
         r += "\n"
         
         # Function body.
+        global function_depth
+        function_depth += 1
         r += to_python(self.statements, tmp_context, indent=indent+4, statements=True)
-
+        function_depth -= 1
+        
         # Check for IOCs.
         r += "\n" + _check_for_iocs(self, tmp_context, indent=indent+4)
         
@@ -542,8 +550,11 @@ class Function(VBA_Object):
         r += "\n"
             
         # Function body.
+        global function_depth
+        function_depth += 1
         r += to_python(self.statements, tmp_context, indent=indent+4, statements=True)
-
+        function_depth -= 1
+        
         # Check for IOCs.
         r += "\n" + _check_for_iocs(self, tmp_context, indent=indent+4)
 
