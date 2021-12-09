@@ -1208,7 +1208,9 @@ class MemberAccessExpression(VBA_Object):
 
         # Try to pull the result from the document data.
         r = context.get_doc_var(field_name)
-        if (r is not None):
+
+        # Return the value if we got something.
+        if ((r is not None) and (r != "NULL")):
             return r
 
         # Maybe this is metadata?
@@ -3125,6 +3127,7 @@ class MemberAccessExpression(VBA_Object):
         call_retval = self._handle_docprops_read(context)
         if (call_retval is not None):
             #print("OUT: 10")
+            #print(call_retval)
             return call_retval
         
         # Handle accessing document variables as a special case.

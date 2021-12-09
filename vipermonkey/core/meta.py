@@ -28,7 +28,19 @@ class FakeMeta(object):
     """Class used to hold Office file metadata fields and values.
 
     """
-    pass
+
+    def __repr__(self):
+        r = ""
+        first = True
+        for attr in dir(self):
+            if (not first):
+                r += "\n"
+            first = False
+            attr = safe_str_convert(attr)
+            if (attr.startswith("__")):
+                continue
+            r += attr + "  :  " + safe_str_convert(getattr(self, attr))
+        return r
 
 def get_metadata_exif(filename):
     """Get the Office metadata for a given file with the exiftool
