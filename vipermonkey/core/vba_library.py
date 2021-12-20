@@ -900,8 +900,11 @@ class FileExists(VbaLibraryFunc):
     def eval(self, context, params=None):
         context = context # pylint
 
+        # Sanity check.
         if ((params is None) or (len(params) == 0)):
-            return False
+            return "**MATCH ANY**"
+
+        # Some files always exist.
         fname = utils.safe_str_convert(params[0])
         if ("powershell" in fname.lower()):
             return True
@@ -909,13 +912,12 @@ class FileExists(VbaLibraryFunc):
             return True
         if ("explorer.exe" in fname.lower()):
             return True
-        if ("c:\\programdata" in fname.lower()):
-            return True
-        # Lets say some log files exist.
-        tmp_log_pat = r"c:[\\]{1,6}temp[\\]{1,6}[^\.]{1,200}\.log"
-        if (re.search(tmp_log_pat, fname.lower()) is not None):
-            return True
-        return False
+        
+        # Since we don't know whether the interesting behavior depends
+        # on the file existing or not existing punt and return the
+        # wildcard logic value. Emulation will then be tried with the
+        # file existing and not existing.
+        return "**MATCH ANY**"
 
     def num_args(self):
         return 1
@@ -2091,7 +2093,7 @@ class International(VbaLibraryFunc):
         
         # Match anything compared to this result.
         return "**MATCH ANY**"
-
+    
 class GetLocale(VbaLibraryFunc):
     """Emulate GetLocale() Function.
 

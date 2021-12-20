@@ -120,6 +120,32 @@ class Infix(object):
     def __call__(self, value1, value2):
         return self.function(value1, value2)
 
+def wild_not(x, wildcard_val):
+    """
+    A definition of boolean not that handles ViperMonkey wildcard boolean
+    value strings.
+    
+    @param x (bool or str) The value to negate. Can be the "**MATCH ANY**"
+    wildcard string.
+    
+    @param wildcard_val (bool) The boolean value to use for the "**MATCH ANY**"
+    string.
+    
+    @retval (bool) The negation of the given value.
+    """
+    
+    # Handle wildcard matching.
+    wildcards = ["CURRENT_FILE_NAME", "SOME_FILE_NAME", "**MATCH ANY**"]
+    if (x in wildcards):
+        x = wildcard_val
+
+    # Negate the parameter.
+    return (not x)
+
+# Boolean negation that handles ViperMonkey boolean wildcard values.
+# pylint: disable=unnecessary-lambda
+bool_not=Infix(lambda x,y: wild_not(x, y))
+
 def safe_plus(x,y):
     """Handle "x + y" where x and y could be some combination of ints and
     strs.

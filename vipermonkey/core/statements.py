@@ -4299,7 +4299,21 @@ class If_Statement(VBA_Object):
             # Evaluate the guard, if it has one. Else parts have no guard.
             guard = True
             if (piece["guard"] is not None):
+
+                # Get the evaluated guard. In most cases this will directly evaluate to
+                # true or false.
                 guard = piece["guard"].eval(context)
+                
+                # Did this evaluate to ViperMonkey's logic wildcard value?
+                if (guard == "**MATCH ANY**"):
+
+                    # Track that we have evaluated a wildcard expression.
+                    context.tested_wildcard = True
+
+                    # Set the guard to the current wildcard value. We do 2 emulation runs,
+                    # 1 run with the wildcard always set to true, 1 run with the wildcard
+                    # always set to false.
+                    guard = context.wildcard_match_value
 
             # Does this case apply?
             if (guard):

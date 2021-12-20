@@ -129,7 +129,7 @@ def _vba_to_python_op(op, is_boolean):
 
     """
     op_map = {
-        "Not" : "not",
+        "Not" : "|bool_not|",
         "And" : "and",
         "AndAlso" : "and",
         "Or" : "or",
@@ -4813,8 +4813,23 @@ class BoolExpr(VBA_Object):
                      " " + self._vba_to_python_op(self.op, context) + " " + \
                      start_cast + to_python(self.rhs, context, params) + end_cast
             else:
-                r += self._vba_to_python_op(self.op, context) + " " + \
-                     start_cast + to_python(self.rhs, context, params) + end_cast
+
+                # Boolean Not can work on wildcard boolean values.
+                python_op = self._vba_to_python_op(self.op, context)
+                if (python_op == "|bool_not|"):
+
+                    # In this case we don't have visibility into whether a wildcard value is
+                    # actually ever used when the Not is emulated since it is done in Python.
+                    # We'll be conservative and assume that a wildcard value is used.
+                    context.tested_wildcard = True
+                    r += start_cast + to_python(self.rhs, context, params) + end_cast + " " + \
+                        python_op + " " + safe_str_convert(context.wildcard_match_value)
+
+                # Regular case.
+                else:
+                    r += python_op + " " + \
+                        start_cast + to_python(self.rhs, context, params) + end_cast
+
         elif (self.lhs is not None):
             r += to_python(self.lhs, context, params)
         else:
@@ -4851,7 +4866,18 @@ class BoolExpr(VBA_Object):
                 
             # Evalue the unary expression.
             if (self.op.lower() == "not"):
+
+                # Handle wildcard logic value.
+                if (rhs == "**MATCH ANY**"):
+
+                    # Track that we have evaluated a wildcard expression.
+                    context.tested_wildcard = True
+                    rhs = context.wildcard_match_value
+
+                # Return the boolean Not.
                 return (not rhs)
+            
+            # Can't handle the negation.
             log.error("BoolExpr: Unknown boolean unary op " + safe_str_convert(self.op))
             return ''
                 

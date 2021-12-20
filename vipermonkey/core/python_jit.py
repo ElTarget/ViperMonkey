@@ -87,7 +87,8 @@ def _boilerplate_to_python(indent):
     boilerplate += indent_str + "from core.utils import lt\n"
     boilerplate += indent_str + "from core.utils import lte\n"
     boilerplate += indent_str + "from core.utils import gt\n"
-    boilerplate += indent_str + "from core.utils import gte\n"    
+    boilerplate += indent_str + "from core.utils import gte\n"
+    boilerplate += indent_str + "from core.utils import bool_not\n"
     boilerplate += indent_str + "import core.utils\n"
     boilerplate += indent_str + "from core.python_jit import update_array\n"
     boilerplate += indent_str + "from core.vba_conversion import coerce_to_num\n"
@@ -894,6 +895,9 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
         if (not context.throttle_logging):
             log.info("Done generating Python JIT code.")
 
+        # Bubble up whether we (possibly) accessed a wildcarded boolean value.
+        context.tested_wildcard = tmp_context.tested_wildcard
+            
         # Extended ASCII strings are handled differently in VBScript and VBA.
         # Punt if we are emulating VBA and we have what appears to be extended ASCII
         # strings. For performance we are not handling the MS VBA extended ASCII in the python
