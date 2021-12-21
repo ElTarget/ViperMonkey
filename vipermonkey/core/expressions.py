@@ -2877,7 +2877,7 @@ class MemberAccessExpression(VBA_Object):
         """
 
         # Is this a Word find/replace call?
-        if (".Content.Find.Execute(".lower() not in str(self).lower()):
+        if ("Find.Execute(".lower() not in str(self).lower()):
 
             # No.
             return None

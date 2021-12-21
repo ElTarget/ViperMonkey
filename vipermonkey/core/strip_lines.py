@@ -814,6 +814,7 @@ def fix_bad_var_names(vba_code):
     #    vba_code = re.sub(pat, r"\1 \2", vba_code) + "\n"
     #return vba_code
 
+# TODO: Looks like we handle this now. Remove when confirmed.
 def fix_unhandled_named_params(vba_code):
     """Currently things like 'foo(a:=1, b:=2)' are not handled, Comment
     them out.
@@ -1874,10 +1875,11 @@ def fix_difficult_code(vba_code):
     if debug_strip:
         print("HERE: 2.3")
         print(vba_code)
-    vba_code = fix_unhandled_named_params(vba_code)
-    if debug_strip:
-        print("HERE: 2.4")
-        print(vba_code)
+    # TODO: Looks like we handle this now. Remove when confirmed.
+    #vba_code = fix_unhandled_named_params(vba_code)
+    #if debug_strip:
+    #    print("HERE: 2.4")
+    #    print(vba_code)
     vba_code = fix_bad_var_names(vba_code)
     if debug_strip:
         print("HERE: 2.5")
