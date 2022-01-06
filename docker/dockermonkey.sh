@@ -104,9 +104,9 @@ if [ "$json_file" != "" ]; then
 fi
 
 # Zip up dropped files if there are any.
-docker exec $docker_id sh -c "touch /root/test.zip ; [ -d \"/root/${file_basename}_artifacts/\" ] && zip -r --password=infected - /root/${file_basename}_artifacts/ > /root/test.zip"
+docker exec $docker_id sh -c "touch /root/test.zip ; [ -d \"/root/${file_basename}_artifacts/\" ] && zip -r --password=infected - \"/root/${file_basename}_artifacts/\" > /root/test.zip"
 docker cp "$docker_id:/root/test.zip" test.zip
-if [ ! -s test.zip ]; then rm test.zip; else mv test.zip ${file_basename}_artifacts.zip; echo "[*] Dropped files are in ${file_basename}_artifacts.zip"; fi
+if [ ! -s test.zip ]; then rm test.zip; else mv test.zip "${file_basename}_artifacts.zip"; echo "[*] Dropped files are in ${file_basename}_artifacts.zip"; fi
 
 echo "[*] Done - Killing docker container $docker_id"
 docker stop $docker_id > /dev/null
