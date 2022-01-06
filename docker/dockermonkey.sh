@@ -29,7 +29,7 @@ if [ $? -ne 0 ]; then
 	exit
 fi
 
-if [[ $(docker ps -f status=running -f ancestor=haroldogden/vipermonkey -l | tail -n +2) ]]; then
+if [[ $(docker ps -f status=running -f ancestor=kirksayre/vipermonkey -l | tail -n +2) ]]; then
         echo "[+] Other ViperMonkey containers are running!"
 fi
 
@@ -48,6 +48,19 @@ if [ $? -ne 0 ]; then
 fi
 echo "[*] Starting container..."
 docker_id=$(docker run --rm -d -t kirksayre/vipermonkey:latest)
+
+# Just getting version info?
+if [ $1 == "--version" ]; then
+    echo "[+] Docker Container:"
+    docker image inspect kirksayre/vipermonkey:latest
+    docker ps
+    echo $docker_id
+    echo "[+] ViperMonkey Git Hash:"
+    docker exec $docker_id sh -c "cd /opt/ViperMonkey/; git pull > /dev/null 2>&1; git rev-parse HEAD"
+    echo "[*] Done - Killing docker container $docker_id"
+    docker stop $docker_id > /dev/null
+    exit
+fi
 
 echo "[*] Attempting to copy file $1 into container ID $docker_id"
 
