@@ -1706,7 +1706,42 @@ class Execute(VbaLibraryFunc):
 
             # Done.
             return "NULL"
-        
+
+        # This could be a ActiveDocument.Content.Find.Execute() call (find/replace
+        # on Word doc text contents).
+        if (".Find" in context.with_prefix):
+
+            # Construct a member access expression for the find/replace.
+            expr = utils.safe_str_convert(context.with_prefix_raw) + ".Execute("
+            first = True
+            for p in params:
+                if not first:
+                    expr += ", "
+                first = False
+                if isinstance(p, str):
+                    p = '"' + p + '"'
+                expr += str(p)
+            expr += ")"
+
+            # Nuke the With prefix to prevent potential recursive calls to Execute()
+            # here if the member access parsing/evaluation fails.
+            old_with_prefix = context.with_prefix
+            old_with_prefix_raw = context.with_prefix_raw
+            context.with_prefix = ""
+            context.with_prefix_raw = None
+            
+            # Evaluate the expression to do the find/replace.
+            try:
+                obj = expressions.expression.parseString(expr, parseAll=True)[0]
+                return eval_arg(obj, context)            
+            except ParseException:
+                # That did not work. Continue on as a regular Execute() call.
+                pass
+
+            # Restore the With prefix.
+            context.with_prefix = old_with_prefix
+            context.with_prefix_raw = old_with_prefix_raw
+            
         # Save the command.
         command = utils.strip_nonvb_chars(utils.safe_str_convert(params[0]))
         context.report_action('Execute Command', command, 'Execute() String', strip_null_bytes=True)

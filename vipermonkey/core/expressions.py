@@ -2894,7 +2894,8 @@ class MemberAccessExpression(VBA_Object):
         # Pull out the string replace arguments.
         find = None
         replace = None
-        # Look for named arguments. All the examples I found used named args.
+
+        # Look for named arguments.
         for p in rep_op.params:            
             if isinstance(p, NamedArgument):
                 if (p.name == "FindText"):
@@ -2902,9 +2903,19 @@ class MemberAccessExpression(VBA_Object):
                 if (p.name == "ReplaceWith"):
                     replace = safe_str_convert(eval_arg(p.value, context))
 
+        # Fill in the arguments if some don't have named arguments.
+        if ((find is None) and (len(rep_op.params) > 0)):
+            tmp_val = eval_arg(rep_op.params[0], context)
+            if isinstance(tmp_val, str):
+                find = tmp_val
+        if ((replace is None) and (len(rep_op.params) > 1)):
+            tmp_val = eval_arg(rep_op.params[1], context)
+            if isinstance(tmp_val, str):
+                replace = tmp_val
+                    
         # Got the find and replace values?
         if ((find is None) or (replace is None)):
-            log.warning("Missing named arguments for find/replace Execute() call. Skipping.")
+            log.warning("Missing arguments for find/replace Execute() call. Skipping.")
             return None
 
         # TODO: We are assuming a global find/replace.
