@@ -2938,6 +2938,38 @@ class MemberAccessExpression(VBA_Object):
         # Did the find/replace on the doc paragraphs.
         return "done"
 
+    def _handle_doc_word_read(self, context):
+        """Handle ActiveDocument.Words(NN) calls on Word doc text contents.
+
+        @param context (Context object) Current emulation context.
+
+        @return (str) The read word on success, None on failure.
+
+        """
+
+        # Is this a Words() call?
+        if ((not isinstance(self.rhs, list)) or (len(self.rhs) == 0)):
+            return None
+        func = self.rhs[0]
+        if ((not isinstance(func, Function_Call)) or (func.name != "Words")):
+            return None
+
+        # We have a Words call. Get the index.
+        if (len(func.params) == 0):
+            return None
+        index = vba_conversion.coerce_to_int(eval_arg(func.params[0], context)) + 1
+        print("INDEX!!: " + str(index))
+
+        # Get the document words.
+        word_list = context.get("ThisDocument.Words")
+        
+        # Do we have this word?
+        if ((index >= len(word_list)) or (index < 1)):
+            return None
+
+        # Return the word.
+        return word_list[index]
+    
     def _handle_excel_get_sheet_name(self, context):
         """Handle calls like Sheets.Item(3).Name for getting a sheet name.
 
@@ -2990,6 +3022,12 @@ class MemberAccessExpression(VBA_Object):
         # Word find/replace on the document text?
         #print("HERE: .5")
         r = self._handle_doc_find_replace(context)
+        if (r is not None):
+            return r
+
+        # Reading a document word with .Words(NN)?
+        #print("HERE: .5")
+        r = self._handle_doc_word_read(context)
         if (r is not None):
             return r
 

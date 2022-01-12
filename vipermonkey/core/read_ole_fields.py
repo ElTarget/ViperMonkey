@@ -3823,7 +3823,7 @@ def _read_doc_text_libreoffice(data):
                                           "--text", "-f", out_dir])
         output = safe_str_convert(output)
     except Exception as e:
-        log.error("Running export_doc_text.py failed. " + safe_str_convert(e))
+        log.error("Running export_doc_text.py (text) failed. " + safe_str_convert(e))
         os.remove(out_dir)
         return None
 
@@ -3854,15 +3854,13 @@ def _read_doc_text_libreoffice(data):
         r = [first_line] + r[1:]
 
     # Dump all the tables using soffice.
-    output = None
+    output = ""
     try:
         output = subprocess.check_output(["python3", "-E", _thismodule_dir + "/../export_doc_text.py",
                                           "--tables", "-f", out_dir])
         output = safe_str_convert(output)
     except Exception as e:
-        log.error("Running export_doc_text.py failed. " + safe_str_convert(e))
-        os.remove(out_dir)
-        return None
+        log.error("Running export_doc_text.py (tables) failed. " + safe_str_convert(e))
 
     # Convert the text to a python list.
     r1 = []

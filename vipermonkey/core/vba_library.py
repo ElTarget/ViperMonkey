@@ -5904,10 +5904,12 @@ class Print(VbaLibraryFunc):
         fileid = "#" + utils.safe_str_convert(params[0])
 
         # 2nd arg should be data to write.
-        print("!! PRINT !!")
-        print(params[1])
         data = utils.safe_str_convert(params[1])
 
+        # A ';' at the end of the line suppresses a newline. Currently
+        # we are not tracking that, so always add a newline.
+        data += "\n"
+        
         # Try writing the file.
         context.write_file(fileid, data)
         

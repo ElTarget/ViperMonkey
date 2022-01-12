@@ -5712,6 +5712,8 @@ class Print_Statement(VBA_Object):
             context.write_file(file_id, '\r\n')
 
 
+# TODO: ';' at the end of the line suppresses putting a newline at the end of what is printed.
+# Need to track that.
 print_statement = Suppress(CaselessKeyword("Print")) + file_pointer("file_id") + Suppress(Optional(",")) + expression("value") + \
                   ZeroOrMore(Suppress(Literal(';')) + expression)("more_values") + Suppress(Optional("," + lex_identifier))
 print_statement.setParseAction(Print_Statement)
