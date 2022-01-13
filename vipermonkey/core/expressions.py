@@ -2958,7 +2958,6 @@ class MemberAccessExpression(VBA_Object):
         if (len(func.params) == 0):
             return None
         index = vba_conversion.coerce_to_int(eval_arg(func.params[0], context)) + 1
-        print("INDEX!!: " + str(index))
 
         # Get the document words.
         word_list = context.get("ThisDocument.Words")
