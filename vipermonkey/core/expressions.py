@@ -2912,7 +2912,18 @@ class MemberAccessExpression(VBA_Object):
             tmp_val = eval_arg(rep_op.params[1], context)
             if isinstance(tmp_val, str):
                 replace = tmp_val
-                    
+
+        # May have explicitly set the find/replace arguments in the paragraph
+        # object itself.
+        if (find is None):
+            find_field = safe_str_convert(self.lhs) + ".Find.Text"
+            if (context.contains(find_field)):
+                find = safe_str_convert(context.get(find_field))
+        if (replace is None):
+            repl_field = safe_str_convert(self.lhs) + ".Find.Replacement.Text"
+            if (context.contains(repl_field)):
+                replace = safe_str_convert(context.get(repl_field))
+        
         # Got the find and replace values?
         if ((find is None) or (replace is None)):
             log.warning("Missing arguments for find/replace Execute() call. Skipping.")
