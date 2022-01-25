@@ -4565,7 +4565,77 @@ def _read_payload_doc_vars(data, orig_filename, vm):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name.lower(), var_val))
 
+def _read_simple_forms(data, vm):
+    """Read in and save the tags and captions of forms represented in an
+    Office 97 file in a simple ASCII format.
 
+    @param data (bytes) The read in Office 97 file (data).
+
+    @param vm (ViperMonkey object) The ViperMonkey emulation engine
+    object that will do the emulation. The read values will be saved
+    in the given emulation engine.
+
+    """
+
+    # Do we need to do this?
+    if ((b"Begin {" not in data) or (b"End" not in data)):
+        return
+
+    # Example of what we are looking for:
+    #
+    #Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} ubun3 
+    #   Caption         =   "UserForm1"
+    #   ClientHeight    =   3036
+    #   ClientLeft      =   108
+    #   ClientTop       =   456
+    #   ClientWidth     =   4584
+    #   StartUpPosition =   1  'CenterOwner
+    #   Tag             =   ".com/"
+    #End
+
+    # Pull out the form definition chunks.
+    form_pat =  br"Begin \{[^\}]{3,100}\} [a-zA-Z0-9_\-]{1,200} *\r?\n"
+    form_pat += br"(?: {1,50}[a-zA-Z0-9_\-]{1,200} {1,50}=[^\n]{1,200}\r?\n){1,20}"
+    form_pat += br"End"
+    chunks = re.findall(form_pat, data, re.DOTALL)
+
+    # Pull out the form name, tag, and caption from each form chunk.
+    for chunk in chunks:
+
+        # Get form name.
+        name_pat = br"Begin \{[^\}]{3,100}\} ([a-zA-Z0-9_\-]{1,200}) *\r?\n"
+        name = safe_str_convert(re.findall(name_pat, chunk)[0])
+
+        # Get form tag.
+        tag_pat = br"Tag {1,50}= {1,50}\"([^\"]{0,500})\""
+        tag_info = re.findall(tag_pat, chunk)
+        tag = None
+        if (len(tag_info) > 0):
+            tag = safe_str_convert(tag_info[0])
+
+        # Get form caption.
+        cap_pat = br"Caption {1,50}= {1,50}\"([^\"]{0,500})\""
+        cap_info = re.findall(cap_pat, chunk)
+        caption = None
+        if (len(cap_info) > 0):
+            caption = safe_str_convert(cap_info[0])
+
+        # Add in ViperMonkey variables for the tag and caption.
+        if (tag is not None):
+            tmp_name = "thisdocument." + name + ".tag"
+            vm.doc_vars[tmp_name] = tag
+            tmp_name = "activedocument." + name + ".tag"
+            vm.doc_vars[tmp_name] = tag
+            tmp_name = name + ".tag"
+            vm.doc_vars[tmp_name] = tag
+        if (caption is not None):
+            tmp_name = "thisdocument." + name + ".caption"
+            vm.doc_vars[tmp_name] = caption
+            tmp_name = "activedocument." + name + ".caption"
+            vm.doc_vars[tmp_name] = caption
+            tmp_name = name + ".caption"
+            vm.doc_vars[tmp_name] = caption
+            
 def read_payload_hiding_places(data, orig_filename, vm, vba_code, vba):
     """
     Read in text values from all of the various places in Office
@@ -4621,12 +4691,13 @@ def read_payload_hiding_places(data, orig_filename, vm, vba_code, vba):
     _read_payload_form_vars(vba, vm)
 
     # Save the form strings.
-    #sys.exit(0)
     _read_payload_form_strings(vba, vm)
 
     # Save DefaultTargetFrame value. This only works for 2007+ files.
     _read_payload_default_target_frame(data, vm)
 
+    # Read in tags and captions for easy to handle form representations.
+    _read_simple_forms(data, vm)
     
 ###########################################################################
 ## Main Program
