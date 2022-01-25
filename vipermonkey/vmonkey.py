@@ -952,7 +952,7 @@ def _process_file (filename,
                 raise e
 
             # This may be VBScript with some null characters. Remove those and try again.
-            data = data.replace("\x00", "")
+            data = data.replace(b"\x00", b"")
             vba = _get_vba_parser(data)
 
         # Do we have analyzable VBA/VBScript? Do the analysis even

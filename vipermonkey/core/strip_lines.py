@@ -645,7 +645,7 @@ def fix_skipped_1st_arg2(vba_code):
     tmp_code = vba_code
     for str_name in strings:
         tmp_code = tmp_code.replace(strings[str_name], str_name)
-    #print "HERE: 1"
+    #print("HERE: 1")
     #print tmp_code
 
     # Fix things like 'a + + b + "ff"' (double pluses).
@@ -680,7 +680,7 @@ def fix_skipped_1st_arg2(vba_code):
                 if (curr_paren is not None):
                     paren_name = "A_PAREN_EXPR_" + safe_str_convert(randint(0, 100000000))
                     while (paren_name in parens):
-                        str_name = "A_PAREN_EXPR_" + safe_str_convert(randint(0, 100000000))
+                        paren_name = "A_PAREN_EXPR_" + safe_str_convert(randint(0, 100000000))
                     curr_paren += c
                     parens[paren_name] = curr_paren
                     curr_paren = None

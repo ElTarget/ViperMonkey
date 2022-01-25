@@ -719,7 +719,7 @@ class Dim_Statement(VBA_Object):
                         ((curr_type == "Byte Array") or
                          (curr_type == "Long Array") or
                          (curr_type == "Integer Array"))):
-                        curr_init_val = [0] * (var[3] + 1)
+                        curr_init_val = [0] * var[3]
                     if ((var[3] is not None) and (curr_type == "String Array")):
                         curr_init_val = [''] * var[3]
                     if ((var[3] is not None) and (curr_type == "Boolean Array")):
@@ -731,7 +731,7 @@ class Dim_Statement(VBA_Object):
                 # Know # of elements?
                 if (var[3] is not None):
                     # Assume NULL.
-                    curr_init_val = [0] * (var[3] + 1)
+                    curr_init_val = [0] * var[3]
 
             # Handle uninitialized global variables.
             if ((context.global_scope) and (curr_init_val is None)):
