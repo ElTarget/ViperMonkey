@@ -1563,7 +1563,7 @@ class Eval(VbaLibraryFunc):
         # Pull out the expression to eval.
         if ((params is None) or (len(params) < 1)):
             return 0
-        expr = utils.strip_nonvb_chars(utils.safe_str_convert(params[0]))
+        expr = utils.strip_nonvb_chars(utils.safe_str_convert(params[0])).strip()
 
         # Save original expression.
         orig_expr = expr
@@ -1615,7 +1615,7 @@ class Eval(VbaLibraryFunc):
                         obj = expressions.expression.parseString(expr, parseAll=True)[0]
                         r = obj
                         
-                    except ParseException:                        
+                    except ParseException:
                         log.error("Parse error. Cannot evaluate '" + orig_expr + "'")
                         return "NULL"
 
