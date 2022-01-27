@@ -1078,15 +1078,16 @@ class VarType(VbaLibraryFunc):
 
     """
 
-    def eval(self, context, params=None):
-        context = context # pylint
+    def _compute_vartype(self, val):
+        """Get the actual VBA integer for the type of the given item.
 
-        # Sanity check.
-        if ((params is None) or (len(params) == 0)):
-            return 0
+        @param val (??) The thing whose type to check.
 
-        # Return VB type ID.
-        val = params[0]
+        @retval (int) The VBA integer representing the type (see
+        https://docs.microsoft.com/en-us/office/vba/language/reference/user-interface-help/vartype-function)
+
+        """
+
         if ((val == "NULL") or (val == "")):
             return 0
         if (isinstance(val, bool)):
@@ -1099,7 +1100,26 @@ class VarType(VbaLibraryFunc):
             return 5
         if (isinstance(val, int)):
             return 3
+        if (isinstance(val, list)):
+            #r = 8192
+            #if (len(var) > 0):
+            #    r += self._compute_vartype(var[0])
+            # TODO: Need to somehow know if this is a variant array. For now
+            # we'll just say all arrays are variant arrays.
+            r = 8204
+            return r
         return 0
+        
+    def eval(self, context, params=None):
+        context = context # pylint
+
+        # Sanity check.
+        if ((params is None) or (len(params) == 0)):
+            return 0
+
+        # Return VB type ID.
+        val = params[0]
+        return self._compute_vartype(val)
 
     def num_args(self):
         return 1
