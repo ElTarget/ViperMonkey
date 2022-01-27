@@ -4752,11 +4752,11 @@ class Run(VbaLibraryFunc):
         
         # Can we find the function to call?
         try:
-            context.report_action("Run", func_name, 'Interesting Function Call', strip_null_bytes=True)
             s = context.get(func_name)
             if (s is None):
                 log.warning("Application.Run() failed. Cannot find function " + utils.safe_str_convert(func_name) + ".")
                 return 0
+            context.report_action("Run", func_name, 'Interesting Function Call', strip_null_bytes=True)
             return s.eval(context=context, params=call_params)
         except KeyError:
             log.warning("Application.Run() failed. Cannot find function " + utils.safe_str_convert(func_name) + ".")
