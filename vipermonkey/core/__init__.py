@@ -373,7 +373,8 @@ class ViperMonkey(StubbedEngine):
                                   '_OnEnterFullScreenMode',
                                   '_Zoom',
                                   '_Scroll',
-                                  '_BeforeDropOrPaste']
+                                  '_BeforeDropOrPaste',
+                                  '_SelectionChange']
                                   
     def set_metadata(self, dat):
         """Save Office metadata of the file being analyzed.
