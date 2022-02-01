@@ -107,8 +107,17 @@ def is_pe_file(fname, is_data):
     # Read the 1st 8 bytes of the file.
     curr_magic = get_1st_8_bytes(fname, is_data)
 
+    # Check to see if we have non-ascii characters in the 6 bytes after
+    # the (maybe) "MZ".
+    got_ascii = True
+    for hex_c in curr_magic.strip().split(" ")[2:]:
+        val = int("0x" + hex_c, 16)
+        if ((val < 32) or (val > 126)):
+            got_ascii = False
+            break
+    
     # See if we the known magic #.
-    return (curr_magic.startswith(pe_magic_num))
+    return (curr_magic.startswith(pe_magic_num) and (not got_ascii))
 
 def is_office_xml_file(fname, is_data):
     """Check to see if the given file is a MS Office XML file.
