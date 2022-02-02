@@ -2588,10 +2588,13 @@ def is_assign_line(line, line_num, local_funcs, bool_statements):
         return False
             
     # Skip lines where the '=' is part of a boolean expression.
-    strip_line = line.strip()            
+    strip_line = line.strip()
+    lower_line = strip_line.lower()
     skip = False
     for bool_statement in bool_statements:
-        if (strip_line.startswith(bool_statement + " ")):
+        bool_statement = bool_statement.lower()
+        if ((lower_line.startswith(bool_statement + " ")) or
+            (lower_line.startswith(bool_statement + "("))):
             skip = True
             break
     if (skip):

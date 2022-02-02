@@ -1782,7 +1782,7 @@ class Execute(VbaLibraryFunc):
         obj = None
         if (orig_command in parse_cache):
             obj = parse_cache[orig_command]
-
+            
         # We have not parsed this previously.
         else:
 
