@@ -2432,7 +2432,7 @@ def replace_constant_int_inline(vba_code):
 
     """
 
-    const_pattern = re.compile("(?i)const +([a-zA-Z][a-zA-Z0-9]{0,20})\s?=\s?(\d+)")
+    const_pattern = re.compile("(?i)const +([a-zA-Z][a-zA-Z0-9]{0,20})\s?=\s?(\d+(?:\.\d+)?)")
     d_const = dict()
 
     for const in re.findall(const_pattern, vba_code):
@@ -2441,7 +2441,7 @@ def replace_constant_int_inline(vba_code):
     if len(d_const) > 0:
         log.info("Found constant integer definitions, replacing them.")
     for const in d_const:
-        this_const = re.compile('(?i)(?<=(?:[(), ]))' + safe_str_convert(const) + '(?=(?:[(), ]))(?!\s*=)')
+        this_const = re.compile('(?i)(?<=(?:[(), ]))(?<!Const )(?<!Const  )(?<!Const   )' + safe_str_convert(const) + '(?=(?:[(), \\n]))(?!\s*=)')
         vba_code = re.sub(this_const, safe_str_convert(d_const[const]), vba_code)
     return(vba_code)
 
