@@ -380,6 +380,71 @@ def _get_shape_names(data):
     # Done
     return r
 
+def _get_shape_textframe_chars(data):
+    """Read the TextFrame strings of embedded Shapes elements in a 2007+
+    Excel file.
+
+    @param data (bytes) The read in Office 2007+ file (data).
+
+    @return (dict) On success return a map from Shape ID (int) to
+    TextFrame.Characters string (str), on failure return None.
+
+    """
+
+    # We can only do this with 2007+ files.
+    if (not filetype.is_office2007_file(data, True)):
+        return None
+
+    # Unzip the file contents.
+    unzipped_data, fname = unzip_data(data)
+    delete_file = (fname is not None)
+    if (unzipped_data is None):
+        return None
+
+    # Pull out xl/drawings/*.xml files, if they are there.
+    drawing_files = set()
+    name_pat = r"xl[/\\]drawings[/\\][^\./\\]{1,100}\.xml"
+    for curr_file in unzipped_data.namelist():
+        if (re.search(name_pat, curr_file) is not None):
+            drawing_files.add(curr_file)
+
+    # Process each drawing XML file.
+    r = {}
+    for drawing_file in drawing_files:
+
+        # Read in the current drawing file.
+        f1 = unzipped_data.open(drawing_file)
+        contents = f1.read()
+        f1.close()
+    
+        # <xdr:cNvPr id="2" name="TextBox 1" hidden="1">
+        # ......
+        #       <xdr:txBody>
+        #         <a:bodyPr vertOverflow="clip" horzOverflow="clip" vert="horz" rtlCol="0" anchor="t"/>
+        #         <a:lstStyle/>
+        #         <a:p>
+        #           <a:r>
+        #             <a:rPr lang="en-US" sz="1100"/>
+        #             <a:t>SAVE THIS STUFF</a:t>        
+        # Pull out the Shape ID and TextFrame.Characters text.
+        pat = br"<xdr:cNvPr id=\"(\d{1,100})\".+<xdr:txBody>.+<a:t>([^<]+)</a:t>"
+        if (re.search(pat, contents, re.DOTALL) is not None):
+
+            # Save the IDs and Shape TextFrame text.
+            for shape_info in re.findall(pat, contents, re.DOTALL):
+                shape_id = int(shape_info[0]) - 1
+                shape_text = shape_info[1]
+                r[shape_id] = safe_str_convert(shape_text)
+
+    # Delete the temporary Office file.
+    if (delete_file):
+        # Need to close the zipfile first, otherwise os.remove fails on Windows
+        unzipped_data.close()
+        os.remove(fname)
+    
+    # Done
+    return r
+
 def get_customxml_text(data):
     """Read custom CustomXMLParts text values from an Office 2007+ file.
 
@@ -4665,6 +4730,40 @@ def _read_shape_names(data, vm):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name.lower(), var_val))
 
+def _read_shape_textframe_chars(data, vm):
+    """Read and save Shape.TextFrame.Characters strings from Office 2007+ files.
+
+    @param data (bytes) The read in Office file data. Can be None if data
+    should be read from a file (orig_fname).
+
+    @param vm (ViperMonkey object) The ViperMonkey emulation engine
+    object that will do the emulation. The read values will be saved
+    in the given emulation engine.
+
+    """
+
+    # Pull out document variables.
+    log.info("Reading Shape TextFrame.Characters...")
+    shape_info = _get_shape_textframe_chars(data)
+    if (shape_info is None):
+        return
+    for shape_id in shape_info:
+        var_val = shape_info[shape_id]
+        var_name = ".Shapes(" + str(shape_id) + ").TextFrame.Characters.Text"
+        vm.doc_vars[var_name] = var_val
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name, var_val))
+        vm.doc_vars[var_name.lower()] = var_val
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name.lower(), var_val))
+        var_name = "ActiveSheet.Shapes(" + str(shape_id) + ").TextFrame.Characters.Text"
+        vm.doc_vars[var_name] = var_val
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name, var_val))
+        vm.doc_vars[var_name.lower()] = var_val
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("Added potential VBA doc variable %r = %r to doc_vars." % (var_name.lower(), var_val))            
+
 def _read_simple_forms(data, vm):
     """Read in and save the tags and captions of forms represented in an
     Office 97 file in a simple ASCII format.
@@ -4801,6 +4900,9 @@ def read_payload_hiding_places(data, orig_filename, vm, vba_code, vba):
 
     # Read in embedded Shapes names.
     _read_shape_names(data, vm)
+
+    # Read in Shapes TextFrame.Characters strings.
+    _read_shape_textframe_chars(data, vm)
     
 ###########################################################################
 ## Main Program
