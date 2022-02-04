@@ -4646,6 +4646,8 @@ def _read_shape_names(data, vm):
     # Pull out document variables.
     log.info("Reading Shape Names...")
     shape_info = _get_shape_names(data)
+    if (shape_info is None):
+        return
     for shape_id in shape_info:
         var_val = shape_info[shape_id]
         var_name = ".Shapes(" + str(shape_id) + ").Name"
