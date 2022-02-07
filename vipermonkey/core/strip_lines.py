@@ -292,9 +292,17 @@ def collapse_macro_if_blocks(vba_code):
     # Handle nested macro blocks.
     if (r.strip() != vba_code.strip()):
         r = collapse_macro_if_blocks(r)
-        
+
+    # Sometimes we wind up with leftover "#End If"s. Strip those.
+    final_r = ""
+    for line in r.split("\n"):
+        if (line.strip().startswith("#End")):
+            final_r += "' LEFTOVER MACRO IF END\n"
+            continue
+        final_r += line + "\n"
+    
     # Return the stripped VBA.
-    return r
+    return final_r
     
 def hide_weird_calls(vba_code):
     """Hide weird calls like 'foo.bar (1,2), cat, dog', These are hard to

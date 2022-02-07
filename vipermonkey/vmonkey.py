@@ -403,6 +403,10 @@ def parse_streams(vba, strip_useless=False):
         got_vba = True
         m = parse_stream(subfilename, stream_path, vba_filename, vba_code, strip_useless, local_funcs)
         if (m is None):
+            got_vba = False
+            r = []
+            break
+        if (m == "empty"):
             continue
         r.append((m, stream_path))    
 

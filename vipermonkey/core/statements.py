@@ -5644,6 +5644,7 @@ file_type = (
             ^ CaselessKeyword("Read Shared")
             ^ CaselessKeyword("Read")
             ^ CaselessKeyword("Shared")
+            ^ CaselessKeyword("Write Shared")
             ^ CaselessKeyword("Write")
         )("access")
     )
