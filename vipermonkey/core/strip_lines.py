@@ -2449,6 +2449,10 @@ def replace_constant_int_inline(vba_code):
     if len(d_const) > 0:
         log.info("Found constant integer definitions, replacing them.")
     for const in d_const:
+        # Just skip constants that overlap with variable names. Grrr.
+        dim_pat = re.compile(r'\n *Dim [^\n]{0,500}' + const)
+        if (re.search(dim_pat, vba_code) is not None):
+            continue
         this_const = re.compile('(?i)(?<=(?:[(), ]))(?<!Const )(?<!Const  )(?<!Const   )' + safe_str_convert(const) + '(?=(?:[(), \\n]))(?!\s*=)')
         vba_code = re.sub(this_const, safe_str_convert(d_const[const]), vba_code)
     return(vba_code)
