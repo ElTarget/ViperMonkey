@@ -4637,33 +4637,39 @@ class BoolExprItem(VBA_Object):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Set unitialized " + safe_str_convert(self.lhs) + " = " + safe_str_convert(lhs))
 
-        # Ugh. VBA autoconverts strings and ints.
-        if (isinstance(lhs, str) and isinstance(rhs, int)):
+        # Ugh. VBA autoconverts strings and ints/floats.
+        if (isinstance(lhs, str) and (isinstance(rhs, int) or isinstance(rhs, float))):
 
             # Handle NULL strings.
             if (len(lhs) == 0):
                 lhs = "0"
             
-            # Convert both to ints, if possible.
+            # Convert both to ints or floats, if possible.
             try:
-                lhs = int(lhs)
+                if isinstance(rhs, int):
+                    lhs = int(lhs)
+                else:
+                    lhs = float(lhs)
             except:
-                # Can't convert argument to an int. Punt by converting the
+                # Can't convert argument to an int/float. Punt by converting the
                 # other argument to a str.
                 rhs = str(rhs)
 
-        if (isinstance(rhs, str) and isinstance(lhs, int)):
+        if (isinstance(rhs, str) and (isinstance(lhs, int) or isinstance(lhs, float))):
 
             # Handle NULL strings.
             if (len(rhs) == 0):
                 rhs = "0"
             
-            # Convert both to ints, if possible.
+            # Convert both to ints or floats, if possible.
             try:
-                rhs = int(rhs)
+                if isinstance(lhs, int):
+                    rhs = int(rhs)
+                else:
+                    rhs = float(rhs)
             # pylint: disable=bare-except
             except:
-                # Can't convert argument to an int. Punt by converting the
+                # Can't convert argument to an int/float. Punt by converting the
                 # other argument to a str.
                 lhs = str(lhs)
 
