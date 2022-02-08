@@ -2030,7 +2030,15 @@ class Context(object):
         # Skip this if this variable is already set and we are not allowing value overwrites.
         if (no_overwrite and self.contains(name)):
             return
-            
+
+        # Treat things like document variables, form captions, etc. as global variables.
+        if ("." in name):
+            suffix = name[name.rindex("."):].strip().lower()
+            fields = set([".caption", ".tag", ".text", ".name", ".alternativetext", ".controltiptext"])
+            if (suffix in fields):
+                log.warning("Saving " + name + " as a global variable.")
+                force_global = True
+        
         # Save IOCs from intermediate values if needed.
         self.save_intermediate_iocs(value)
         

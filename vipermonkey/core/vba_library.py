@@ -5191,6 +5191,8 @@ class Cells(VbaLibraryFunc):
         if ("Sheet" in utils.safe_str_convert(type(params[0]))):
 
             # Pull out all the cells  in the sheet and return that.
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Sheet given as 1st arg to Cells().")
             return excel.pull_cells_sheet(params[0])
         
         # The row and column must always be the 1st 2 arguments.
@@ -5258,11 +5260,14 @@ class Cells(VbaLibraryFunc):
 
         # Punt if we still have no idea what sheet to work with.
         if (sheet is None):
+            log.warning("Cells(" + str(row) + ", " + str(col) + ") call failed. Can't find largest sheet.")
             return "NULL"
 
         # Return the cell contents.
         cell_val = _read_cell(sheet, row, col)
         if (cell_val is not None):
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("Cells(" + str(row) + ", " + str(col) + ") = '" + str(cell_val) + "' (1)")
             return cell_val
         
         # The largest sheet or given sheet did not work. Try each sheet until we read a cell.
@@ -5282,6 +5287,8 @@ class Cells(VbaLibraryFunc):
             # Return the cell contents.
             cell_val = _read_cell(sheet, row, col)
             if (cell_val is not None):
+                if (log.getEffectiveLevel() == logging.DEBUG):
+                    log.debug("Cells(" + str(row) + ", " + str(col) + ") = '" + str(cell_val) + "' (2)")
                 return cell_val
             continue
 
