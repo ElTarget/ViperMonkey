@@ -6502,8 +6502,21 @@ class DefaultFilePath(VbaLibraryFunc):
 
         # Unknown
         return "C:\\UNKOWN_DEFAULTFILEPATH_DIR\\"        
-        
-        
+
+class EncodeScriptFile(VbaLibraryFunc):
+    """Fake the method that is supposed to encode VBS to VBE. Currently
+    this just returns the given VBS.
+
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) < 2)):
+            return "NULL"
+        return utils.safe_str_convert(params[1])
+
+    def num_args(self):
+        return 3
+            
 # Save classes emulating various VB functions for later lookup.
 for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                BuiltInDocumentProperties, Array, UBound, LBound, Trim,
@@ -6538,7 +6551,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Worksheets, Value, IsObject, Filter, GetRef, BuildPath, CreateFolder,
                Arguments, DateDiff, SetRequestHeader, SetOption, SetTimeouts, DefaultFilePath,
                SubFolders, Files, Name, ExcelFormula, Tables, Cell, DecodeURIComponent,
-               Words):
+               Words, EncodeScriptFile):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 
