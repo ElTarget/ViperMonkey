@@ -4806,12 +4806,34 @@ class ExecQuery(VbaLibraryFunc):
         cmd = utils.safe_str_convert(params[0])
         context.report_action("Execute Query", cmd, 'Query', strip_null_bytes=True)
 
+        # Special handling on ping query.
+        if (cmd.lower().startswith("SELECT * FROM Win32_PingStatus WHERE Address='".lower())):
+
+            # Kind of save that there is an "ip address" result.
+            start = cmd.index("'") + 1
+            end = cmd.rindex("'")
+            domain = cmd[start:end]
+            context.report_action("Ping", "Pinging '" + domain + "'", 'Interesting Command Execution', strip_null_bytes=True)
+            context.set(".ProtocolAddress", "_IP_ADDR_OF(" + domain + ")", force_global=True)
+        
         # Return some data for some queries.
         if (cmd.lower() == "select * from win32_process"):
             return [{"name" : "wscript.exe"},
                     {"name" : "cscript.exe"},
                     {"name" : "word.exe"},
                     {"name" : "excel.exe"},]
+        if (cmd.lower() == "Select * from Win32_Processor".lower()):
+            return [{"NumberOfCores" : 4},
+                    {"NumberOfCores" : 4},
+                    {"NumberOfCores" : 4},
+                    {"NumberOfCores" : 4}]
+        if (cmd.lower() == "Select * from Win32_LogicalDisk".lower()):
+            return [{"Size" : 64424509440},
+                    {"Size" : 64424509440},
+                    {"Size" : 64424509440}]
+        if (cmd.lower() == "Select * from Win32_ComputerSystem".lower()):
+            return [{"TotalPhysicalMemory" : 1073741824},
+                    {"TotalPhysicalMemory" : 1073741824}]
         
         # Say it was successful.
         return ["", ""]

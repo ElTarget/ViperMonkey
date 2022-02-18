@@ -506,6 +506,11 @@ class MemberAccessExpression(VBA_Object):
 
         """
 
+        # Test case:
+        #   WinExec(1).RTrim(2).LTrim(3)
+        # Expected:
+        #   LTrim(3, RTrim(2, WinExec(1)))
+        
         #print("_convert_nested_methods_to_func_call")
         #print(self)
         
@@ -526,6 +531,8 @@ class MemberAccessExpression(VBA_Object):
 
         # See if every component of the member access expression has
         # a corresponding emulation function in ViperMonkey.
+        #print("OBJ")
+        #print(obj_stack)
         unneeded_vars = set(["ActiveWorkbook".lower()])
         prev_func = None
         curr_func = None
@@ -534,6 +541,8 @@ class MemberAccessExpression(VBA_Object):
 
             # Get name of current member item.
             curr_obj = obj_stack.pop()
+            #print("CURR OBJ")
+            #print(curr_obj)
             obj_name = None
             curr_func = curr_obj
             if isinstance(curr_obj, SimpleNameExpression):
@@ -543,11 +552,16 @@ class MemberAccessExpression(VBA_Object):
             elif isinstance(curr_obj, Function_Call):
                 obj_name = safe_str_convert(curr_obj.name).strip()
                 curr_func = Function_Call(None, None, None, old_call=curr_obj)
+                #print("COPIED")
             else:
                 #print("BOO: 1")
                 return None
 
             # Skip some unneeded variables.
+            #print("OBJ NAME")
+            #print(obj_name)
+            #print("CURR FUNC")
+            #print(curr_func)
             if (obj_name.lower() in unneeded_vars):
                 continue
             
@@ -556,10 +570,13 @@ class MemberAccessExpression(VBA_Object):
 
                 # This is not a VBA function call. Is it a variable reference? We can
                 # handle a variable reference if it is the last item on the stack.
+                #print("HERE: 1")
                 if ((context.contains(obj_name)) and (len(obj_stack) == 0)):
 
                     # If this is a synthetic value leave it as a variable.
                     curr_func = context.get(obj_name)
+                    #print("HERE: 2")
+                    #print(curr_func)
                     if (curr_func == "__LOOP_VAR__"):
                         curr_func = curr_obj
                 else:
@@ -569,13 +586,22 @@ class MemberAccessExpression(VBA_Object):
 
             # Add the current call as an argument to the previous call.
             if (prev_func is not None):
-                prev_func.params.append(curr_func)
+                if (not isinstance(prev_func.params, (list, pyparsing.ParseResults))):
+                    #print("NO PARAMS")
+                    #print(prev_func.params)
+                    #print(type(prev_func.params))
+                    prev_func.params = []
+                prev_func.append_param(curr_func)
+                #print("PREV")
+                #print(prev_func)
             else:
                 res_func = curr_func
             prev_func = curr_func
             
         # Done.
         #print("BOO: 3")
+        #print(prev_func)
+        res_func.gloss = None
         #print(res_func)
         return res_func
         
@@ -2318,9 +2344,11 @@ class MemberAccessExpression(VBA_Object):
             # Do we have the needed field?
             key = safe_str_convert(self.rhs).replace("[", "").replace("]", "").replace("'", "")
             if (key.lower() in list(tmp_lhs.keys())):
-
                 # Return the field value.
                 return tmp_lhs[key.lower()]
+            if (key in list(tmp_lhs.keys())):
+                # Return the field value.
+                return tmp_lhs[key]
 
             # Text value of an Excel cell object?
             if (key.lower() == "text"):
@@ -3791,6 +3819,10 @@ class Function_Call(VBA_Object):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as Function_Call' % self)
 
+    def append_param(self, param):
+        self.params.append(param)
+        self.gloss = None
+            
     def __repr__(self):
         if (self.gloss is not None):
             return self.gloss
