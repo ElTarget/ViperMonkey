@@ -593,6 +593,7 @@ class MemberAccessExpression(VBA_Object):
                     prev_func.params = []
                 prev_func.append_param(curr_func)
                 #print("PREV")
+                prev_func.gloss = None
                 #print(prev_func)
             else:
                 res_func = curr_func
@@ -683,6 +684,10 @@ class MemberAccessExpression(VBA_Object):
         #print("TO_PYTHON!!")
         #print(self)
 
+        # We can't handle simulated ExecQuery() results in Python JIT code.
+        if (".Properties_" in str(self)):
+            raise ValueError("Can't handle simulated ExecQuery() results in Python JIT code")
+        
         # Handle Scripting.Dictionary.Add() calls.
         add_code = self._to_python_handle_add(context, indent)
         if (add_code is not None):
@@ -2318,6 +2323,106 @@ class MemberAccessExpression(VBA_Object):
             log.error("Regex.Test() failed. " + safe_str_convert(e))
             return None
         return (r is not None)
+
+    def _read_member_expression_as_dict(self, context, tmp_lhs):
+        """Handle member access expressions where the expression fields
+        correspond to entries in a dict.
+        
+        @param context (Context object) Current program state will be
+        read from the context.
+
+        @param tmp_lhs (any) The evaluated LHS of the member access
+        expression.
+
+        @return (list) The value of the dict entry if found, None if
+        not found.
+
+        """
+        
+        # Reading a field from a dict?
+        #print("CHECK DICT")
+        #print(tmp_lhs)
+        #print(type(tmp_lhs))
+        if (not isinstance(tmp_lhs, dict)):
+            return None
+
+        # Text value of an Excel cell object?
+        key = safe_str_convert(self.rhs).replace("[", "").replace("]", "").replace("'", "")
+        if (key.lower() == "text"):
+            key = "value"
+            if (key.lower() in list(tmp_lhs.keys())):
+
+                # Return the field value.
+                return tmp_lhs[key.lower()]
+
+        # Handle nested access of dicts.
+        keys = self.rhs
+        if (not isinstance(keys, list)):
+            keys = [keys]
+        r = tmp_lhs
+        for key_expr in keys:
+
+            # Ran out of nested dicts?
+            if (not isinstance(r, dict)):
+                return None
+
+            # Using Item("KEY") to read a dict entry?
+            if (isinstance(key_expr, Function_Call) and
+                (key_expr.name == "Item")):
+
+                # Do we have an Item() entry in the current dict?
+                if (("item" not in r) and ("Item" not in r)):
+
+                    # Can't read the entry.
+                    return None
+
+                # Pull out the Item reference.
+                if ("item" in r):
+                    r = r["item"]
+                elif ("Item" in r):
+                    r = r["Item"]
+
+                # Resolve the KEY from the Item(KEY) call.
+                if (len(key_expr.params) == 0):
+                    return None
+                item_expr_str = safe_str_convert(eval_arg(key_expr.params[0], context))
+                #print("ITEM KEY")
+                #print(item_expr_str)
+                #print(r)
+
+                # Do we have an Item(KEY) entry in the current dict?
+                if ((item_expr_str.lower() not in r) and (item_expr_str not in r)):
+
+                    # Can't read the entry.
+                    return None
+
+                # Pull out the Item(KEY) reference.
+                if (item_expr_str.lower() in r):
+                    r = r[item_expr_str.lower()]
+                elif (item_expr_str in r):
+                    r = r[item_expr_str]
+
+                # Got it.
+                return r
+                
+            # Direct dict entry reference?
+            key_str = safe_str_convert(key_expr)
+            #print("KEY")
+            #print(key_expr)
+            #print(type(key_expr))
+            if ((key_str not in r) and (key_str.lower() not in r)):
+                return None
+
+            # Pull out the dict entry for the current key.
+            if (key_str in r):
+                r = r[key_str]
+            elif (key_str.lower() in r):
+                r = r[key_str.lower()]
+                
+        # Return the referenced dict field.
+        #print("GOT")
+        #print(r)
+        return r
         
     def _read_member_expression_as_var(self, context, tmp_lhs):
         """See if we can read a variable with the same name as the member
@@ -2336,27 +2441,9 @@ class MemberAccessExpression(VBA_Object):
         """
         
         # Reading a field from a dict?
-        #print("CHECK DICT")
-        #print(tmp_lhs)
-        #print(type(tmp_lhs))
-        if (isinstance(tmp_lhs, dict)):
-
-            # Do we have the needed field?
-            key = safe_str_convert(self.rhs).replace("[", "").replace("]", "").replace("'", "")
-            if (key.lower() in list(tmp_lhs.keys())):
-                # Return the field value.
-                return tmp_lhs[key.lower()]
-            if (key in list(tmp_lhs.keys())):
-                # Return the field value.
-                return tmp_lhs[key]
-
-            # Text value of an Excel cell object?
-            if (key.lower() == "text"):
-                key = "value"
-                if (key.lower() in list(tmp_lhs.keys())):
-
-                    # Return the field value.
-                    return tmp_lhs[key.lower()]
+        tmp_r = self._read_member_expression_as_dict(context, tmp_lhs)
+        if (tmp_r is not None):
+            return tmp_r
 
         # Value of an Excel cell, not represented as a dict?
         tmp_str = safe_str_convert(self).lower()

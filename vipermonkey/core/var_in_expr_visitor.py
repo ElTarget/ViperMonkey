@@ -55,15 +55,17 @@ class var_in_expr_visitor(visitor):
 
     """
 
-    def __init__(self, context=None):
+    def __init__(self, context=None, follow_calls=False):
         self.variables = set()
         self.visited = set()
         self.context = context
+        self.follow_calls = follow_calls
     
     def visit(self, item):
         from core.expressions import SimpleNameExpression
         from core.expressions import MemberAccessExpression
-
+        from core import procedures
+        
         # Already looked at this?
         if (item in self.visited):
             return False
@@ -78,9 +80,17 @@ class var_in_expr_visitor(visitor):
 
             # Is this an array or function?
             if (hasattr(item, "name") and (self.context.contains(item.name))):
+
+                # Array access?
                 ref = self.context.get(item.name)
                 if isinstance(ref, (list, str)):
                     self.variables.add(safe_str_convert(item.name))
+
+                # Function call?
+                if ((isinstance(ref, procedures.Function) or isinstance(ref, procedures.Sub)) and self.follow_calls):
+
+                    # Get variables from the function body also.
+                    ref.accept(self)                    
 
         # Member access expression used as a variable?
         if (isinstance(item, MemberAccessExpression)):

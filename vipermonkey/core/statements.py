@@ -84,6 +84,7 @@ from core.python_jit import _loop_vars_to_python, to_python, _updated_vars_to_py
     enter_loop, exit_loop
 from core import procedures
 from core.var_in_expr_visitor import var_in_expr_visitor
+from core.contains_statement_visitor import contains_statement_visitor
 from core.function_call_visitor import function_call_visitor
 from core import vb_str
 from core import loop_transform
@@ -2924,7 +2925,7 @@ class While_Statement(VBA_Object):
 
         # Set up initialization of variables used in the loop.
         loop_init, prog_var = _loop_vars_to_python(self, context, indent)
-            
+        
         # Save the updated variable values.
         save_vals = _updated_vars_to_python(self, context, indent)
         
@@ -3232,6 +3233,58 @@ class While_Statement(VBA_Object):
         r = (prev_context == curr_context)
         return r
 
+    def _is_possible_infinite_loop(self, context):
+        """Check to see if the variables in the loop guard are never even
+        used in the loop body.
+
+        @param context (Context object) The context containing the
+        current variable state.
+
+        @return (boolean) Return True if the variables in the guard
+        are never even read, much less updated. Return False if
+        anything at all is done with the guard variables.
+
+        """
+
+        # If the guard contains no variables it may be infinite.
+        guard_var_visitor = var_in_expr_visitor()
+        self.guard.accept(guard_var_visitor)
+        possible_infinite = (len(guard_var_visitor.variables) == 0)
+        
+        # If the guard has variables see if any of them are referenced
+        # in the loop body.
+        if (not possible_infinite):
+
+            # Get the variables in the loop body. We're being conservative and will look
+            # at all the variables in called functions also.
+            body_var_visitor = var_in_expr_visitor(context=context, follow_calls=True)
+            for s in self.body:
+                s.accept(body_var_visitor)
+            
+            # See if any of the guard variables appear in the body.
+            got_guard_var = False
+            for body_var in body_var_visitor.variables:
+                if (body_var in guard_var_visitor.variables):
+                    got_guard_var = True
+                    break
+
+            # If no guard variables appear in the body it may be an
+            # infinite loop.
+            if (not got_guard_var):
+                possible_infinite = True
+
+        # If no guard vars are referenced check to see if any exit
+        # statements are called in the loop.
+        if possible_infinite:
+            for s in self.body:
+                exit_visitor = contains_statement_visitor([Exit_For_Statement, Exit_Function_Statement, Exit_While_Statement])
+                s.accept(exit_visitor)
+                if exit_visitor.found:
+                    possible_infinite = False
+                    break
+
+        return possible_infinite
+    
     def _has_constant_loop_guard(self):
         """Check to see if the loop guard is a literal expression that always
         evaluates True or False.
@@ -3314,6 +3367,15 @@ class While_Statement(VBA_Object):
                 log.warn("Found loop that never runs w. constant loop guard. Skipping.")
                 return None
 
+        # If this looks like potential infinite loop (guard vars never
+        # updated), only run it a few times.
+        if self._is_possible_infinite_loop(context):
+
+            # Just run the loop a few times.
+            log.warn("Found infinite loop w. guard variables that are never updated. Limiting iterations.")
+            max_loop_iters = 2
+            is_infinite_loop = True
+            
         # Try converting the loop to Python and running that.
         # Don't do Python JIT on short circuited infinite loops.
         if ((not is_infinite_loop) and

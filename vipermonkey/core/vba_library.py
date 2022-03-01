@@ -1682,7 +1682,7 @@ class Count(VbaLibraryFunc):
 
         # Sanity check.
         if ((params is None) or(len(params) == 0)):
-            return "NULL"
+            return 0
         
         # Return the # of Added items.
         # Subtract 1 due to "__ADDED_ITEMS__" entry in dict.
@@ -4815,7 +4815,16 @@ class ExecQuery(VbaLibraryFunc):
             domain = cmd[start:end]
             context.report_action("Ping", "Pinging '" + domain + "'", 'Interesting Command Execution', strip_null_bytes=True)
             context.set(".ProtocolAddress", "_IP_ADDR_OF(" + domain + ")", force_global=True)
-        
+
+            # Return some fake results.
+            return [{"statuscode" : 0,
+                     "properties_" : {"item" : {"protocoladdress": "_IP_ADDR_OF(" + domain + ")"}},
+                     "properties" : {"item" : {"protocoladdress": "_IP_ADDR_OF(" + domain + ")"}}},
+                    {"statuscode" : 1,
+                     "properties_" : {"item" : {"protocoladdress": "_IP_ADDR_OF(" + domain + ")"}},
+                     "properties" : {"item" : {"protocoladdress": "_IP_ADDR_OF(" + domain + ")"}}},]
+
+            
         # Return some data for some queries.
         if (cmd.lower() == "select * from win32_process"):
             return [{"name" : "wscript.exe"},
