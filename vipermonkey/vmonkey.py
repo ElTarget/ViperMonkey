@@ -337,6 +337,8 @@ def parse_stream(subfilename,
             safe_print(" "*(err.column-1) + "^")
             safe_print(err)
             log.error("Parse Error. Processing Aborted.")
+            global got_parse_error
+            got_parse_error = True
             return None
 
     # Check for timeouts.
@@ -634,6 +636,9 @@ def _remove_duplicate_iocs(iocs):
     # Return stripped IOC set.
     return r
 
+# Track whether there was a parse error.
+got_parse_error = False
+
 def _get_vba_parser(data):
     """Get an olevba VBA_Parser object for reading an Office file. This
     handles regular Office files and HTA files with VBScript script
@@ -646,6 +651,10 @@ def _get_vba_parser(data):
     object for the given file contents. On error, None.
 
     """
+
+    # Reset the parse error flag.
+    global got_parse_error
+    got_parse_error = False
     
     # First just try the most common case where olevba can directly get the VBA.
     vba = None
@@ -822,6 +831,7 @@ def _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file
             })
 
         out_data = {
+            "parse_error": got_parse_error,
             "file_name": orig_filename,
             "potential_iocs": list(tmp_iocs),
             "shellcode" : shellcode_bytes,
