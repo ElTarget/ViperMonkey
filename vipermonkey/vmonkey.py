@@ -177,7 +177,14 @@ __version__ = '2.0.0'
 #   https://msdn.microsoft.com/en-us/library/dd361851.aspx
 # - [MS-OVBA]: Microsoft Office VBA File Format Structure
 #   http://msdn.microsoft.com/en-us/library/office/cc313094%28v=office.12%29.aspx
-    
+
+## Globals
+
+# Track whether there was a parse error.
+got_parse_error = False
+# Track whether emulation crashed with an exception.
+got_crash_error = False
+
 def get_vb_contents_from_hta(vba_code):
     """Pull out Visual Basic code from .hta file contents.
 
@@ -636,9 +643,6 @@ def _remove_duplicate_iocs(iocs):
     # Return stripped IOC set.
     return r
 
-# Track whether there was a parse error.
-got_parse_error = False
-
 def _get_vba_parser(data):
     """Get an olevba VBA_Parser object for reading an Office file. This
     handles regular Office files and HTA files with VBScript script
@@ -832,6 +836,7 @@ def _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file
 
         out_data = {
             "parse_error": got_parse_error,
+            "crash_error": got_crash_error,
             "file_name": orig_filename,
             "potential_iocs": list(tmp_iocs),
             "shellcode" : shellcode_bytes,
@@ -943,6 +948,10 @@ def _process_file (filename,
     if (time_limit is not None):
         core.vba_object.max_emulation_time = datetime.now() + timedelta(minutes=time_limit)
 
+    # Clear out any old crash information.
+    global got_crash_error
+    got_crash_error = False
+        
     # Create the emulator.
     log.info("Starting emulation...")
     vm = core.ViperMonkey(filename, data, do_jit=do_jit)
@@ -1090,6 +1099,7 @@ def _process_file (filename,
         # Print error info.
         if (("SystemExit" not in safe_str_convert(e)) and (". Aborting analysis." not in safe_str_convert(e))):
             traceback.print_exc()
+        got_crash_error = True
         log.error(safe_str_convert(e))
 
         # If this is an out of memory error terminate the process with an
@@ -1309,12 +1319,16 @@ def main():
 
             # add json results to list
             if (options.out_file):
-                with open(options.out_file, 'r') as json_file:
-                    try:
-                        json_results.append(json.loads(json_file.read()))
-                    except ValueError:
-                        pass
-
+                if (not got_crash_error):
+                    with open(options.out_file, 'r') as json_file:
+                        try:
+                            json_results.append(json.loads(json_file.read()))
+                        except ValueError:
+                            pass
+                else:
+                    # Save that analysis crashed.
+                    json_results.append({"crash_error": got_crash_error})
+                    
     if (options.out_file):
         if isinstance(json_results, list):
             if (len(json_results) == 0):
