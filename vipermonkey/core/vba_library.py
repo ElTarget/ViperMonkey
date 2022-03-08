@@ -2711,6 +2711,45 @@ class Replace(VbaLibraryFunc):
 
     """
 
+    def _handle_regex_replace(self, s, subst, context):
+        """Handle a RegEx.Replace() object call where the RegEx object
+        appears in the With context of the Replace call.
+
+        @param s (str) The text in which to perform the replacement.
+        @param subst (str) The replacement text.
+        @param context (Context object) The current program state.
+
+        @return (str) If this call is made in a With block where the
+        With object is a Regex object return the result of doing the
+        regex replacement on the given payload string. If there is no
+        RegEx object in the With context return the given string
+        unchanged.
+
+        """
+
+        # Example:
+        #
+        #   With New RegExp
+        #      .Pattern = "\s"
+        #      .MultiLine = True
+        #      .Global = True
+        #      Func3 = .Replace(wjkwer, vbNullString)
+        #   End With
+
+        # Do we have a RegEx object as the With context?
+        if ("RegExp" not in str(context.with_prefix_raw)):
+            return s
+
+        # Do we have the replacement pattern?
+        if (not context.contains(".Pattern")):
+            return s
+
+        # Do the replacement.
+        pat = context.get(".Pattern")
+        regex_obj = utils.vb_RegExp()
+        regex_obj.Pattern = pat
+        return regex_obj.Replace(s, subst)
+        
     def eval(self, context, params=None):
         context = context # pylint
 
@@ -2718,8 +2757,15 @@ class Replace(VbaLibraryFunc):
             return ""
         if (len(params) < 3):
             if (len(params) > 0):
-                return params[0]
+
+                # Is this a RegEx.Replace() call where the RegEx object is in the With context?
+                if (len(params) == 1):
+                    # No.
+                    return params[0]
+                else:
+                    return self._handle_regex_replace(params[0], params[1], context)
             return ""
+
         # TODO: Handle start, count, and compare parameters.
         string = params[0]
         # Handle Excel cells.
