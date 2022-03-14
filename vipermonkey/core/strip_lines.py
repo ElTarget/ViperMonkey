@@ -2158,6 +2158,8 @@ def delete_bracket_constructs(vba_code):
     for bracket in brackets:
 
         # Skip this if it appears in a string.
+        if (bracket not in vba_code):
+            continue
         start = vba_code.index(bracket)
         in_str1 = False
         pos = start
