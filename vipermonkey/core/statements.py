@@ -6337,6 +6337,13 @@ orphaned_marker.setParseAction(Orphaned_Marker)
 #   SUV = 10      'Value = 10
 #   Truck         'Value = 11
 # End Enum
+#
+# Public Enum enFileOperationConstants
+#    efocCopy = FO_COPY
+#    efocDelete = FO_DELETE
+#    efocMove = FO_MOVE
+#    efocRename = FO_RENAME
+# End Enum
 
 class EnumStatement(VBA_Object):
     """Emulate a VB Enum statement.
@@ -6351,10 +6358,13 @@ class EnumStatement(VBA_Object):
         enum_vals = tokens[1]
         last_val = -1
         for enum_val in enum_vals:
-            last_val += 1
             if (len(enum_val) == 2):
                 last_val = enum_val[1]
             self.values.append((safe_str_convert(enum_val[0]), last_val))
+            try:
+                last_val = expression.parseString(str(last_val) + " + 1", parseAll=True)[0]
+            except ParseException:
+                last_val = -1
                 
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as Enum_Statement' % self)
@@ -6376,10 +6386,10 @@ class EnumStatement(VBA_Object):
         
         # Add the enum values as variables to the context.
         for enum_val in self.values:
-            context.set(enum_val[0], enum_val[1], force_global=True)
+            context.set(enum_val[0], eval_arg(enum_val[1], context=context), force_global=True)
 
 
-enum_value = Group((lex_identifier ^ enum_val_id)("name") + Optional(Suppress(Literal("=")) + integer("value")))
+enum_value = Group((lex_identifier ^ enum_val_id)("name") + Optional(Suppress(Literal("=")) + expression("value")))
 enum_statement = Suppress(Optional(CaselessKeyword('Public') | CaselessKeyword('Private'))) + \
                  Suppress(CaselessKeyword("Enum")) + lex_identifier("enum_name") + Suppress(EOS) + \
                  Group(ZeroOrMore(enum_value + Suppress(EOS))("enum_values")) + \
