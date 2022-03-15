@@ -1007,6 +1007,13 @@ class Context(object):
                     b = chr(b)
                 self.open_files[fname] += b
             return True
+
+        # Are we writing a blob of bytes?
+        elif isinstance(data, bytes):
+            for b in data:
+                if isinstance(b, int):
+                    b = chr(b)
+                self.open_files[fname] += b
         
         # Unhandled.
         else:
@@ -2168,8 +2175,13 @@ class Context(object):
                     self.set(val_name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
 
         # Handle hex conversion with VBA objects.
-        if (name.lower().endswith(".nodetypedvalue")):
+        if ((name.lower().endswith(".nodetypedvalue")) or (name.lower().endswith(".text"))):
 
+            # Figure out in which field to put the decoded value.
+            decode_field = ".Text"
+            if (name.lower().endswith(".text")):
+                decode_field = ".NodeTypedValue"
+                
             # Handle doing conversions on the data.
             node_type = name[:name.rindex(".")] + ".datatype"
             try:
@@ -2197,8 +2209,8 @@ class Context(object):
                 if (conv_val is not None):
                     self.set(name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
 
-                    # Save the decoded value in the .Text field of the object.
-                    text_name = name[:name.rindex(".")] + ".Text"
+                    # Save the decoded value in the decoded value field of the object.
+                    text_name = name[:name.rindex(".")] + decode_field
                     self.set(text_name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
                     
             except KeyError:

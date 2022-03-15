@@ -4498,9 +4498,18 @@ class WriteByte(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
+        global written_byte_blob_count
         if ((params is None) or (len(params) < 1)):
             return
+
+        # Report writing the bytes.
         context.report_action('Write Process Memory', utils.safe_str_convert(params), 'MemoryStream.WriteByte', strip_null_bytes=True)
+
+        # Save the bytes as an analysis artifact.
+        fname = "mem_stream_byte_blob.dat"
+        if not context.file_is_open(fname):
+            context.open_file(fname)
+        context.write_file(fname, params[0], binary=True)
         
 class WriteLine(VbaLibraryFunc):
     """Emulate File WriteLine() method.
