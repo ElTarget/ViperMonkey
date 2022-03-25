@@ -271,8 +271,6 @@ def get_drawing_titles(data):
         r.append((var_name, drawing_text))
 
     # Done.
-    print("OUT: 1")
-    print(r)
     return _make_elems_str(r)
 
 def get_defaulttargetframe_text(data):
@@ -2981,8 +2979,6 @@ def get_shapes_text_values_xml(fname):
         # Move to next shape.
         pos += 1
 
-    print("OUT: 2")
-    print(r)
     return _make_elems_str(r)
 
 def get_shapes_text_values_direct_2007(data):
@@ -3021,8 +3017,6 @@ def get_shapes_text_values_direct_2007(data):
     
     # Return the Shape name and text value.
     r = [(name, val)]
-    print("OUT: 3")
-    print(r)
     return _make_elems_str(r)
 
 def get_shapes_text_values_direct_2007_1(data):
@@ -3052,8 +3046,6 @@ def get_shapes_text_values_direct_2007_1(data):
         
     # Return the Shape name and text value.
     r = [(name, val)]
-    print("OUT: 4")
-    print(r)
     return _make_elems_str(r)
 
 def _parse_activex_chunk(data):
@@ -3213,7 +3205,7 @@ def _get_comments_2007(fname):
     # Read in all the individual comment XML blocks.
 
     # Comment blocks begin with '<w:comment' and end with '</w:comment>'.
-    comm_pat = r"<w:comment.*</w:comment>"
+    comm_pat = br"<w:comment.*</w:comment>"
     comment_blocks = re.findall(comm_pat, data)
     if (len(comment_blocks) == 0):
         unzipped_data.close()
@@ -3227,14 +3219,14 @@ def _get_comments_2007(fname):
 
         # Pull out the ID for this comment block.
         # <w:comment w:id="1"
-        id_pat = r"<w:comment\s+w:id=\"(\d+)\""
+        id_pat = br"<w:comment\s+w:id=\"(\d+)\""
         ids = re.findall(id_pat, block)
         if (len(ids) == 0):
             continue
         curr_id = ids[0]
 
         # Pull out the comment text.
-        text_pat = r"<w:t[^>]*>([^<]+)</w:t>"
+        text_pat = br"<w:t[^>]*>([^<]+)</w:t>"
         texts = re.findall(text_pat, block)
         if (len(texts) == 0):
             continue
@@ -3243,7 +3235,7 @@ def _get_comments_2007(fname):
 
         for text in texts:
             new_text = safe_str_convert(_clean_2007_text(text))
-            block_text += _clean_2007_text(new_text)
+            block_text += safe_str_convert(_clean_2007_text(new_text))
 
         # Save the comment.
         r.append((curr_id, block_text))
@@ -3386,8 +3378,6 @@ def get_shapes_text_values_2007(fname):
         os.remove(fname)
     #print r
     #sys.exit(0)
-    print("OUT: 5")
-    print(r)
     return _make_elems_str(r)
 
 def get_shapes_text_values(fname, stream):
