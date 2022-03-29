@@ -2346,7 +2346,14 @@ class VarPtr(VbaLibraryFunc):
 
         # Report on the full byte array given to VarPtr().
         val = params[0]
-        context.report_action("External Call", "VarPtr(" + utils.safe_str_convert(val) + ")", "VarPtr", strip_null_bytes=True)
+        r = utils.safe_str_convert(val)
+        context.report_action("External Call", "VarPtr(" + r + ")", "VarPtr", strip_null_bytes=True)
+
+        # Return a stand-in string for the result.
+        if (len(r) > 500):
+            r = new_params[:250] + "... <SNIP> ..." + new_params[-250:]
+        r = "VarPtr(" + r + ")"
+        return r
 
 class RtlMoveMemory(VbaLibraryFunc):
     """Emulate External RtlMoveMemory() function.
@@ -2482,7 +2489,7 @@ class Split(VbaLibraryFunc):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Split: return %r" % r)
         return r
-    
+
 class Int(VbaLibraryFunc):
     """Emulate Int() function.
 
@@ -3489,6 +3496,13 @@ class CSng(VbaLibraryFunc):
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("CSng: CSng(%r) returns %r" % (params[0], r))
         return r
+
+class CDec(CSng):
+    """Emulate CDec() function. This is not emulated exactly, it is being
+    treated like CSng().
+
+    """
+    pass
     
 class Atn(VbaLibraryFunc):
     """Emulate Atn() math function.
@@ -3698,7 +3712,9 @@ class Name(VbaLibraryFunc):
         params = params # pylint
 
         # Getting the name of an Excel sheet?
-        if ((len(params) > 0) and (isinstance(params[0], excel.ExcelSheet))):
+        if ((params is not None) and
+            (len(params) > 0) and
+            (isinstance(params[0], excel.ExcelSheet))):
             return params[0].name
         
         # Lets have this match any logic and see what the VB does.
@@ -5956,6 +5972,22 @@ class Variable(VbaLibraryFunc):
 
 class Variables(Variable):
     pass
+
+class CustomDocumentProperties(VbaLibraryFunc):
+    """Read Office file metadata field.
+
+    """
+
+    def eval(self, context, params=None):
+        if ((params is None) or (len(params) < 1)):
+            return "NULL"
+        var = utils.safe_str_convert(params[0]).strip()
+        r = context.read_metadata_item(var)
+        if (r is None):
+            r = ""
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("CustomDocumentProperties(" + var + ") = " + utils.safe_str_convert(r))
+        return r
     
 class CDbl(VbaLibraryFunc):
     """Emulate CDbl() type conversion function.
@@ -6637,7 +6669,7 @@ for _class in (MsgBox, Shell, Len, Mid, MidB, Left, Right,
                Worksheets, Value, IsObject, Filter, GetRef, BuildPath, CreateFolder,
                Arguments, DateDiff, SetRequestHeader, SetOption, SetTimeouts, DefaultFilePath,
                SubFolders, Files, Name, ExcelFormula, Tables, Cell, DecodeURIComponent,
-               Words, EncodeScriptFile):
+               Words, EncodeScriptFile, CustomDocumentProperties, CDec):
     name = _class.__name__.lower()
     VBA_LIBRARY[name] = _class()
 

@@ -303,6 +303,35 @@ def collapse_macro_if_blocks(vba_code):
     
     # Return the stripped VBA.
     return final_r
+
+def hide_some_array_accesses(vba_code):
+    """Hide function call/array access mixes like 'a = cat("dog")(12)(0)',
+    we can't parse these.
+
+    @param vba_code (str) The VB code to check and modify.
+
+    @return (str) The modified VB code.
+
+    """
+
+    # Do we have any of these constructs?
+    pat = "[a-zA-Z0-9_](?:\([^\)]{1,100}\)){3}"
+    if (re2.search(pat, vba_code) is None):
+        return vba_code
+
+    # Comment out the lines we cannot parse.
+    r = ""
+    for line in vba_code.split("\n"):
+        if (re2.search(pat, line) is None):
+            r += line + "\n"
+            continue
+        if (line.strip().lower().startswith("if ")):
+            r += "If False Then\n"
+            continue
+        r += "' " + line + "\n"
+
+    # Done.
+    return r
     
 def hide_weird_calls(vba_code):
     """Hide weird calls like 'foo.bar (1,2), cat, dog', These are hard to
@@ -1296,11 +1325,19 @@ def fix_weird_copyhere(vba_code):
     if debug_strip:
         print("HERE: 6")
         print(vba_code)
-    namespace_pat = r"(\w+\.Run\(.+\)[^,\n]*),\s*[^\n\)]+"
-    if (re2.search(str(namespace_pat), vba_code) is not None):
+    # TODO: Does not handle the following:
+    # K015_indirectAssign K015_callFunction, Application.Run(strFileRef & "!" & strFunctionName, varArgv(lngIndex + 0), varArgv(lngIndex + 1))
+    # Match result:
+    # ['Application.Run(strFileRef & "!" & strFunctionName, varArgv(lngIndex + 0)']
+    namespace_pat = r"(\w+\.Run\(.+\)[^,\n\r]*),\s*[^\n\r\)]+"
+    guard_pat = r"\w+\.Run\([^\n]+\)\)"
+    if ((re2.search(str(namespace_pat), vba_code) is not None) and
+        (re2.search(str(guard_pat), vba_code) is None)):
+        print(re.findall(namespace_pat, vba_code))
+        vba_code = re.sub(namespace_pat, r"\1", vba_code)
         if debug_strip:
             print("HERE: 6.1")
-        vba_code = re.sub(namespace_pat, r"\1", vba_code)
+            print(vba_code)
 
     # Done.
     return vba_code
@@ -2346,6 +2383,12 @@ def fix_vba_code(vba_code):
     #    print "FIX_VBA_CODE: 16.1"
     #    print vba_code
     #vba_code = hide_weird_calls(vba_code)
+
+    # Hide some weird hard to parse array accesses.
+    if debug_strip:
+        print("FIX_VBA_CODE: 16.1")
+        print(vba_code)
+    vba_code = hide_some_array_accesses(vba_code)
     
     # For each const integer defined, replace it inline in the code to reduce lookups
     if debug_strip:

@@ -379,7 +379,7 @@ class ViperMonkey(StubbedEngine):
     def set_metadata(self, dat):
         """Save Office metadata of the file being analyzed.
 
-        @pram dat (dict) A mapping from metadata field names to
+        @param dat (dict) A mapping from metadata field names to
         metadata vales.
 
         """

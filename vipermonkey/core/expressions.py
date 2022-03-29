@@ -4370,8 +4370,9 @@ def quick_parse_int_or_var(text):
 # Parse large array expressions quickly with a regex.
 # language=PythonRegExp
 # No newlines in whitespace.
-expr_list_fast = Regex("(?:\s*[0-9a-zA-Z_]+[ \t\f\v]*,[ \t\f\v]*){10,}[ \t\f\v]*[0-9a-zA-Z_]+[ \t\f\v]*")
-expr_list_fast.setParseAction(lambda t: [quick_parse_int_or_var(i) for i in t[0].split(",")])
+# TODO: This does not handle expression lists that contain non-atomic expressions like '1 + 2'.
+#expr_list_fast = Regex("(?:\s*[0-9a-zA-Z_]+[ \t\f\v]*,[ \t\f\v]*){10,}[ \t\f\v]*[0-9a-zA-Z_]+[ \t\f\v]*")
+#expr_list_fast.setParseAction(lambda t: [quick_parse_int_or_var(i) for i in t[0].split(",")])
 
 # Parse general expression lists more completely but more slowly.
 expr_list_slow = delimitedList(Optional(expr_list_item, default=""))
@@ -4380,12 +4381,14 @@ expr_list_slow = delimitedList(Optional(expr_list_item, default=""))
 expr_list = (
     expr_list_item
     + NotAny(':=')
-    + Optional(Suppress(",") + (expr_list_fast | expr_list_slow))
+    #+ Optional(Suppress(",") + (expr_list_fast ^ expr_list_slow))
+    + Optional(Suppress(",") + expr_list_slow)
 )
 expr_list_strict = (
     expr_list_item_strict
     + NotAny(':=')
-    + Optional(Suppress(",") + (expr_list_fast | expr_list_slow))
+    #+ Optional(Suppress(",") + (expr_list_fast | expr_list_slow))
+    + Optional(Suppress(",") + expr_list_slow)
 )
 
 # TODO: check if parentheses are optional or not. If so, it can be either a variable or a function call without params
