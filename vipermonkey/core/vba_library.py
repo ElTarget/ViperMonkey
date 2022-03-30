@@ -6216,13 +6216,18 @@ class CreateTextFile(VbaLibraryFunc):
         if (fname is None):
             return "NULL"
         
-        # Do we have a numeric file ID?
-        file_id = ""
-        if (len(params) > 1):
-            file_id = params[1]
+        # Are we appending to an existing file?
+        append = False
+        if (len(params) >= 2):
+            mode = None
+            try:
+                mode = vba_conversion.coerce_to_int(params[1])
+            except Exception as e:
+                mode = -1
+            append = (mode == 8)
             
         # Save that the file is opened.
-        context.open_file(fname, file_id)
+        context.open_file(fname, append=append)
         context.report_action('File Access', fname, "")
 
         # This could be an external WebDAV access.

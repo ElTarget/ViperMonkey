@@ -874,7 +874,7 @@ class Context(object):
         # Don't reopen already opened files.
         return (fname in list(self.open_files.keys()))
         
-    def open_file(self, fname, file_id=""):
+    def open_file(self, fname, file_id="", append=False):
         """Simulate opening a file.
 
         @see get_interesting_fileid
@@ -889,6 +889,10 @@ class Context(object):
         @param fname (str) The name of the file.
 
         @param file_id (str) The numeric ID of the file.
+
+        @param append (boolean) If True pull data that was already
+        written to the file to use as the initial file contents, if
+        False the file contents are empty.
 
         """
         # Save that the file is opened.
@@ -905,6 +909,10 @@ class Context(object):
         if (file_id != ""):
             self.file_id_map[file_id] = fname
         log.info("Opened file " + fname)
+
+        # Are we appending to a file we wrote to previously?
+        if append and (fname in self.closed_files):
+            self.open_files[fname] = self.closed_files[fname]
         
     def write_file(self, fname, data, binary=False):
         """Simulate writing to a file.

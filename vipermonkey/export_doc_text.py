@@ -155,15 +155,10 @@ def save_document_as_text(document):
     tmpname = tempfile.gettempdir() + os.path.sep + next(tempfile._get_candidate_names())
     url = convert_path_to_url(tmpname)
     p = PropertyValue(Name = 'FilterName', Value = 'Text')
-    from pprint import pprint
-    pprint(dir(document))
-    pprint(document._show_attributes())
-    print(type(document))
-    print(document.desktop)
-    dumb = document.desktop.loadComponentFromURL(document.url, '_blank', 0, ())
-    print(dumb)
-    #document.storeAsURL(url, [p])
-    document.store_to_url(url, [p])
+    if hasattr(document, "storeAsURL"):
+        document.storeAsURL(url, [p])
+    else:
+        document.store_to_url(url, [p])
     return tmpname
 
 ###################################################################################################
