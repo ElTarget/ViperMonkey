@@ -2351,7 +2351,7 @@ class VarPtr(VbaLibraryFunc):
 
         # Return a stand-in string for the result.
         if (len(r) > 500):
-            r = new_params[:250] + "... <SNIP> ..." + new_params[-250:]
+            r = r[:250] + "... <SNIP> ..." + r[-250:]
         r = "VarPtr(" + r + ")"
         return r
 

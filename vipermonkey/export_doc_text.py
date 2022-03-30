@@ -87,11 +87,11 @@ def get_office_proc():
 
     for proc in psutil.process_iter():
         try:
-            pinfo = proc.as_dict(attrs=['pid', 'name', 'username'])
+            pinfo = proc.as_dict(attrs=['pid', 'name', 'username', 'status'])
         except psutil.NoSuchProcess:
             pass
         else:
-            if (pinfo["name"].startswith("soffice")):
+            if ((pinfo["name"].startswith("soffice")) and (pinfo["status"] != "zombie")):
                 return pinfo
     return None
 
@@ -155,7 +155,15 @@ def save_document_as_text(document):
     tmpname = tempfile.gettempdir() + os.path.sep + next(tempfile._get_candidate_names())
     url = convert_path_to_url(tmpname)
     p = PropertyValue(Name = 'FilterName', Value = 'Text')
-    document.storeAsURL(url, [p])
+    from pprint import pprint
+    pprint(dir(document))
+    pprint(document._show_attributes())
+    print(type(document))
+    print(document.desktop)
+    dumb = document.desktop.loadComponentFromURL(document.url, '_blank', 0, ())
+    print(dumb)
+    #document.storeAsURL(url, [p])
+    document.store_to_url(url, [p])
     return tmpname
 
 ###################################################################################################
