@@ -3393,34 +3393,51 @@ def get_shapes_text_values(fname, stream):
     """
 
     # Maybe 2007+ file?
+    #print("START: get_shapes_text_values()")
     r = get_shapes_text_values_2007(fname)
     if (len(r) > 0):
+        #print("DONE 1: get_shapes_text_values()")
         return _make_elems_str(r)
     
     r = []
     try:
         # Read the WordDocument stream.
         ole = olefile.OleFileIO(fname, write_mode=False)
+        #print("STREAM: " + safe_str_convert(stream))
         if (not ole.exists(stream)):
+            #print("DONE 2: get_shapes_text_values()")
             return []
         data = ole.openstream(stream).read()
         
         # It looks like maybe(?) the shapes text appears as ASCII blocks bounded by
-        # 0x0D bytes. We will look for that.
-        pat = br"\x0d[\x20-\x7e]{100,}\x0d"
+        # 0x0D bytes (or some other specific byte patterns). We will look for that.
+        # <\x00\r\x0b\x00
+        pat = br"(?:\x0d|(?:<\x00\r\x0b\x00))(?:[\x20-\x7e]|[\r\n\t]){100,}(?:\x0d|(?:<\x00\())"
         strs = re.findall(pat, data)
-        #print "STREAM: " + safe_str_convert(stream)
-        #print data
-        #print "^^^^^^^^^^^"
-        #print strs
+        #print(data)
+        #print("^^^^^^^^^^^")
+        #print(strs)
         
         # Hope that the Shape() object indexing follows the same order as the strings
         # we found.
         pos = 1
         for shape_text in strs:
 
+            # Strip start/end markers from text.
+            #print("@@@@@@")
+            #print(shape_text)
+            if (shape_text.startswith(b"<\x00\r\x0b\x00")):
+                shape_text = shape_text[len("<\x00\r\x0b\x00"):]
+            else:
+                shape_text = shape_text
+            if (shape_text.endswith(b"<\x00(")):
+                shape_text = shape_text[:-len("<\x00(")]
+            else:
+                shape_text = shape_text[:-1]
+            #print("^^^^^^")
+            #print(shape_text)
+                
             # Access value with .TextFrame.TextRange.Text accessor.
-            shape_text = shape_text[1:-1]
             var = "Shapes('" + safe_str_convert(pos) + "').TextFrame.TextRange.Text"
             r.append((var, shape_text))
             
@@ -3472,6 +3489,7 @@ def get_shapes_text_values(fname, stream):
         if ("not an OLE2 structured storage file" in safe_str_convert(e)):
             r = get_shapes_text_values_xml(fname)
 
+    #print("DONE 3: get_shapes_text_values()")
     return _make_elems_str(r)
 
 
@@ -4596,6 +4614,7 @@ def _read_payload_shape_text(data, vm):
     log.info("Reading Shapes object text fields...")
     got_it = False
     shape_text = get_shapes_text_values(data, 'worddocument')
+    shape_text.extend(get_shapes_text_values(data, 'workbook'))
     pos = 1
     for (var_name, var_val) in shape_text:
         got_it = True
