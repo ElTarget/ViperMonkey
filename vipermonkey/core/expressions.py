@@ -3094,7 +3094,30 @@ class MemberAccessExpression(VBA_Object):
 
         # Return the word.
         return word_list[index]
-    
+
+    def _handle_range_text_read(self, context):
+        """Handle .Range.Text field references of a paragraph object.
+
+        @param context (Context object) Current emulation context.
+
+        @return (str) The paragraph text on success, None on failure.
+
+        """
+
+        # Is this a .Range.Text reference?
+        if (not str(self).strip().endswith(".Range.Text")):
+            return None
+
+        # We are referencing the .Range.Text field. Is the "object"
+        # value a string (that's how a paragraph is being represented)?
+        par_val = eval_arg(self.lhs, context)
+        if (isinstance(par_val, str) and (par_val != "NULL")):
+            return par_val + "\n"
+
+        # The "object" value is not a string, so probably not a
+        # paragraph object.
+        return None
+            
     def _handle_excel_get_sheet_name(self, context):
         """Handle calls like Sheets.Item(3).Name for getting a sheet name.
 
@@ -3153,6 +3176,12 @@ class MemberAccessExpression(VBA_Object):
         # Reading a document word with .Words(NN)?
         #print("HERE: .5")
         r = self._handle_doc_word_read(context)
+        if (r is not None):
+            return r
+
+        # Reading the text of a paragraph?
+        #print("HERE: .51")
+        r = self._handle_range_text_read(context)
         if (r is not None):
             return r
 
