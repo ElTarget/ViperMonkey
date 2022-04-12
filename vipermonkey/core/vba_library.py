@@ -3544,7 +3544,7 @@ class Tables(VbaLibraryFunc):
 
         # Get the table if the index is valid.
         tables = context.get("__DOC_TABLE_CONTENTS__")
-        if (table_index >= len(tables)):
+        if ((table_index >= len(tables)) or (table_index < 0)):
             return "NULL"
         table = tables[table_index]
 

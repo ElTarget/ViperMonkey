@@ -1256,14 +1256,14 @@ def get_ole_textbox_values1(data, debug, stream_names):
     chunk_orig = chunk[0]
 
     # Can we narrow it down?
-    if ("C\x00o\x00m\x00p\x00O\x00b\x00j" not in chunk_orig):
+    if (b"C\x00o\x00m\x00p\x00O\x00b\x00j" not in chunk_orig):
         if debug:
             print("\nNO NARROWED DOWN CHUNK")
         return []
     
     # Narrow the name chunk down.
-    start = chunk_orig.index("C\x00o\x00m\x00p\x00O\x00b\x00j")
-    chunk = chunk_orig[start + len("C\x00o\x00m\x00p\x00O\x00b\x00j"):]
+    start = chunk_orig.index(b"C\x00o\x00m\x00p\x00O\x00b\x00j")
+    chunk = chunk_orig[start + len(b"C\x00o\x00m\x00p\x00O\x00b\x00j"):]
     if debug:
         print("\n---------------")
         print("Names:")
@@ -1274,12 +1274,12 @@ def get_ole_textbox_values1(data, debug, stream_names):
     if (len(names) > 0):
         names = names[:-1]
     if (len(names) == 0):
-        if ("Document" not in chunk_orig):
+        if (b"Document" not in chunk_orig):
             if debug:
                 print("\nNO NAMES, NO Document IN CHUNK")
             return []
-        start = chunk_orig.index("Document")
-        chunk = chunk_orig[start + len("Document"):]
+        start = chunk_orig.index(b"Document")
+        chunk = chunk_orig[start + len(b"Document"):]
         names = re.findall(ascii_pat, chunk)
         names = names[:-1]
     if debug:
@@ -3601,7 +3601,7 @@ def _read_doc_vars_zip(fname):
     # Unescape XML escaping in variable values.
     r = []
     for i in var_info:
-        val = i[1]
+        val = safe_str_convert(i[1])
         # &quot; &amp; &lt; &gt;
         val = val.replace("&quot;", '"')
         val = val.replace("&amp;", '&')
