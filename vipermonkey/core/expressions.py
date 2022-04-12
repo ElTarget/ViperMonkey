@@ -602,7 +602,8 @@ class MemberAccessExpression(VBA_Object):
         # Done.
         #print("BOO: 3")
         #print(prev_func)
-        res_func.gloss = None
+        if hasattr(res_func, "gloss"):
+            res_func.gloss = None
         #print(res_func)
         return res_func
         

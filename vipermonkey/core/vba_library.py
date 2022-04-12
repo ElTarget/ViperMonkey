@@ -2073,7 +2073,7 @@ class RTrim(VbaLibraryFunc):
     def eval(self, context, params=None):
         context = context # pylint
 
-        if ((params is None) or (len(params) == 0)):
+        if ((params is None) or (len(params) == 0) or (params[0] is None)):
             return "NULL"
         r = None
         if (isinstance(params[0], int)):
