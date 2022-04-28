@@ -49,21 +49,23 @@ from core.visitor import visitor
 from core.utils import safe_str_convert
 
 class var_in_expr_visitor(visitor):
-    """Get the names of all variables that appear in an expression. The
-    discovered variables are saved in the self.variables (set) field
-    of the visitor.
+    """Get the names of all variables (and function calls if desired) that
+    appear in an expression. The discovered variables/functions are
+    saved in the self.variables (set) field of the visitor.
 
     """
 
-    def __init__(self, context=None, follow_calls=False):
+    def __init__(self, context=None, follow_calls=False, get_functions=False):
         self.variables = set()
         self.visited = set()
         self.context = context
         self.follow_calls = follow_calls
-    
+        self.get_functions = get_functions
+        
     def visit(self, item):
         from core.expressions import SimpleNameExpression
         from core.expressions import MemberAccessExpression
+        from core.expressions import Function_Call
         from core import procedures
         
         # Already looked at this?
@@ -75,6 +77,10 @@ class var_in_expr_visitor(visitor):
         if (isinstance(item, SimpleNameExpression)):
             self.variables.add(safe_str_convert(item.name))
 
+        # Tracking all function calls?
+        if (self.get_functions and isinstance(item, Function_Call)):
+            self.variables.add(safe_str_convert(item.name))
+        
         # Array access?
         if (("Function_Call" in safe_str_convert(type(item))) and (self.context is not None)):
 

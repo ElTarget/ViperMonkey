@@ -513,7 +513,11 @@ def set_cached_value(arg, val):
     # Don't cache things that contain Excel sheets or workbooks.
     if contains_excel(arg):
         return
-        
+
+    # Only cache constant math expressions.
+    if not is_constant_math(arg):
+        return
+    
     # We have a number. Cache it.
     arg_str = safe_str_convert(arg)
     try:
@@ -534,9 +538,10 @@ def is_constant_math(arg):
 
     """
 
-    # Sanity check. If there are variables in the expression it is not all literals.
+    # Sanity check. If there are variables/function calls in the
+    # expression it is not all literals.
     if (isinstance(arg, VBA_Object)):
-        var_visitor = var_in_expr_visitor()
+        var_visitor = var_in_expr_visitor(get_functions=True)
         arg.accept(var_visitor)
         if (len(var_visitor.variables) > 0):
             return False

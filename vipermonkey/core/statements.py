@@ -5135,13 +5135,19 @@ class Redim_Statement(VBA_Object):
         self.data_type = None
         if (hasattr(tokens, "data_type")):
             self.data_type = tokens.data_type
+        self.preserve = False
+        if ((hasattr(tokens, "preserve")) and (tokens.preserve == "Preserve")):
+            self.preserve = True
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r' % self)
 
     def __repr__(self):
         if (self.gloss is not None):
             return self.gloss
-        r = 'ReDim ' + safe_str_convert(self.item)
+        preserve = ""
+        if (self.preserve):
+            preserve = "Preserve "
+        r = 'ReDim ' + preserve + safe_str_convert(self.item)
         if ((self.start is not None) and (self.end is not None)):
             r += "(" + safe_str_convert(self.start) + " To " + safe_str_convert(self.end) + ")"
         if (self.data_type is not None):
@@ -5232,6 +5238,12 @@ class Redim_Statement(VBA_Object):
               (self.end is not None) and
               (len(safe_str_convert(self.start).strip()) > 0) and
               (len(safe_str_convert(self.end).strip()) > 0)):
+
+            # Save the current array value. We'll use this if we are
+            # supposed to preserve old values.
+            old_val = None
+            if (self.preserve and context.contains(self.item)):
+                old_val = context.get(self.item)
             
             # Compute the new array size.
             start = None
@@ -5244,6 +5256,17 @@ class Redim_Statement(VBA_Object):
                 
                 # Resize the list.
                 new_list = [0] * (end - start)
+
+                # Add in old values if needed.
+                if (old_val is not None):
+                    pos = 0
+                    for v in old_val:
+                        if (pos >= len(new_list)):
+                            break
+                        new_list[pos] = v
+                        pos += 1
+
+                # Save the resized array.
                 context.set(self.item, new_list)
                 
             except Exception:
@@ -5260,15 +5283,34 @@ class Redim_Statement(VBA_Object):
 
                 # Got a value we can work with?
                 if (isinstance(new_size, int)):
+
+                    # Make value for resized array.
                     new_list = [0] * (new_size + 1)
+
+                    # Save the current array value. We'll use this if we are
+                    # supposed to preserve old values.
                     var_name = self.raw_item.name
+                    old_val = None
+                    if (self.preserve and context.contains(var_name)):
+                        old_val = context.get(var_name)
+
+                    # Add in old values if needed.
+                    if (old_val is not None):
+                        pos = 0
+                        for v in old_val:
+                            if (pos >= len(new_list)):
+                                break
+                            new_list[pos] = v
+                            pos += 1
+
+                    # Save the resized array.                        
                     context.set(var_name, new_list)
                     
         return
 
 
 # Array redim statement
-redim_item = Optional(CaselessKeyword('Preserve')) + \
+redim_item = Optional(CaselessKeyword('Preserve')('preserve')) + \
              expression('item') + \
              Optional('(' + expression('start') + CaselessKeyword('To') + expression('end') + \
                       ZeroOrMore("," + expression + CaselessKeyword('To') + expression) + ')') + \

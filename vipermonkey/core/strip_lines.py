@@ -2567,6 +2567,12 @@ def is_assign_line(line, line_num, local_funcs, bool_statements):
             log.debug("SKIP: While loop. Keep it.")
         return False
 
+    # Skip ReDim statements.
+    if (line.strip().lower().startswith("redim ")):
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("SKIP: ReDim statement. Keep it.")
+        return False
+
     # Skip calls to .create()
     if (".create" in line.strip().lower()):
         if (log.getEffectiveLevel() == logging.DEBUG):

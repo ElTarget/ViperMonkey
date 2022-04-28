@@ -2255,12 +2255,14 @@ class StrConv(VbaLibraryFunc):
             # Handle list of ASCII values.
             all_int = True
             for i in r:
-                if (not isinstance(i, int)):
+                if ((not isinstance(i, int)) and (not isinstance(i, float))):
                     all_int = False
                     break
             if (all_int):
                 tmp = ""
                 for i in r:
+                    if isinstance(i, float):
+                        i = int(i)
                     if (i < 0):
                         continue
                     try:
