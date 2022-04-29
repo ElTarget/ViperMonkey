@@ -390,6 +390,7 @@ class ViperMonkey(StubbedEngine):
             new_dat = FakeMeta()
             for field in list(dat.keys()):
                 setattr(new_dat, safe_str_convert(field), dat[field])
+                setattr(new_dat, safe_str_convert(field).lower(), dat[field])
         self.metadata = new_dat
         
     def add_compiled_module(self, m, stream):

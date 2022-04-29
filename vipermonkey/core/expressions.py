@@ -2875,6 +2875,42 @@ class MemberAccessExpression(VBA_Object):
             child_folder = safe_str_convert(eval_arg(self.rhs[-2], context))
         return child_folder + "\.."
 
+    def _handle_customdocproperty(self, context):
+        """Handle getting document peperty field values with
+        CustomDocumentProperties().
+
+        @param context (Context object) Context for the current code
+        execution (local and global variables). Current program state
+        will be read from the context.
+
+        @return (str) The value of the document property field if
+        found, None if not.
+
+        """
+
+        # Reading a custom doc property?
+        # ThisWorkbook.CustomDocumentProperties("khnslfkw").Value
+        if (not isinstance(self.rhs, list)):
+            return None
+        cust_call = None
+        for f in self.rhs:
+            if (isinstance(f, Function_Call) and (f.name == "CustomDocumentProperties")):
+                cust_call = f
+                break
+        if (cust_call is None):
+            return None
+
+        # Get the property name.
+        if (len(cust_call.params) == 0):
+            return None
+        prop_name = safe_str_convert(eval_arg(cust_call.params[0], context))
+        
+        # Read the property value if we have it.
+        r = context.read_metadata_item(prop_name)
+        if (len(r) == 0):
+            return None
+        return r
+        
     def _handle_exec(self, context):
         """Handle calling the WSCriptShell Exec() method. The executed command
         will be saved in the actions in the context.
@@ -3236,6 +3272,13 @@ class MemberAccessExpression(VBA_Object):
         r = self._handle_parentdirectory(context)
         if (r is not None):
             #print("OUT: 1.2")
+            return r
+
+        # Getting a custom document property?
+        #print("HERE: 1.2.1")
+        r = self._handle_customdocproperty(context)
+        if (r is not None):
+            #print("OUT: 1.2.2")
             return r
         
         # Easy case. Do we have this saved as a variable?
