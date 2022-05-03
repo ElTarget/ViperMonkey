@@ -2636,7 +2636,105 @@ def _make_elems_str(r):
             new_tup.append(safe_str_convert(elem))
         r1.append(tuple(new_tup))
     return r1
-        
+
+def get_variable_values(obj, vba_code):
+    """Read in the text associated with document variables
+    (ActiveDocument.Variable()). NOTE: This currently is a NASTY hack.
+
+    @param obj (str) The read in Office file to analyze or the name
+    of the Office file to analyze. The file will be read in if a file
+    name is given.
+
+    @param vba_code (str) The VBA macro code from the Office file.
+
+    @return (list) The results as a list of 2 element tuples where the
+    1st element is the name (str) of an object and the 2nd element is
+    the text value (str) of the object.
+
+    """
+
+    # Figure out if we have been given already read in data or a file name.
+    if obj[0:4] == '\xd0\xcf\x11\xe0':
+
+        #its the data blob
+        data = obj
+    else:
+
+        # Probably a file name?
+        try:
+            f = open(obj, "rb")
+            data = f.read()
+            f.close()
+        except IOError:
+            data = obj
+        except TypeError:
+            data = obj
+        except ValueError:
+            data = obj
+
+    # Is this an Office97 file?
+    if (not filetype.is_office97_file(data, True)):
+
+        # See if we can pul vbaProject.bin from a 2007+ Office file.
+        data = get_vbaprojectbin(data)
+        if (data is None):
+            return []
+
+    # Set to True to print lots of debugging.
+    #debug = True
+    debug = False
+    if debug:
+        print("\nExtracting ActiveDocument.Variable() strings...")
+
+    # Pull out the names of the variables being accessed. Currently we
+    # only handle variables where the name is a string literal.
+    # ActiveDocument.Variables("PNRclLpmUIPqrLBq")
+    var_pat = r"ActiveDocument\.Variables\( *\"([^\"]{1,200})\" *\)"
+    var_names = set(re.findall(var_pat, vba_code))
+    if (len(var_names) == 0):
+        if debug:
+            print("\nNo literal var names found.")
+            sys.exit(0)
+        return []
+
+    # Look for the value of each variable.
+    r = []
+    for var_name in var_names:
+
+        # Make a regex to look for the value of this variable.
+        if debug:
+            print("Looking for '" + var_name + "'")
+        val_pat = br""
+        # Name, null padded.
+        for c in var_name:
+            val_pat += bytes(c + "\x00", "utf-8")
+        # 3 or more non-ASCII chars.
+        val_pat += br"(?:[\x00-\x1f]|[\x80-\xff]){3,100}"
+        # A bunch of null padded ASCII chars. This is the var value.
+        val_pat += br"((?:(?:[\x20-\x7e]|\r?\n)\x00){3,})"
+
+        # Look for the variable value.
+        if debug:
+            print("val regex:")
+            print(val_pat)
+        value = re.findall(val_pat, data)
+        if debug:
+            print("Found:")
+            print(value)
+
+        # Got a value?
+        if (len(value) > 0):
+
+            # Remove null padding and save.
+            value = safe_str_convert(value[0].replace(b"\x00", b""))
+            r.append((var_name, value))
+
+    # Done.
+    if debug:
+        print(".Variable() results:")
+        print(r)
+    return r
+
 def get_ole_textbox_values(obj, vba_code):
     """Read in the text associated with embedded OLE form textbox
     objects. NOTE: This currently is a NASTY hack.
@@ -4480,6 +4578,8 @@ def _read_payload_textbox_text(data, vba_code, vm):
     tmp_data = get_customxml_text(data)
     object_data.extend(tmp_data)
     tmp_data = get_drawing_titles(data)
+    object_data.extend(tmp_data)
+    tmp_data = get_variable_values(data, vba_code)
     object_data.extend(tmp_data)
     for (var_name, var_val) in object_data:
         var_name = safe_str_convert(var_name)
