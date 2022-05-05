@@ -3117,7 +3117,7 @@ def get_shapes_text_values_direct_2007(data):
         return []
 
     # Reassemble the values.
-    val = ""
+    val = b""
     for v in vals:
         val += v
     val = _clean_2007_text(val)
