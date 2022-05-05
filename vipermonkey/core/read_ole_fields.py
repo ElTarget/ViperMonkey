@@ -521,7 +521,7 @@ def get_msftedit_variables_97(data):
     for chunk in re.findall(pat, data, re.DOTALL):
 
         # Names and values are wide character strings. Strip out the null bytes.
-        chunk = chunk.replace("\x00", "")
+        chunk = chunk.replace(b"\x00", b"")
     
         # Pull out the name of the current thing .
 
@@ -1392,7 +1392,7 @@ def is_name(poss_name):
     # Basic check first. Must start with an alphabetic character and
     # be followed with regular printable characters.
     if isinstance(poss_name, str):
-        poss_name = bytes(poss_name, "latin-1")
+        poss_name = bytes(poss_name, "latin-1", errors="replace")
     name_pat = br"[a-zA-Z]\w*"
     if (re.match(name_pat, poss_name) is None):
         return False
@@ -3571,7 +3571,7 @@ def get_shapes_text_values(fname, stream):
         for shape_text in strs:
 
             # Access value with .TextFrame.TextRange.Text accessor.
-            shape_text = shape_text[1:-1].replace("\x00", "")
+            shape_text = shape_text[1:-1].replace(b"\x00", b"")
             var = "Shapes('" + safe_str_convert(pos) + "').TextFrame.TextRange.Text"
             r.append((var, shape_text))
             
