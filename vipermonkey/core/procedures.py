@@ -690,10 +690,15 @@ class Function(VBA_Object):
         # TODO self.call_params
         context.clear_error()
         for s in self.statements:
+
+            # Do we have a statement to emulate?
             if (log.getEffectiveLevel() == logging.DEBUG):
-                log.debug('Function %s eval statement: %s' % (self.name, s))
-            if (isinstance(s, VBA_Object)):
-                s.eval(context=context)
+                log.debug('Function %s eval statement: %s' % (self.name, s))                
+            if (not isinstance(s, VBA_Object)):
+                continue
+
+            # Yes, emulate the statement.
+            s.eval(context=context)
 
             # Have we exited from the function with 'Exit Function'?
             if (context.exit_func):

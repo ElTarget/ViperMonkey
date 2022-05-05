@@ -545,6 +545,10 @@ def get_largest_sheet(workbook):
 
     """
 
+    # Sanity check.
+    if (workbook is None):
+        return None
+    
     # Have we already computed this?
     if (hasattr(workbook, "__largest_sheet__")):
         return workbook.__largest_sheet__
