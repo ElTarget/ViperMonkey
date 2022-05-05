@@ -6003,10 +6003,9 @@ class CDbl(VbaLibraryFunc):
             return "NULL"
         try:
             # Handle hex.
-            tmp = utils.safe_str_convert(params[0]).upper()
-            if (tmp.lower().startswith("&h")):
-                tmp = tmp.replace("&h", "0x")
-                tmp = int(tmp, 16)
+            tmp = utils.safe_str_convert(params[0]).lower()
+            if (tmp.startswith("&h")):
+                tmp = int(tmp.replace("&h", "0x"), 16)
 
             # VBA rounds the significant digits.
             #return round(float(params[0]), 11)

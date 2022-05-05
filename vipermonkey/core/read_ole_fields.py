@@ -2708,8 +2708,10 @@ def get_variable_values(obj, vba_code):
         # Name, null padded.
         for c in var_name:
             val_pat += bytes(c + "\x00", "utf-8")
-        # 3 or more non-ASCII chars.
-        val_pat += br"(?:[\x00-\x1f]|[\x80-\xff]){3,100}"
+
+        # 3 or more non-ASCII chars. Single ASCII characters are OK, but they
+        # have to be followed by a non-ASCII char.        
+        val_pat += br"(?:[\x20-\x7e]?(?:[\x00-\x1f]|[\x80-\xff])){3,100}"
         # A bunch of null padded ASCII chars. This is the var value.
         val_pat += br"((?:(?:[\x20-\x7e]|\r?\n)\x00){3,})"
 
@@ -2725,14 +2727,21 @@ def get_variable_values(obj, vba_code):
         # Got a value?
         if (len(value) > 0):
 
+            # Pick the longest value if we get multiple value hits.
+            longest = b""
+            for v in value:
+                if (len(v) > len(longest)):
+                    longest = v                    
+            
             # Remove null padding and save.
-            value = safe_str_convert(value[0].replace(b"\x00", b""))
+            value = safe_str_convert(longest.replace(b"\x00", b""))
             r.append((var_name, value))
 
     # Done.
     if debug:
         print(".Variable() results:")
         print(r)
+        sys.exit(0)
     return r
 
 def get_ole_textbox_values(obj, vba_code):
