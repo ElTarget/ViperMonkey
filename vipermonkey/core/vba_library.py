@@ -4600,7 +4600,8 @@ class WriteText(VbaLibraryFunc):
         var_name = "ADODB.Stream.ReadText"
         if (not context.contains(var_name)):
             context.set(var_name, b"", force_global=True)
-        final_txt = context.get(var_name) + txt
+        # Make sure current var val is a bytes like string.
+        final_txt = bytes(utils.safe_str_convert(context.get(var_name)), "latin-1") + txt
         context.set(var_name, final_txt, force_global=True)
         #print(final_txt)
         
