@@ -4985,7 +4985,10 @@ call_params_strict = (
 )
 call_statement0 = NotAny(known_keywords_statement_start) + \
                   Optional(CaselessKeyword('Call').suppress()) + \
-                  (member_access_expression('name'))  + \
+                  (
+                      member_access_expression('name') |
+                      (Suppress("[") + member_access_expression('name') + Suppress("]"))
+                  ) + \
                   Suppress(Optional(NotAny(White()) + '$') + \
                            Optional(NotAny(White()) + '#') + \
                            Optional(NotAny(White()) + '@') + \
@@ -4997,7 +5000,10 @@ call_statement0 = NotAny(known_keywords_statement_start) + \
 
 call_statement1 = NotAny(known_keywords_statement_start) + \
                   Optional(CaselessKeyword('Call').suppress()) + \
-                  (TODO_identifier_or_object_attrib_loose('name')) + \
+                  (
+                      TODO_identifier_or_object_attrib_loose('name') |
+                      (Suppress("[") + TODO_identifier_or_object_attrib_loose('name') + Suppress("]"))
+                  ) + \
                   Suppress(Optional(NotAny(White()) + '$') + \
                            Optional(NotAny(White()) + '#') + \
                            Optional(NotAny(White()) + '@') + \
