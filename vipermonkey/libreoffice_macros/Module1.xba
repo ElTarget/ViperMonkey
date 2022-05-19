@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
+<script:module xmlns:script="http://openoffice.org/2000/script" script:name="Module1" script:language="StarBasic">REM  *****  BASIC  *****
+
+Sub ExportSheets
+	Dim fileProps(0) as new com.sun.star.beans.PropertyValue
+	sheets = ThisComponent.Sheets
+
+	fileProps(0).Name = &quot;FilterName&quot;
+	fileProps(0).Value = &quot;Text - txt - csv (StarCalc)&quot;
+
+	i = 0
+
+	Do While sheets.Count &gt; i
+  		sheet = sheets.getByIndex(i)
+  		cntrllr = ThisComponent.CurrentController
+  		cntrllr.setActiveSheet(sheet)
+  		sURL = &quot;file:///home/sayre/sheet_&quot; &amp; Str(i) &amp; &quot;.csv&quot;
+  		ThisComponent.storeToURL(sURL, fileProps())
+  		i = i + 1
+	Loop
+End Sub
+
+sub ExportSheetsFromFile(FilePath as String)
+	docURL = ConvertToURL(FilePath)
+	Dim docProperties()
+	Document = StarDesktop.LoadComponentFromURL(docURL, &quot;_blank&quot;, 0, docProperties)
+  	&apos;Document = OpenSilent(FilePath)
+  	call ExportSheets()
+  	call Document.close(True)
+end sub
+</script:module>
