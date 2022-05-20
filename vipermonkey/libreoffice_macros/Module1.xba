@@ -4,9 +4,9 @@
 
 Option VBASupport 1
 
-Sub ExportSheets(outFilePrefix as String)
+Sub ExportSheets(outFilePrefix as String, Document)
 	Dim fileProps(0) as new com.sun.star.beans.PropertyValue
-	sheets = ThisComponent.Sheets
+	sheets = Document.Sheets
 
 	fileProps(0).Name = &quot;FilterName&quot;
 	fileProps(0).Value = &quot;Text - txt - csv (StarCalc)&quot;
@@ -15,27 +15,67 @@ Sub ExportSheets(outFilePrefix as String)
 
 	&apos; Cycle through each sheet, dumping each sheet to a different file.
 	Do While sheets.Count &gt; i
+
+		&apos; Get current sheet.
   		sheet = sheets.getByIndex(i)
-  		cntrllr = ThisComponent.CurrentController
-  		cntrllr.setActiveSheet(sheet)
-  		
+
+		&apos; Ugh. Get row and column of last used cell in sheet.
+  		curs = sheet.createCursor
+		curs.gotoEndOfUsedArea(True)
+		numRows = curs.Rows.Count
+		numCols = curs.Columns.Count
+				
   		&apos; Get the output file name for the sheet.
   		&apos; outfilename =  &quot;/tmp/sheet_%s-%s--%s.csv&quot; % (short_name, str(pos), name.replace(&apos; &apos;, &apos;_SPACE_&apos;))
   		sheetName = Replace(sheet.getName(), &quot; &quot;, &quot;_SPACE_&quot;)
-		fname = &quot;/tmp/sheet_&quot; &amp; outFilePrefix &amp; &quot;-&quot; &amp; Str(i) &amp; &quot;--&quot; &amp; sheetName &amp; &quot;.csv&quot;
-		print(outFilePrefix)
+		fname = &quot;/tmp/sheet_&quot; &amp; outFilePrefix &amp; &quot;-&quot; &amp; LTrim(Str(i)) &amp; &quot;--&quot; &amp; sheetName &amp; &quot;.csv&quot;
   		sURL = &quot;file://&quot; &amp; fname
-  		ThisComponent.storeToURL(sURL, fileProps())
+
+		&apos; Open the CSV file for this sheet.
+		fileNum = Freefile
+		Open fname For Output As #fileNum
+
+		&apos; Ugh. Setting the active sheet does not work when the GUI is hidden, so we are
+		&apos; manually iterating through all the cells and printing them to a file.
+		For row=0 To numRows-1
+			rowStr = &quot;&quot;
+			For col=0 to numCols-1
+		    	currCell = sheet.getCellByPosition(col,row)
+		    	cellValue = &quot;&quot;
+		    	Select Case currCell.Type
+					Case com.sun.star.table.CellContentType.VALUE
+						cellValue = currCell.Value
+					Case com.sun.star.table.CellContentType.TEXT
+						cellValue = currCell.String
+				End Select
+				rowStr = rowStr &amp; &quot;,&quot;&quot;&quot; &amp; cellValue &amp; &quot;&quot;&quot;&quot;
+		  	Next
+		  
+			&apos; Print sheet row to output CSV file.
+			Print #fileNum, Right(rowStr, Len(rowStr)-1)
+		  
+		Next
+
+		&apos; Done with current sheet.		
+  		Close #fileNum
   		i = i + 1
 	Loop
 End Sub
 
+Function OpenSilent(FilePath as String) as Object
+	Dim FileProperties(2) As New com.sun.star.beans.PropertyValue
+	FileProperties(1).Name = &quot;Hidden&quot;
+	FileProperties(1).Value = True
+	FileProperties(2).Name = &quot;ReadOnly&quot;
+	FileProperties(2).Value = True
+	docURL = ConvertToURL(&quot;file://&quot; &amp; FilePath)
+	OpenSilent = StarDesktop.loadComponentFromURL(docUrl, &quot;_default&quot;, 0, FileProperties())
+End Function
+
 sub ExportSheetsFromFile(FilePath as String)
 
 	&apos; Open given Excel file.
-	docURL = ConvertToURL(FilePath)
-	Dim docProperties()
-	Document = StarDesktop.LoadComponentFromURL(docURL, &quot;_blank&quot;, 0, docProperties)
+	Document = OpenSilent(FilePath)
 
 	&apos; Get the prefix for the file names in which to dump the sheet contents.
 	&apos; outfilename =  &quot;/tmp/sheet_%s-%s--%s.csv&quot; % (short_name, str(pos), name.replace(&apos; &apos;, &apos;_SPACE_&apos;))
@@ -47,7 +87,7 @@ sub ExportSheetsFromFile(FilePath as String)
 	End If
 
 	&apos; Now that the file is loaded, export the sheets.
-  	call ExportSheets(outFileName)
+  	call ExportSheets(outFileName, Document)
   	
   	&apos; Done. Close the file.
   	call Document.close(True)

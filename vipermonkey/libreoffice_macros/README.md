@@ -24,7 +24,7 @@ To dump all sheets from an Excel file from the command line run the
 following:
 
 ```
-libreoffice --invisible --nofirststartwizard --headless --norestore 'macro:///Module1.ExportSheetsFromFile("EXCEL_FILE_NAME_GOES_HERE")'
+libreoffice --invisible --nofirststartwizard --headless --norestore 'macro:///Standard.Module1.ExportSheetsFromFile("EXCEL_FILE_NAME_GOES_HERE")'
 ```
 
 Dumping Word Document Text
