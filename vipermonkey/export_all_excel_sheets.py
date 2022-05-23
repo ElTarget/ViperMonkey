@@ -7,28 +7,14 @@ sheets of an Excel file as separate CSV files. This is Python 3.
 
 import sys
 import os
-import signal
-# sudo pip3 install psutil
-import psutil
 import subprocess
-import time
 import codecs
 import string
+import json
+import pathlib
 
-# sudo pip3 install unotools
-# sudo apt install libreoffice-calc, python3-uno
-# NOTE: unotools does not work in pypy3, so python3 needed to run this.
-from unotools import Socket, connect
-from unotools.component.calc import Calc
-from unotools.unohelper import convert_path_to_url
-from unotools import ConnectionError
-
-# Please please let printing work.
-sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
-
-# Connection information for LibreOffice.
-HOST = "127.0.0.1"
-PORT = 2002
+from core.logger import log
+from core.utils import safe_str_convert
 
 def strip_unprintable(the_str):
     """Strip out unprinatble chars from a string.
@@ -87,89 +73,6 @@ def is_excel_file(maldoc):
     typ = subprocess.check_output(["exiftool", maldoc])
     return (b"vnd.ms-excel" in typ)
 
-###################################################################################################
-def wait_for_uno_api():
-    """Sleeps until the libreoffice UNO api is available by the headless
-    libreoffice process. Takes a bit to spin up even after the OS
-    reports the process as running. Tries 3 times before giving up and
-    throwing an Exception.
-
-    """
-
-    tries = 0
-
-    while tries < 3:
-        try:
-            connect(Socket(HOST, PORT))
-            return
-        except ConnectionError:
-            time.sleep(5)
-            tries += 1
-
-    raise Exception("libreoffice UNO API failed to start")
-
-###################################################################################################
-def get_office_proc():
-    """Returns the process info for the headless LibreOffice
-    process. None if it's not running
-
-    @return (psutil.Process) The LibreOffice process if found, None if not found.
-
-    """
-
-    for proc in psutil.process_iter():
-        try:
-            pinfo = proc.as_dict(attrs=['pid', 'name', 'username'])
-        except psutil.NoSuchProcess:
-            pass
-        else:
-            if (pinfo["name"].startswith("soffice")):
-                return pinfo
-    return None
-
-###################################################################################################
-def is_office_running():
-    """Check to see if the headless LibreOffice process is running.
-
-    @return (bool) True if running False otherwise
-
-    """
-
-    return True if get_office_proc() else False
-
-###################################################################################################
-def run_soffice():
-    """Start the headless, UNO supporting, LibreOffice process to access
-    the API, if it is not already running.
-
-    """
-
-    # start the process
-    if not is_office_running():
-
-        # soffice is not running. Run it in listening mode.
-        cmd = "/usr/lib/libreoffice/program/soffice.bin --headless --invisible " + \
-              "--nocrashreport --nodefault --nofirststartwizard --nologo " + \
-              "--norestore " + \
-              '--accept="socket,host=127.0.0.1,port=2002,tcpNoDelay=1;urp;StarOffice.ComponentContext"'
-        subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-        wait_for_uno_api()
-
-def get_component(fname, context):
-    """Load the object for the Excel spreadsheet.
-
-    @param fname (str) The name of the Excel file.
-
-    @param context (??) The UNO object connected to the local LibreOffice server.
-
-    @return (??) UNO LibreOffice Calc object representing the loaded
-    Excel file.
-
-    """
-    url = convert_path_to_url(fname)
-    component = Calc(context, url)
-    return component
-
 def fix_file_name(fname):
     """
     Replace non-printable ASCII characters in the given file name.
@@ -202,82 +105,40 @@ def convert_csv(fname):
         # Not Excel, so no sheets.
         return []
 
-    # Run soffice in listening mode if it is not already running.
-    run_soffice()
+    # The LibreOffice macro only works on absolute paths. Get the absolute path
+    # of the input file.
+    full_fname = safe_str_convert(pathlib.Path(fname).resolve())
     
-    # TODO: Make sure soffice is running in listening mode.
-    # 
-    
-    # Connect to the local LibreOffice server.
-    context = None
-    attempts = 0
-    while (attempts < 5):
-        attempts += 1
-        try:
-            context = connect(Socket(HOST, PORT))
-            break
-        except ConnectionError:
-            time.sleep(1)
+    # Run LibreOffice macros to dump all the sheets as CSV files.
+    #macro = "'macro:///Standard.Module1.ExportSheetsFromFile(\"" + fname + "\")'"
+    macro = "macro:///Standard.Module1.ExportSheetsFromFile(\"" + full_fname + "\")"
+    cmd = ["libreoffice", "--invisible",
+           "--nofirststartwizard", "--headless",
+           "--norestore", macro]
+    out = subprocess.check_call(cmd)
 
-    # Do we have a connection to the headless LibreOffice?
-    if (context is None):        
+    # Can't get stdout from running the macro, so we have to hard code where to look
+    # for the file of info about the CSV export.
+    info_fname = full_fname
+    if ("/" in info_fname):
+        info_fname = info_fname[info_fname.rindex("/") + 1:]
+    info_fname = "/tmp/sheet_" + info_fname + "_info.json"
 
-        # Can't connect to LibreOffice. Punt.
-        print("ERROR: Cannot connect to headless LibreOffice.")
-        return []
+    # Read in the active sheet name and names of CSV files (JSON).
+    r = None
+    try:
 
-    # Load the Excel sheet.
-    component = get_component(fname, context)
+        # Read in JSON data.
+        f = open(info_fname, "r")
+        r = json.load(f)
+        f.close()
 
-    # Save the currently active sheet.
-    r = []
-    controller = component.getCurrentController()
-    active_sheet = None
-    if hasattr(controller, "ActiveSheet"):
-        active_sheet = controller.ActiveSheet
-    active_sheet_name = "NO_ACTIVE_SHEET"
-    if (active_sheet is not None):
-        active_sheet_name = fix_file_name(active_sheet.getName())
-    r.append(active_sheet_name)
-
-    # Bomb out if this is not an Excel file.
-    if (not hasattr(component, "getSheets")):
-        return r
+        # We have the data, clean up the info file.
+        os.remove(info_fname)
         
-    # Iterate on all the sheets in the spreadsheet.
-    sheets = component.getSheets()
-    enumeration = sheets.createEnumeration()
-    pos = 0
-    if sheets.getCount() > 0:
-        while enumeration.hasMoreElements():
-
-            # Move to next sheet.
-            sheet = enumeration.nextElement()
-            name = sheet.getName()
-            if (name.count(" ") > 10):
-                name = name.replace(" ", "")
-            name = fix_file_name(name)
-            controller.setActiveSheet(sheet)
-
-            # Set up the output URL.
-            short_name = fname
-            if (os.path.sep in short_name):
-                short_name = short_name[short_name.rindex(os.path.sep) + 1:]
-            short_name = fix_file_name(short_name)
-            outfilename =  "/tmp/sheet_%s-%s--%s.csv" % (short_name, str(pos), name.replace(' ', '_SPACE_'))
-            pos += 1
-            r.append(outfilename)
-            url = convert_path_to_url(outfilename)
-
-            # Export the CSV.
-            component.store_to_url(url,'FilterName','Text - txt - csv (StarCalc)')
-
-    # Close the spreadsheet.
-    component.close(True)
-
-    # clean up
-    os.kill(get_office_proc()["pid"], signal.SIGTERM)
-
+    except IOError:
+        log.error("Exporting " + safe_str_convert(fname) + " to CSV with LibreOffice failed.")
+    
     # Done.
     return r
 
