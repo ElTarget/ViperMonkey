@@ -5,15 +5,16 @@
 Option VBASupport 1
 
 Sub ExportSheets(outFilePrefix as String, Document)
-	Dim fileProps(0) as new com.sun.star.beans.PropertyValue
-	sheets = Document.Sheets
 
-	fileProps(0).Name = &quot;FilterName&quot;
-	fileProps(0).Value = &quot;Text - txt - csv (StarCalc)&quot;
-
-	i = 0
+	&apos; Get the name of the active sheet.
+	activeSheet = Document.CurrentController.ActiveSheet
+    &apos;activeSheetName = &quot;NO_ACTIVE_SHEET&quot;
+	activeSheetName = activeSheet.getName()
+	csvInfo = &quot;[&quot;&quot;&quot; &amp; activeSheetName &amp; &quot;&quot;&quot;&quot;
 
 	&apos; Cycle through each sheet, dumping each sheet to a different file.
+	i = 0
+	sheets = Document.Sheets
 	Do While sheets.Count &gt; i
 
 		&apos; Get current sheet.
@@ -29,7 +30,6 @@ Sub ExportSheets(outFilePrefix as String, Document)
   		&apos; outfilename =  &quot;/tmp/sheet_%s-%s--%s.csv&quot; % (short_name, str(pos), name.replace(&apos; &apos;, &apos;_SPACE_&apos;))
   		sheetName = Replace(sheet.getName(), &quot; &quot;, &quot;_SPACE_&quot;)
 		fname = &quot;/tmp/sheet_&quot; &amp; outFilePrefix &amp; &quot;-&quot; &amp; LTrim(Str(i)) &amp; &quot;--&quot; &amp; sheetName &amp; &quot;.csv&quot;
-  		sURL = &quot;file://&quot; &amp; fname
 
 		&apos; Open the CSV file for this sheet.
 		fileNum = Freefile
@@ -56,10 +56,23 @@ Sub ExportSheets(outFilePrefix as String, Document)
 		  
 		Next
 
+		&apos; Track the name of the CSV file.
+		csvInfo = csvInfo &amp; &quot;, &quot;&quot;&quot; &amp; fname &amp; &quot;&quot;&quot;&quot;
+
 		&apos; Done with current sheet.		
   		Close #fileNum
   		i = i + 1
 	Loop
+	
+	&apos; Save info about active sheet and names of CSV files since we cannot
+	&apos; print that to stdout.
+	csvInfo = csvInfo &amp; &quot;]&quot;
+	fname = &quot;/tmp/sheet_&quot; &amp; outFilePrefix &amp; &quot;_info.json&quot;
+	fileNum = Freefile
+	Open fname For Output As #fileNum
+	Print #fileNum, csvInfo
+	Close #fileNum
+
 End Sub
 
 Function OpenSilent(FilePath as String) as Object
