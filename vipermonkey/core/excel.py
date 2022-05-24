@@ -61,7 +61,8 @@ except ImportError:
     import xlrd
     
 from core.utils import safe_str_convert
-    
+import core.export_all_excel_sheets as export_all_excel_sheets
+
 _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
     
 #debug = True
@@ -226,9 +227,12 @@ def _fix_sheet_name(sheet_name):
 
     """
 
-    # Get the characters given as hex strings in the name.
-    pat = r"(0x[0-9a-f]{2})"
+    # Space characters are escaped by export_all_excel_sheets. Undo that.
     r = safe_str_convert(sheet_name)
+    r = r.replace("_SPACE_", " ")
+    
+    # Get the characters given as hex strings in the name.
+    pat = r"(0x[0-9a-f]{2})"    
     hex_strs = re.findall(pat, r)
     if (len(hex_strs) == 0):
         return sheet_name
@@ -266,23 +270,7 @@ def load_excel_libreoffice(data):
     f.close()
     
     # Dump all the sheets as CSV files using soffice.
-    output = None
-    try:
-        output = subprocess.check_output(["timeout", "30", "pypy3", _thismodule_dir + "/../export_all_excel_sheets.py", out_dir])
-        output = safe_str_convert(output)
-    except Exception as e:
-        log.error("Running export_all_excel_sheets.py failed. " + safe_str_convert(e))
-        os.remove(out_dir)
-        return None
-
-    # Get the names of the sheet files, if there are any. Also get the name of
-    # the currently active sheet.
-    try:
-        sheet_files = json.loads(output.replace("'", '"'))
-    except Exception as e:
-        log.error("Loading sheet file names failed. " + safe_str_convert(e))
-        os.remove(out_dir)
-        return None
+    sheet_files = export_all_excel_sheets.convert_csv(out_dir)
 
     # No sheets exported? The 1st element is the name of the active sheet,
     # hence the <= 1.
@@ -471,6 +459,7 @@ def load_excel(data):
     
     # Try loading the sheets with Libreoffice.
     wb = load_excel_libreoffice(data)    
+    #print(wb)
     if (wb is not None):
 
         # Did we load sheets with libreoffice?
@@ -795,7 +784,7 @@ class ExcelSheet(object):
         """
         self.gloss = None
         self.cells = cells
-        self.name = name.replace("0x20", " ")
+        self.name = name.replace("0x20", " ").replace("_SPACE_", " ")
         self.__num_rows = None
         self.__num_cols = None
 

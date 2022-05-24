@@ -267,6 +267,7 @@ def run_function(func_name, context, params):
     """
 
     # Rename python WScript.Shell.Run() calls.
+    orig_func_name = utils.safe_str_convert(func_name)
     func_name = func_name.lower()
     if (func_name == "run"):
         func_name = "runshell"
@@ -276,7 +277,22 @@ def run_function(func_name, context, params):
     # arguments. Check that here.
     if not _valid_jit_params(func_name, context, params):
         raise RuntimeError("Cannot run VB function with given parameters.")
-        
+
+    # Since Visual Basic allows name collisions between variables and
+    # VB functions (thanks :( ) it may be the case that we have a variable
+    # reference rather than a function call. Check for that by looking
+    # for 0 argument "calls" where the "function name" is a global
+    # variable in the Python JIT variable space.
+    #
+    #
+    # TODO: Figure out how to handle this. Need to look at the
+    # variables defined in scopes up through the Python call stack and
+    # see if we have a variable that matches the "function name". Need
+    # to skip variables defined here in vba_library since we have
+    # classes defined for the VB builtin funcs and we don't want
+    # those, we want variables defined in the Python JIT generated
+    # code.
+            
     # Create an object for emulating the function.
     if (func_name not in VBA_LIBRARY):
         return None
