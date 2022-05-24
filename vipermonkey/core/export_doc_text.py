@@ -82,7 +82,10 @@ def get_text(fname):
     out = subprocess.check_call(cmd)
 
     # Get the contexts of the text file.
-    out_fname = fname + ".txt"
+    out_fname = fname
+    if ("." in out_fname):
+        out_fname = out_fname[:out_fname.rindex(".")]
+    out_fname = out_fname + ".txt"
     r = None
     try:
 
