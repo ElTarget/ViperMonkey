@@ -85,7 +85,7 @@ Function OpenSilent(FilePath as String) as Object
 	OpenSilent = StarDesktop.loadComponentFromURL(docUrl, &quot;_default&quot;, 0, FileProperties())
 End Function
 
-sub ExportSheetsFromFile(FilePath as String)
+Sub ExportSheetsFromFile(FilePath as String)
 
 	&apos; Open given Excel file.
 	Document = OpenSilent(FilePath)
@@ -104,5 +104,63 @@ sub ExportSheetsFromFile(FilePath as String)
   	
   	&apos; Done. Close the file.
   	call Document.close(True)
-end sub
+End Sub
+
+Sub ExportTables(outFilePrefix as String, Document)
+
+	&apos; Get list of tables in doc.
+	tables = Document.TextTables
+		
+	&apos; Cycle through each table.
+	i = 0
+	Do While tables.Count &gt; i
+	
+		&apos; Get current table contents.
+		tableData = tables.getByIndex(i).getDataArray()
+		i = i + 1
+
+		&apos; Save contents to JSOn string.
+		tmp_str = &quot;::START_TABLE::&quot;
+		for row=0 To UBound(tableData)
+			tmp_str = tmp_str &amp; &quot;::START_ROW::&quot;
+			for col=0 To UBound(tableData(row))
+				cellStr = Str(tableData(row)(col))
+				tmp_str = tmp_str &amp; &quot;::START_CELL::&quot;
+				tmp_str = tmp_str &amp; cellStr
+				tmp_str = tmp_str &amp; &quot;::END_CELL::&quot;
+			Next
+			tmp_str = tmp_str &amp; &quot;::END_ROW::&quot;
+		Next
+		tmp_str = tmp_str &amp; &quot;::END_TABLE::&quot;
+		r = r &amp; tmp_str
+	Loop
+	
+	&apos; Save raw table info string to file. This will need to be parsed by something else.
+	fname = &quot;/tmp/doc_tables_&quot; &amp; outFilePrefix &amp; &quot;.txt&quot;
+	fileNum = Freefile
+	Open fname For Output As #fileNum
+	Print #fileNum, r
+	Close #fileNum
+	
+End Sub
+
+Sub ExportTablesFromFile(FilePath as String)
+
+	&apos; Open given Word file.
+	Document = OpenSilent(FilePath)
+
+	&apos; Get the prefix for the file names in which to dump the document tables.
+	outFileName = FilePath
+	If (InStr(outFileName, &quot;/&quot;) &gt; 0) Then
+		&apos; NOTE: Linux path sep only!
+		numChars = InStr(StrReverse(outFileName), &quot;/&quot;) - 1
+		outFileName = Right(outFileName, numChars)
+	End If
+
+	&apos; Now that the file is loaded, get the document tables.
+  	call ExportTables(outFileName, Document)
+  	
+  	&apos; Done. Close the file.
+  	call Document.close(True)
+End Sub
 </script:module>
