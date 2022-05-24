@@ -91,11 +91,20 @@ def get_tables(fname):
     except IOError:
         return None
     table_pat = r"::START_TABLE::.*?::END_TABLE::"
+    row_pat = r"::START_ROW::.*?::END_ROW::"
+    cell_pat = r"::START_CELL::(.*?)::END_CELL::"
+    r = []
     for table_str in re.findall(table_pat, data, re.DOTALL):
-        print("----")
-        print(table_str)
+        curr_table = []
+        for row_str in re.findall(row_pat, table_str, re.DOTALL):
+            curr_row = []
+            for cell_str in re.findall(cell_pat, row_str, re.DOTALL):
+                curr_row.append(cell_str)
+            curr_table.append(curr_row)
+        r.append(curr_table)
 
-    return None
+    # Done
+    return r
 
 ###########################################################################
 def get_text(fname):
