@@ -52,7 +52,6 @@ import os
 from core import filetype
 import random
 import re
-import subprocess
 from functools import reduce
 try:
     import xlrd2 as xlrd

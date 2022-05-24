@@ -59,6 +59,7 @@ import olefile
 from core.logger import log
 from core import filetype
 from core.utils import safe_str_convert
+import core.export_doc_text as export_doc_text
 
 _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
 
@@ -4063,16 +4064,11 @@ def _read_doc_text_libreoffice(data):
     f.close()
     
     # Dump all the text using soffice.
-    output = None
-    try:
-        output = subprocess.check_output(["timeout", "30", "python3", "-E", _thismodule_dir + "/../export_doc_text.py",
-                                          "--text", "-f", out_dir])
-        output = safe_str_convert(output)
-    except Exception as e:
-        log.error("Running export_doc_text.py (text) failed. " + safe_str_convert(e))
-        os.remove(out_dir)
-        return None
-
+    output = export_doc_text.get_text(out_dir)
+    if (output is None):
+        log.warning("Failed to read document text with libreoffice.")
+        output = ""
+    
     # Read the paragraphs from the converted text file.
     r = []
     for line in output.split("\n"):
@@ -4100,18 +4096,10 @@ def _read_doc_text_libreoffice(data):
         r = [first_line] + r[1:]
 
     # Dump all the tables using soffice.
-    output = ""
-    try:
-        output = subprocess.check_output(["python3", "-E", _thismodule_dir + "/../export_doc_text.py",
-                                          "--tables", "-f", out_dir])
-        output = safe_str_convert(output)
-    except Exception as e:
-        log.error("Running export_doc_text.py (tables) failed. " + safe_str_convert(e))
-
-    # Convert the text to a python list.
-    r1 = []
-    if (len(output.strip()) > 0):
-        r1 = json.loads(output)
+    r1 = export_doc_text.get_tables(out_dir)
+    if (r1 is None):
+        log.warning("Failed to read document tables with libreoffice.")
+        r1 = []
     
     # Return the paragraph text and table text.
     os.remove(out_dir)

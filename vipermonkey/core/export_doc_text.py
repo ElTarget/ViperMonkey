@@ -120,8 +120,12 @@ def get_text(fname):
     cmd = ["libreoffice", "--invisible",
            "--nofirststartwizard", "--headless",
            "--norestore", "--convert-to", "txt", fname]
+    if ("/" in fname):
+        out_dir = fname[:fname.rindex("/")]
+        cmd.append("-outdir")
+        cmd.append(out_dir)
     out = subprocess.check_call(cmd)
-
+    
     # Get the contexts of the text file.
     out_fname = fname
     if ("." in out_fname):
