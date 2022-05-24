@@ -11,6 +11,8 @@ import argparse
 import json
 import os
 import signal
+import re
+import pathlib
 
 from core.utils import safe_str_convert
 
@@ -44,26 +46,56 @@ def is_word_file(fname):
     return ('<?mso-application progid="Word.Document"?>' in contents)
 
 ###################################################################################################
-def get_tables(document):
+def get_tables(fname):
     """Get the text tables embedded in the Word doc.
 
-    @param document (Writer) LibreOffice component containing the
-    document.
+    @param fname (str) The name of the Word file.
 
     @return (list) List of 2D arrays containing text content of all
     cells in all text tables of the document
 
     """
 
-    data_array_list = []
+    # The LibreOffice macro only works on absolute paths. Get the absolute path
+    # of the input file.
+    full_fname = safe_str_convert(pathlib.Path(fname).resolve())
+    
+    # Run LibreOffice macros to dump all the sheets as CSV files.
+    macro = "macro:///Standard.Module1.ExportTablesFromFile(\"" + full_fname + "\")"
+    cmd = ["libreoffice", "--invisible",
+           "--nofirststartwizard", "--headless",
+           "--norestore", macro]
+    out = subprocess.check_call(cmd)
 
-    text_tables = document.getTextTables()
-    table_count = 0
-    while table_count < text_tables.getCount():
-        data_array_list.append(text_tables.getByIndex(table_count).getDataArray())
-        table_count += 1
+    # Can't get stdout from running the macro, so we have to hard code where to look
+    # for the file of info about the doc tables.
+    info_fname = full_fname
+    if ("/" in info_fname):
+        info_fname = info_fname[info_fname.rindex("/") + 1:]
+    info_fname = "/tmp/doc_tables_" + info_fname + ".txt"
 
-    return data_array_list
+    # In outfile:
+    #
+    # Table: ::START_TABLE::...::END_TABLE::
+    # Row in Table: ::START_ROW::...::END_ROW::
+    # Cell in Row in Table: ::START_CELL::...::END_CELL::
+
+    # Parse text from macro results file into a list of lists with the
+    # table data.
+    data = None
+    try:
+        f = open(info_fname, "r")
+        data = f.read()
+        f.close()
+        os.remove(info_fname)
+    except IOError:
+        return None
+    table_pat = r"::START_TABLE::.*?::END_TABLE::"
+    for table_str in re.findall(table_pat, data, re.DOTALL):
+        print("----")
+        print(table_str)
+
+    return None
 
 ###########################################################################
 def get_text(fname):
@@ -128,4 +160,4 @@ if __name__ == '__main__':
     if args.text:
         print((get_text(args.file)))
     elif args.tables:
-        print((json.dumps(get_tables(document))))
+        print((json.dumps(get_tables(args.file))))
