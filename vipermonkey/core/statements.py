@@ -876,12 +876,19 @@ class Let_Statement(VBA_Object):
         self.name = tokens.name
         string_ops = set(["mid", "mid$"])
         self.string_op = None
+        # Assigning to a string operation call like Mid()?
         if (hasattr(self.name, "__len__") and
             (len(self.name) > 0) and
             (self.name[0].lower() in string_ops)):
             self.string_op = {}
             self.string_op["op"] = self.name[0].lower()
             self.string_op["args"] = self.name[1:]
+        # Regular variable assignment.
+        else:
+            # Add an attribute with a VBA object for the LHS
+            # variable. This will make the LHS show up when visiting
+            # with a visitor.
+            self.name_vba_obj = SimpleNameExpression(None, None, None, name=self.name)
         self.expression = tokens.expression
         self.index = None
         if (tokens.index != ''):
@@ -2917,7 +2924,7 @@ class While_Statement(VBA_Object):
         
         # Set up doing this for loop in Python.
         loop_start = indent_str + "exit_all_loops = False\n"
-        loop_start += indent_str + "max_errors = " + safe_str_convert(VBA_Object.loop_upper_bound/10) + "\n"
+        loop_start += indent_str + "max_errors = " + safe_str_convert(VBA_Object.loop_upper_bound) + "\n"
         loop_start += indent_str + "while " + until_pre + to_python(self.guard, context) + until_post + ":\n"
         loop_start += indent_str + " " * 4 + "if exit_all_loops:\n"
         loop_start += indent_str + " " * 8 + "break\n"
@@ -2940,7 +2947,7 @@ class While_Statement(VBA_Object):
         loop_body += "safe_print(\"Done \" + safe_str_convert(" + prog_var + ") + \" iterations of While loop '" + loop_str + "'\")\n"
         loop_body += indent_str + " " * 4 + prog_var + " += 1\n"
         # No infinite loops.
-        loop_body += indent_str + " " * 4 + "if (" + prog_var + " > " + safe_str_convert(VBA_Object.loop_upper_bound/3) + ") or " + \
+        loop_body += indent_str + " " * 4 + "if (" + prog_var + " > " + safe_str_convert(VBA_Object.loop_upper_bound) + ") or " + \
                      "(vm_context.get_general_errors() > max_errors):\n"
         loop_body += indent_str + " " * 8 + "raise ValueError('Infinite Loop')\n"
         enter_loop()
@@ -3249,7 +3256,7 @@ class While_Statement(VBA_Object):
         # If the guard contains no variables it may be infinite.
         guard_var_visitor = var_in_expr_visitor()
         self.guard.accept(guard_var_visitor)
-        possible_infinite = (len(guard_var_visitor.variables) == 0)
+        possible_infinite = (len(guard_var_visitor.variables) == 0)        
         
         # If the guard has variables see if any of them are referenced
         # in the loop body.
@@ -3260,7 +3267,7 @@ class While_Statement(VBA_Object):
             body_var_visitor = var_in_expr_visitor(context=context, follow_calls=True)
             for s in self.body:
                 s.accept(body_var_visitor)
-            
+                
             # See if any of the guard variables appear in the body.
             got_guard_var = False
             for body_var in body_var_visitor.variables:
@@ -3575,7 +3582,7 @@ class Do_Statement(VBA_Object):
         loop_body += "safe_print(\"Done \" + str(" + prog_var + ") + \" iterations of Do While loop '" + loop_str + "'\")\n"
         loop_body += indent_str + " " * 4 + prog_var + " += 1\n"
         # No infinite loops.
-        loop_body += indent_str + " " * 4 + "if (" + prog_var + " > " + safe_str_convert(VBA_Object.loop_upper_bound/10) + ") or " + \
+        loop_body += indent_str + " " * 4 + "if (" + prog_var + " > " + safe_str_convert(VBA_Object.loop_upper_bound) + ") or " + \
                      "(vm_context.get_general_errors() > max_errors):\n"
         loop_body += indent_str + " " * 8 + "raise ValueError('Infinite Loop')\n"
         enter_loop()
@@ -4978,7 +4985,10 @@ call_params_strict = (
 )
 call_statement0 = NotAny(known_keywords_statement_start) + \
                   Optional(CaselessKeyword('Call').suppress()) + \
-                  (member_access_expression('name'))  + \
+                  (
+                      member_access_expression('name') |
+                      (Suppress("[") + member_access_expression('name') + Suppress("]"))
+                  ) + \
                   Suppress(Optional(NotAny(White()) + '$') + \
                            Optional(NotAny(White()) + '#') + \
                            Optional(NotAny(White()) + '@') + \
@@ -4990,7 +5000,10 @@ call_statement0 = NotAny(known_keywords_statement_start) + \
 
 call_statement1 = NotAny(known_keywords_statement_start) + \
                   Optional(CaselessKeyword('Call').suppress()) + \
-                  (TODO_identifier_or_object_attrib_loose('name')) + \
+                  (
+                      TODO_identifier_or_object_attrib_loose('name') |
+                      (Suppress("[") + TODO_identifier_or_object_attrib_loose('name') + Suppress("]"))
+                  ) + \
                   Suppress(Optional(NotAny(White()) + '$') + \
                            Optional(NotAny(White()) + '#') + \
                            Optional(NotAny(White()) + '@') + \

@@ -573,7 +573,8 @@ def fix_skipped_1st_arg1(vba_code):
     """
 
     # Skipped this if unneeded.
-    if (re2.search(r".*[0-9a-zA-Z_\.]+\(\s*,.*", vba_code, re.DOTALL) is None):
+    if ((re2.search(r".*\(\s{0,100},.*", vba_code, re.DOTALL) is None) or
+        (re2.search(r".*[0-9a-zA-Z_\.]{1,100}\(\s{0,100},.*", vba_code, re.DOTALL) is None)):
         return vba_code
     
     # We don't want to replace things like this in string literals. Temporarily
@@ -2844,8 +2845,8 @@ def strip_difficult_tuple_lines(vba_code):
 
     # Done
     return r
-        
 
+    
 external_funcs = []
 def strip_useless_code(vba_code, local_funcs):
     """(Main Top Level Function) Strip statements that have no useful
@@ -2873,8 +2874,9 @@ def strip_useless_code(vba_code, local_funcs):
     
     # Don't strip lines if Execute() is called since the stripped variables
     # could be used in the execed code strings.
-    exec_pat = r"execute(?:global)?\s*\("
+    exec_pat = r"(?:eval|(?:execute(?:global)?))(?:(?:\s*\()|(?:\s+[^\s]))"
     if (re.search(exec_pat, vba_code, re.IGNORECASE) is not None):
+        log.warning("VBS dynamically executes code. Not stripping assignment statements.")
         r = strip_attribute_lines(vba_code)
         r = collapse_macro_if_blocks(r)
         return r
