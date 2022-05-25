@@ -112,10 +112,15 @@ def convert_csv(fname):
     # Run LibreOffice macros to dump all the sheets as CSV files.
     #macro = "'macro:///Standard.Module1.ExportSheetsFromFile(\"" + fname + "\")'"
     macro = "macro:///Standard.Module1.ExportSheetsFromFile(\"" + full_fname + "\")"
-    cmd = ["libreoffice", "--invisible",
+    cmd = ["timeout", "20", "libreoffice", "--invisible",
            "--nofirststartwizard", "--headless",
            "--norestore", macro]
-    out = subprocess.check_call(cmd)
+    out = None
+    try:
+        out = subprocess.check_call(cmd)
+    except Exception as e:
+        log.error("Headless run of libreoffice to export Excel sheets failed. " + str(e))
+        return []
 
     # Can't get stdout from running the macro, so we have to hard code where to look
     # for the file of info about the CSV export.
@@ -136,8 +141,9 @@ def convert_csv(fname):
         # We have the data, clean up the info file.
         os.remove(info_fname)
         
-    except IOError:
-        log.error("Exporting " + safe_str_convert(fname) + " to CSV with LibreOffice failed.")
+    except IOError as e:
+        log.error("Exporting " + safe_str_convert(fname) + " to CSV with LibreOffice failed. " + str(e))
+        return []
     
     # Done.
     return r

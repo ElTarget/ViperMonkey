@@ -15,6 +15,7 @@ import re
 import pathlib
 
 from core.utils import safe_str_convert
+from core.logger import log
 
 ###################################################################################################
 def is_word_file(fname):
@@ -60,12 +61,17 @@ def get_tables(fname):
     # of the input file.
     full_fname = safe_str_convert(pathlib.Path(fname).resolve())
     
-    # Run LibreOffice macros to dump all the sheets as CSV files.
+    # Run LibreOffice macros to dump all the tables.
     macro = "macro:///Standard.Module1.ExportTablesFromFile(\"" + full_fname + "\")"
-    cmd = ["libreoffice", "--invisible",
+    cmd = ["timeout", "20", "libreoffice", "--invisible",
            "--nofirststartwizard", "--headless",
            "--norestore", macro]
-    out = subprocess.check_call(cmd)
+    out = None
+    try:
+        out = subprocess.check_call(cmd)
+    except Exception as e:
+        log.error("Headless run of libreoffice to export Document tables failed. " + str(e))
+        return []        
 
     # Can't get stdout from running the macro, so we have to hard code where to look
     # for the file of info about the doc tables.
@@ -88,8 +94,9 @@ def get_tables(fname):
         data = f.read()
         f.close()
         os.remove(info_fname)
-    except IOError:
-        return None
+    except IOError as e:
+        log.error("Read of file containing libreoffice exported Document tables failed. " + str(e))
+        return []
     table_pat = r"::START_TABLE::.*?::END_TABLE::"
     row_pat = r"::START_ROW::.*?::END_ROW::"
     cell_pat = r"::START_CELL::(.*?)::END_CELL::"
@@ -117,15 +124,20 @@ def get_text(fname):
     """
 
     # Run headless LibreOffice to save the Word document as text.
-    cmd = ["libreoffice", "--invisible",
+    cmd = ["timeout", "20", "libreoffice", "--invisible",
            "--nofirststartwizard", "--headless",
            "--norestore", "--convert-to", "txt", fname]
     if ("/" in fname):
         out_dir = fname[:fname.rindex("/")]
-        cmd.append("-outdir")
+        cmd.append("--outdir")
         cmd.append(out_dir)
-    out = subprocess.check_call(cmd)
-    
+    out = None
+    try:
+        out = subprocess.check_call(cmd)
+    except Exception as e:
+        log.error("Headless run of libreoffice to export Document text failed. " + str(e))
+        return None
+        
     # Get the contexts of the text file.
     out_fname = fname
     if ("." in out_fname):
@@ -142,8 +154,9 @@ def get_text(fname):
         # Clean up text file.
         os.remove(out_fname)
         
-    except IOError:
-        pass
+    except IOError as e:
+        log.error("Read of file containing libreoffice exported Document text failed. " + str(e))
+        return None
 
     # Done.
     return r
