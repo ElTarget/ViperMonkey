@@ -27,6 +27,20 @@ following:
 libreoffice --invisible --nofirststartwizard --headless --norestore 'macro:///Standard.Module1.ExportSheetsFromFile("EXCEL_FILE_NAME_GOES_HERE")'
 ```
 
+Full path needed for the file name.
+
+Dumping Word Tables With Macro
+-------------------------------
+
+To dump all tables from an Excel file from the command line run the
+following:
+
+```
+libreoffice --invisible --nofirststartwizard --headless --norestore 'macro:///Standard.Module1.ExportTablesFromFile("WORD_FILE_NAME_GOES_HERE")'
+```
+
+Full path needed for the file name.
+
 Dumping Word Document Text
 --------------------------
 
@@ -35,3 +49,4 @@ To dump Word document text from the command line run the following:
 ```
 libreoffice --headless --convert-to txt WORD_FILE_NAME_GOES_HERE
 ```
+

@@ -6,6 +6,8 @@ Option VBASupport 1
 
 Sub ExportSheets(outFilePrefix as String, Document)
 
+	On Error GoTo ErrorHandler
+
 	&apos; Get the name of the active sheet.
 	activeSheet = Document.CurrentController.ActiveSheet
     &apos;activeSheetName = &quot;NO_ACTIVE_SHEET&quot;
@@ -73,9 +75,11 @@ Sub ExportSheets(outFilePrefix as String, Document)
 	Print #fileNum, csvInfo
 	Close #fileNum
 
+	ErrorHandler:
 End Sub
 
 Function OpenSilent(FilePath as String) as Object
+	On Error GoTo ErrorHandler
 	Dim FileProperties(2) As New com.sun.star.beans.PropertyValue
 	FileProperties(1).Name = &quot;Hidden&quot;
 	FileProperties(1).Value = True
@@ -83,11 +87,13 @@ Function OpenSilent(FilePath as String) as Object
 	FileProperties(2).Value = True
 	docURL = ConvertToURL(&quot;file://&quot; &amp; FilePath)
 	OpenSilent = StarDesktop.loadComponentFromURL(docUrl, &quot;_default&quot;, 0, FileProperties())
+	ErrorHandler:
 End Function
 
 Sub ExportSheetsFromFile(FilePath as String)
 
 	&apos; Open given Excel file.
+	On Error GoTo ErrorHandler
 	Document = OpenSilent(FilePath)
 
 	&apos; Get the prefix for the file names in which to dump the sheet contents.
@@ -104,11 +110,13 @@ Sub ExportSheetsFromFile(FilePath as String)
   	
   	&apos; Done. Close the file.
   	call Document.close(True)
+  	ErrorHandler:
 End Sub
 
 Sub ExportTables(outFilePrefix as String, Document)
 
 	&apos; Get list of tables in doc.
+	On Error GoTo ErrorHandler
 	tables = Document.TextTables
 		
 	&apos; Cycle through each table.
@@ -142,11 +150,13 @@ Sub ExportTables(outFilePrefix as String, Document)
 	Print #fileNum, r
 	Close #fileNum
 	
+	ErrorHandler:
 End Sub
 
 Sub ExportTablesFromFile(FilePath as String)
 
 	&apos; Open given Word file.
+	On Error GoTo ErrorHandler
 	Document = OpenSilent(FilePath)
 
 	&apos; Get the prefix for the file names in which to dump the document tables.
@@ -162,5 +172,6 @@ Sub ExportTablesFromFile(FilePath as String)
   	
   	&apos; Done. Close the file.
   	call Document.close(True)
+	ErrorHandler:
 End Sub
 </script:module>
