@@ -45,21 +45,22 @@ __version__ = '0.03'
 
 #import traceback
 #import sys
-from logger import log
+from .logger import log
 import logging
 import json
 import os
-import filetype
+from . import filetype
 import random
 import re
 import subprocess
+from functools import reduce
 try:
     import xlrd2 as xlrd
 except ImportError:
     log.warning("xlrd2 Python package not installed. Falling back to xlrd.")
     import xlrd
 
-from utils import safe_str_convert
+from .utils import safe_str_convert
     
 _thismodule_dir = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
     
@@ -199,7 +200,7 @@ def _fix_sheet_name(sheet_name):
     pat = r"(0x[0-9a-f]{2})"
     r = safe_str_convert(sheet_name)
     hex_strs = re.findall(pat, r)
-    if (len(hex_strs) == 0):
+    if len(hex_strs) == 0:
         return sheet_name
 
     # Replace them with the actual values.
@@ -223,16 +224,18 @@ def load_excel_libreoffice(data):
     """
     
     # Don't try this if it is not an Office file.
-    if (not filetype.is_office_file(data, True)):
+    if not filetype.is_office_file(data, True):
         log.warning("The file is not an Office file. Not extracting sheets with LibreOffice.")
         return None
     
     # Save the Excel data to a temporary file.
-    out_dir = "/tmp/tmp_excel_file_" + safe_str_convert(random.randrange(0, 10000000000))
-    f = open(out_dir, 'wb')
-    f.write(data)
-    f.close()
-    
+    out_dir = 'tmp'
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+    out_dir = os.path.join("tmp", "tmp_excel_file_" + safe_str_convert(random.randrange(0, 10000000000)))
+    with open(out_dir, 'wb') as f:
+        f.write(data)
+
     # Dump all the sheets as CSV files using soffice.
     output = None
     try:
@@ -247,14 +250,14 @@ def load_excel_libreoffice(data):
     try:
         sheet_files = json.loads(output.replace("'", '"'))
     except Exception as e:
-        if (log.getEffectiveLevel() == logging.DEBUG):
+        if log.getEffectiveLevel() == logging.DEBUG:
             log.debug("Loading sheet file names failed. " + safe_str_convert(e))
         os.remove(out_dir)
         return None
 
     # No sheets exported? The 1st element is the name of the active sheet,
     # hence the <= 1.
-    if (len(sheet_files) <= 1):
+    if len(sheet_files) <= 1:
         os.remove(out_dir)
         return None
 

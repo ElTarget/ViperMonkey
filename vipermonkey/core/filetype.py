@@ -40,19 +40,31 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import logging
-import subprocess
 
-from logger import log
+from .logger import log
 
 # Office magic numbers.
 magic_nums = {
-    "office97" : "D0 CF 11 E0 A1 B1 1A E1",    # Office 97
-    "office2007" : "50 4B 3 4",                # Office 2007+ (PKZip)
+    "office97": "D0 CF 11 E0 A1 B1 1A E1",  # Office 97
+    "office2007": "50 4B 3 4",  # Office 2007+ (PKZip)
+    # "office2007": "50 4B 03 04",  # Office 2007+ (PKZip)
 }
 
 # PE magic number.
 pe_magic_num = "4D 5A"
+
+
+def bytes2hex(data):
+    num = len(data)
+    print(data)
+    hex_str = u""
+    for i in range(num):
+        t = u"%x" % data[i]
+        if len(t) % 2:
+            t = u"0" + t
+        hex_str += t + " "
+    return hex_str.upper()
+
 
 def get_1st_8_bytes(fname, is_data):
     """Get the first 8 bytes of a file (or data).
@@ -66,26 +78,27 @@ def get_1st_8_bytes(fname, is_data):
     @return (str) The 1st 8 bytes of the file.
 
     """
-    
-    info = None
+
     is_data = (is_data or (len(fname) > 200))
-    if (not is_data):
+    if not is_data:
         try:
             tmp = open(fname, 'rb')
             tmp.close()
         except IOError:
             is_data = True
-    if (not is_data):
+    if not is_data:
         with open(fname, 'rb') as f:
             info = f.read(8)
     else:
         info = fname[:9]
-
     curr_magic = ""
+    if type(info) == str:
+        return curr_magic
     for b in info:
-        curr_magic += hex(ord(b)).replace("0x", "").upper() + " "
-        
+        curr_magic += hex(b).replace("0x", "").upper() + " "
+    # curr_magic = bytes2hex(info)
     return curr_magic
+
 
 def is_pe_file(fname, is_data):
     """Check to see if the given file is a PE executable.
@@ -104,7 +117,8 @@ def is_pe_file(fname, is_data):
     curr_magic = get_1st_8_bytes(fname, is_data)
 
     # See if we the known magic #.
-    return (curr_magic.startswith(pe_magic_num))
+    return curr_magic.startswith(pe_magic_num)
+
 
 def is_office_xml_file(fname, is_data):
     """Check to see if the given file is a MS Office XML file.
@@ -125,17 +139,20 @@ def is_office_xml_file(fname, is_data):
         contents = fname
     else:
         try:
-            f = open(fname, "r")
-            contents = f.read()
-            f.close()
+            with open(fname, "r", encoding='utf8', errors="ignore") as f:
+                contents = f.read()
         except IOError as e:
             log.error("Cannot read file " + fname + ". " + str(e))
             return False
+    contents = str(contents)
 
+    print(('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' in contents) and
+          ('<?mso-application progid="Word.Document"?>' in contents))
     # Return whether this is an Office XML file.
     # TODO: Currently only checks for Word files.
     return (('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' in contents) and
             ('<?mso-application progid="Word.Document"?>' in contents))
+
 
 def is_office_file(fname, is_data):
     """Check to see if the given file is a MS Office (97 or 2007+) file.
@@ -156,11 +173,12 @@ def is_office_file(fname, is_data):
     # See if we have 1 of the known magic #s.
     for typ in magic_nums:
         magic = magic_nums[typ]
-        if (curr_magic.startswith(magic)):
+        if curr_magic.startswith(magic):
             return True
 
     # See if it is an Office file saved as XML.
     return is_office_xml_file(fname, is_data)
+
 
 def is_office97_file(fname, is_data):
     """Check to see if the given file is a MS Office 97 file.
@@ -174,12 +192,13 @@ def is_office97_file(fname, is_data):
     @return (boolean) True if it is an Office 97 file, False if not.
 
     """
-    
+
     # Read the 1st 8 bytes of the file.
     curr_magic = get_1st_8_bytes(fname, is_data)
 
     # See if we have the Office97 magic #.
-    return (curr_magic.startswith(magic_nums["office97"]))
+    return curr_magic.startswith(magic_nums["office97"])
+
 
 def is_office2007_file(fname, is_data):
     """Check to see if the given file is a MS Office 2007+ file.
@@ -193,9 +212,9 @@ def is_office2007_file(fname, is_data):
     @return (boolean) True if it is an Office 2007+ file, False if not.
 
     """
-    
+
     # Read the 1st 8 bytes of the file.
     curr_magic = get_1st_8_bytes(fname, is_data)
 
     # See if we have the Office 2007 magic #.
-    return (curr_magic.startswith(magic_nums["office2007"]))
+    return curr_magic.startswith(magic_nums["office2007"])

@@ -45,8 +45,8 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from visitor import visitor
-from utils import safe_str_convert
+from .visitor import visitor
+from .utils import safe_str_convert
 
 class var_in_expr_visitor(visitor):
     """Get the names of all variables that appear in an expression. The
@@ -61,8 +61,8 @@ class var_in_expr_visitor(visitor):
         self.context = context
     
     def visit(self, item):
-        from expressions import SimpleNameExpression
-        from expressions import MemberAccessExpression
+        from .expressions import SimpleNameExpression
+        from .expressions import MemberAccessExpression
 
         # Already looked at this?
         if (item in self.visited):

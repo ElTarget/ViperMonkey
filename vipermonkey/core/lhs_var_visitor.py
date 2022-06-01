@@ -44,8 +44,8 @@ https://github.com/decalage2/ViperMonkey
 
 import pyparsing
 
-from visitor import visitor
-from utils import safe_str_convert
+from .visitor import visitor
+from .utils import safe_str_convert
 
 class lhs_var_visitor(visitor):
     """Get the LHS of all Let statements. The variables on the LHSs of

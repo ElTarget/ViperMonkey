@@ -51,11 +51,11 @@ __version__ = '0.03'
 import logging
 from collections import Iterable
 
-from vba_object import eval_args, VBA_Object
-from python_jit import to_python
-from logger import log
-from utils import safe_str_convert
-import vba_conversion
+from .vba_object import eval_args, VBA_Object
+from .python_jit import to_python
+from .logger import log
+from .utils import safe_str_convert
+from . import vba_conversion
 
 def debug_repr(op, args):
     """Represent an operator applied to a list of arguments as a string

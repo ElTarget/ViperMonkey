@@ -50,19 +50,19 @@ import traceback
 import re
 import sys
 
-from curses_ascii import isprint
+from .curses_ascii import isprint
 import pyparsing
 import logging
-from logger import log
+from .logger import log
 
-from utils import safe_print, safe_str_convert
-from vba_context import Context
-from vba_object import VBA_Object, VbaLibraryFunc
-from function_call_visitor import function_call_visitor
-import utils
-from lhs_var_visitor import lhs_var_visitor
-from var_in_expr_visitor import var_in_expr_visitor
-from let_statement_visitor import let_statement_visitor
+from .utils import safe_print, safe_str_convert
+from .vba_context import Context
+from .vba_object import VBA_Object, VbaLibraryFunc
+from .function_call_visitor import function_call_visitor
+from . import utils
+from .lhs_var_visitor import lhs_var_visitor
+from .var_in_expr_visitor import var_in_expr_visitor
+from .let_statement_visitor import let_statement_visitor
 
 def _boilerplate_to_python(indent):
     """Get starting boilerplate code for VB to Python JIT code.
@@ -908,7 +908,7 @@ def _eval_python(loop, context, params=None, add_boilerplate=False, namespace=No
             # code recognize functions defined in the dynamic code. I don't know why.
             if (not context.throttle_logging):
                 log.info("Evaluating Python JIT code...")
-            exec code_python in locals()
+            exec(code_python in locals())
         else:
 
             # JIT code execution goes not involve emulating VB GOTOs.

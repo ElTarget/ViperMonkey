@@ -42,8 +42,9 @@ https://github.com/decalage2/ViperMonkey
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from visitor import visitor
-from utils import safe_str_convert
+from .visitor import visitor
+from .utils import safe_str_convert
+
 
 class function_call_visitor(visitor):
     """Collect the names of all called functions.
@@ -53,31 +54,31 @@ class function_call_visitor(visitor):
     def __init__(self):
         self.called_funcs = set()
         self.visited = set()
-    
+
     def visit(self, item):
 
-        import statements
-        import expressions
-        import lib_functions
+        from . import statements
+        from . import expressions
+        from . import lib_functions
 
-        if (item in self.visited):
+        if item in self.visited:
             return False
         self.visited.add(item)
-        if (isinstance(item, statements.Call_Statement)):
-            if (not isinstance(item.name, expressions.MemberAccessExpression)):
+        if isinstance(item, statements.Call_Statement):
+            if not isinstance(item.name, expressions.MemberAccessExpression):
                 self.called_funcs.add(safe_str_convert(item.name))
-        if (isinstance(item, expressions.Function_Call)):
+        if isinstance(item, expressions.Function_Call):
             self.called_funcs.add(safe_str_convert(item.name))
-        if (isinstance(item, statements.File_Open)):
+        if isinstance(item, statements.File_Open):
             self.called_funcs.add("Open")
-        if (isinstance(item, statements.Print_Statement)):
+        if isinstance(item, statements.Print_Statement):
             self.called_funcs.add("Print")
-        if (isinstance(item, lib_functions.Chr)):
+        if isinstance(item, lib_functions.Chr):
             self.called_funcs.add("Chr")
-        if (isinstance(item, lib_functions.Asc)):
+        if isinstance(item, lib_functions.Asc):
             self.called_funcs.add("Asc")
-        if (isinstance(item, lib_functions.StrReverse)):
+        if isinstance(item, lib_functions.StrReverse):
             self.called_funcs.add("StrReverse")
-        if (isinstance(item, lib_functions.Environ)):
+        if isinstance(item, lib_functions.Environ):
             self.called_funcs.add("Environ")
-        return True        
+        return True

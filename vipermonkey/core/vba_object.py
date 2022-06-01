@@ -57,9 +57,9 @@ __version__ = '0.08'
 # --- IMPORTS ------------------------------------------------------------------
 
 import logging
-from logger import log
+from .logger import log
 import re
-from curses_ascii import isprint
+from .curses_ascii import isprint
 import traceback
 
 from inspect import getouterframes, currentframe
@@ -67,10 +67,10 @@ import sys
 from datetime import datetime
 import pyparsing
 
-from var_in_expr_visitor import var_in_expr_visitor
-from utils import safe_str_convert
-import utils
-import excel
+from .var_in_expr_visitor import var_in_expr_visitor
+from .utils import safe_str_convert
+from . import utils
+from . import excel
 
 max_emulation_time = None
 
@@ -131,7 +131,7 @@ def limits_exceeded(throw_error=False):
     """
 
     # Check to see if we are approaching the recursion limit.
-    level = len(getouterframes(currentframe(1)))
+    level = len(getouterframes(currentframe()))
     recursion_exceeded = (level > (sys.getrecursionlimit() * .50))
     time_exceeded = False
 
@@ -230,7 +230,7 @@ class VBA_Object(object):
         if ((hasattr(self, "_children")) and (self._children is not None)):
             return self._children
         r = []
-        for _, value in self.__dict__.iteritems():
+        for _, value in self.__dict__.items():
             if (isinstance(value, VBA_Object)):
                 r.append(value)
             if isinstance(value, (list, pyparsing.ParseResults)):
@@ -361,7 +361,7 @@ def _read_from_object_text(arg, context):
     #
     # Make sure not to pull out Shapes() references that appear as arguments to function
     # calls.
-    import expressions
+    from . import expressions
     if (("shapes(" in arg_str_low) and (not isinstance(arg, expressions.Function_Call))):
 
         # Yes we do. 
@@ -454,7 +454,7 @@ def contains_excel(arg):
         return True
     
     # Got a function call?
-    import expressions
+    from . import expressions
     if (not isinstance(arg, expressions.Function_Call)):
         return False
 
@@ -559,11 +559,11 @@ def is_constant_math(arg):
     paren_pat = base_pat + "|(?:\\((?:\\s*" + base_pat + "\\s*[+\\-\\*\\\\]\\s*)*\\s*" + base_pat + "\\))"
     arg_str = safe_str_convert(arg).strip()
     try:
-        arg_str = unicode(arg_str)
+        arg_str = str(arg_str)
     except UnicodeDecodeError:
         arg_str = filter(isprint, arg_str)
-        arg_str = unicode(arg_str)
-    return (local_re.match(unicode(paren_pat), arg_str) is not None)
+        arg_str = str(arg_str)
+    return (local_re.match(str(paren_pat), arg_str) is not None)
 
 def _handle_wscriptshell_run(arg, context, got_constant_math):
     """Handle cases where wscriptshell.run() is being called and there is

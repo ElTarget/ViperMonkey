@@ -11,7 +11,7 @@ Project Repository:
 https://github.com/decalage2/ViperMonkey
 """
 
-#=== LICENSE ==================================================================
+# === LICENSE ==================================================================
 
 # ViperMonkey is copyright (c) 2015-2019 Philippe Lagadec (http://www.decalage.info)
 # All rights reserved.
@@ -63,6 +63,7 @@ def _get_keywords(line, num=2):
 
 class CustomVBALibraryFunc(VbaLibraryFunc):
     """Wraps a function into a VbaLibraryFunc class object."""
+
     def __init__(self, callback):
         self._callback = callback
 
@@ -75,6 +76,7 @@ class SmartDict(dict):
     Smarter dictionary that handles the VBALibraryFunc types better.
     Also, the keys are case insensitive.
     """
+
     def __contains__(self, key):
         return super(SmartDict, self).__contains__(key.lower())
 
@@ -93,6 +95,8 @@ class SmartDict(dict):
 
         super(SmartDict, self).__setitem__(key.lower(), value)
 
+
+# Context = ''
 
 orig_Context = Context
 
@@ -361,11 +365,11 @@ class Module(CodeBlock):
         elif line_keywords[0] == 'sub':
             log.debug('SUB')
             lines = [line] + list(self._take_until(line_gen, ['end', 'sub']))
-            return CodeBlock(procedures.sub_start_line, lines)
+            return CodeBlock(self.procedures.sub_start_line, lines)
         elif line_keywords[0] == 'function':
             log.debug('FUNCTION')
             lines = [line] + list(self._take_until(line_gen, ['end', 'function']))
-            return CodeBlock(procedures.function_start_line, lines)
+            return CodeBlock(self.procedures.function_start_line, lines)
         else:
             return super(Module, self)._generate_code_block(line_gen, line, line_keywords)
 

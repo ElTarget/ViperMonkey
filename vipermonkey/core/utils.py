@@ -13,7 +13,7 @@ Project Repository:
 https://github.com/decalage2/ViperMonkey
 """
 
-#=== LICENSE ==================================================================
+# === LICENSE ==================================================================
 
 # ViperMonkey is copyright (c) 2015-2018 Philippe Lagadec (http://www.decalage.info)
 # All rights reserved.
@@ -39,29 +39,31 @@ https://github.com/decalage2/ViperMonkey
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import re
-from curses_ascii import isascii
-from curses_ascii import isprint
+from .curses_ascii import isascii
+from .curses_ascii import isprint
 import base64
 import string
-
+import six
 import logging
 
 # for logging
 try:
     from core.logger import log
 except ImportError:
-    from logger import log
+    from .logger import log
 try:
     from core.logger import CappedFileHandler
 except ImportError:
-    from logger import CappedFileHandler
+    from .logger import CappedFileHandler
 from logging import LogRecord
 from logging import FileHandler
+
 
 def _test_char(c):
     if isinstance(c, int):
         c = chr(c)
-    return (isprint(c) or (c in "\t\n"))
+    return isprint(c) or (c in "\t\n")
+
 
 def safe_str_convert(s, strict=False):
     """Convert a string to ASCII without throwing a unicode decode error.
@@ -77,13 +79,13 @@ def safe_str_convert(s, strict=False):
     """
 
     # Handle Excel strings.
-    if (isinstance(s, dict) and ("value" in s)):
+    if isinstance(s, dict) and ("value" in s):
         s = s["value"]
 
     # Do the actual string conversion.
     try:
         # Strip unprintable characters if needed.
-        if (strict and isinstance(s, str)):
+        if strict and isinstance(s, str):
             s = filter(_test_char, s)
         return str(s)
     except UnicodeDecodeError:
@@ -91,24 +93,32 @@ def safe_str_convert(s, strict=False):
     except UnicodeEncodeError:
         return filter(_test_char, s)
 
+
 class Infix(object):
     """Used to define our own infix operators.
 
     """
+
     def __init__(self, function):
         self.function = function
+
     def __ror__(self, other):
         return Infix(lambda x, self=self, other=other: self.function(other, x))
+
     def __or__(self, other):
         return self.function(other)
+
     def __rlshift__(self, other):
         return Infix(lambda x, self=self, other=other: self.function(other, x))
+
     def __rshift__(self, other):
         return self.function(other)
+
     def __call__(self, value1, value2):
         return self.function(value1, value2)
 
-def safe_plus(x,y):
+
+def safe_plus(x, y):
     """Handle "x + y" where x and y could be some combination of ints and
     strs.
 
@@ -126,7 +136,7 @@ def safe_plus(x,y):
         x = x["value"]
     if excel.is_cell_dict(y):
         y = y["value"]
-    
+
     # Handle NULLs.
     if (y == "NULL"):
         y = 0
@@ -152,9 +162,9 @@ def safe_plus(x,y):
 
     # Easy case first.
     if (isinstance(x, (float, int)) and
-        isinstance(y, (float, int))):
+            isinstance(y, (float, int))):
         return x + y
-        
+
     # Fix data types.
     if (isinstance(y, str)):
 
@@ -182,9 +192,10 @@ def safe_plus(x,y):
 
 # Safe plus infix operator. Ugh.
 # pylint: disable=unnecessary-lambda
-plus=Infix(lambda x,y: safe_plus(x, y))
+plus = Infix(lambda x, y: safe_plus(x, y))
 
-def safe_equals(x,y):
+
+def safe_equals(x, y):
     """Handle "x = y" where x and y could be some combination of ints and
     strs.
 
@@ -206,16 +217,16 @@ def safe_equals(x,y):
     # Handle equality checks on a wildcarded file name. The
     # current file name is never going to be equal to "".
     if (((x == "CURRENT_FILE_NAME") and (y == "")) or
-        ((y == "CURRENT_FILE_NAME") and (x == "")) or
-        ((x == "SOME_FILE_NAME") and (y == "")) or
-        ((y == "SOME_FILE_NAME") and (x == ""))):
+            ((y == "CURRENT_FILE_NAME") and (x == "")) or
+            ((x == "SOME_FILE_NAME") and (y == "")) or
+            ((y == "SOME_FILE_NAME") and (x == ""))):
         return False
-        
+
     # Handle wildcard matching.
     wildcards = ["CURRENT_FILE_NAME", "SOME_FILE_NAME", "**MATCH ANY**"]
     if ((x in wildcards) or (y in wildcards)):
         return True
-        
+
     # Easy case first.
     # pylint: disable=unidiomatic-typecheck
     if (type(x) == type(y)):
@@ -223,19 +234,20 @@ def safe_equals(x,y):
 
     # Booleans and ints can be directly compared.
     if ((isinstance(x, bool) and (isinstance(y, int))) or
-        (isinstance(y, bool) and (isinstance(x, int)))):
+            (isinstance(y, bool) and (isinstance(x, int)))):
         return x == y
-        
+
     # Punt. Just convert things to strings and hope for the best.
     return str(x) == str(y)
 
 
 # Safe equals and not equals infix operators. Ugh. Loosely typed languages are terrible.
 # pylint: disable=unnecessary-lambda
-eq=Infix(lambda x,y: safe_equals(x, y))
-neq=Infix(lambda x,y: (not safe_equals(x, y)))
+eq = Infix(lambda x, y: safe_equals(x, y))
+neq = Infix(lambda x, y: (not safe_equals(x, y)))
 
-def safe_gt(x,y):
+
+def safe_gt(x, y):
     """Handle "x > y" where x and y could be some combination of ints and
     strs.
 
@@ -253,12 +265,12 @@ def safe_gt(x,y):
         x = 0
     if (y == "NULL"):
         y = 0
-        
+
     # Handle wildcard matching.
     wildcards = ["CURRENT_FILE_NAME", "SOME_FILE_NAME", "**MATCH ANY**"]
     if ((x in wildcards) or (y in wildcards)):
         return True
-        
+
     # Since we are doing > both values should be numbers.
     try:
         from vba_conversion import coerce_to_num
@@ -270,12 +282,14 @@ def safe_gt(x,y):
     # Return the numeric comparison.
     return (x > y)
 
+
 # Safe > and < infix operators. Ugh. Loosely typed languages are terrible.
 # pylint: disable=unnecessary-lambda
-gt=Infix(lambda x,y: safe_gt(x, y))
-lt=Infix(lambda x,y: (not safe_gt(x, y)))
-gte=Infix(lambda x,y: (safe_gt(x, y) or safe_equals(x,y)))
-lte=Infix(lambda x,y: (not safe_gt(x, y) or safe_equals(x,y)))
+gt = Infix(lambda x, y: safe_gt(x, y))
+lt = Infix(lambda x, y: (not safe_gt(x, y)))
+gte = Infix(lambda x, y: (safe_gt(x, y) or safe_equals(x, y)))
+lte = Infix(lambda x, y: (not safe_gt(x, y) or safe_equals(x, y)))
+
 
 def safe_print(text):
     """Sometimes printing large strings when running in a Docker
@@ -305,6 +319,7 @@ def safe_print(text):
             handler.emit(LogRecord(log.name, logging.INFO, "", None, text, None, None, "safe_print"))
             handler.setFormatter(logging.Formatter("%(levelname)-8s %(message)s"))
 
+
 def fix_python_overlap(var_name):
     """Eliminate collisions between VB variable/function names and Python
     builtin names.
@@ -321,9 +336,10 @@ def fix_python_overlap(var_name):
     var_name = var_name.replace("$", "__DOLLAR__")
     # RegExp object?
     if ((not var_name.endswith(".Pattern")) and
-        (not var_name.endswith(".Global"))):
+            (not var_name.endswith(".Global"))):
         var_name = var_name.replace(".", "")
     return var_name
+
 
 def b64_decode(value):
     """Base64 decode a string.
@@ -345,22 +361,23 @@ def b64_decode(value):
         tmp_str = tmp_str.replace(" ", "").replace("\x00", "")
         b64_pat = r"^[A-Za-z0-9+/=]+$"
         if (re.match(b64_pat, tmp_str) is not None):
-            
+
             # Pad out the b64 string if needed.
             missing_padding = len(tmp_str) % 4
             if missing_padding:
-                tmp_str += b'='* (4 - missing_padding)
-        
+                tmp_str += b'=' * (4 - missing_padding)
+
             # Return the decoded value.
             conv_val = base64.b64decode(tmp_str)
             return conv_val
-    
+
     # Base64 conversion error.
     except Exception:
         pass
 
     # No valid base64 decode.
     return None
+
 
 class vb_RegExp(object):
     """Class to simulate a VBS RegEx object in python.
@@ -373,7 +390,7 @@ class vb_RegExp(object):
 
     def __repr__(self):
         return "<RegExp Object: Pattern = '" + str(self.Pattern) + "', Global = " + str(self.Global) + ">"
-        
+
     def _get_python_pattern(self):
         pat = self.Pattern
         if (pat is None):
@@ -386,7 +403,7 @@ class vb_RegExp(object):
             pat1 = re.sub(fix_dash_pat1, r"[\1-\2]", pat1)
             pat = pat1
         return pat
-        
+
     def Test(self, string):
         """Emulation of the VB Regex object Test() method.
 
@@ -397,9 +414,9 @@ class vb_RegExp(object):
 
         """
         pat = self._get_python_pattern()
-        #print "PAT: '" + pat + "'"
-        #print "STR: '" + string + "'"
-        #print re.findall(pat, string)
+        # print "PAT: '" + pat + "'"
+        # print "STR: '" + string + "'"
+        # print re.findall(pat, string)
         if (pat is None):
             return False
         return (re.match(pat, string) is not None)
@@ -426,6 +443,7 @@ class vb_RegExp(object):
             pass
         return r
 
+
 def get_num_bytes(i):
     """Get the minimum number of bytes needed to represent a given int
     value.
@@ -436,7 +454,7 @@ def get_num_bytes(i):
     int.
 
     """
-    
+
     # 1 byte?
     if ((i & 0x00000000FF) == i):
         return 1
@@ -449,6 +467,7 @@ def get_num_bytes(i):
     # Lets go with 8 bytes.
     return 8
 
+
 def strip_nonvb_chars(s):
     """Strip invalid VB characters from a string.
 
@@ -459,9 +478,10 @@ def strip_nonvb_chars(s):
     """
 
     # Handle unicode strings.
-    if (isinstance(s, unicode)):
-        s = s.encode('ascii','replace')
-    
+    # if isinstance(s,unicode):
+    if isinstance(s, six.string_types):
+        s = s.encode('ascii', 'replace')
+
     # Sanity check.
     if (not isinstance(s, str)):
         return s
@@ -469,12 +489,11 @@ def strip_nonvb_chars(s):
     # Do we need to do this?
     if (re.search(r"[^\x09-\x7e]", s) is None):
         return s
-    
+
     # Strip non-ascii printable characters.
     r = re.sub(r"[^\x09-\x7e]", "", s)
-    
+
     # Strip multiple 'NULL' substrings from the string.
     if (r.count("NULL") > 10):
         r = r.replace("NULL", "")
     return r
-    

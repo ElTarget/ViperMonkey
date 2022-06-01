@@ -57,7 +57,7 @@ pyparsing.ParserElement.setDefaultWhitespaceChars(' \t\x19')
 
 from pyparsing import CaselessKeyword, Regex, Word, Suppress, Optional, NotAny, \
     Literal, CharsNotIn, Combine, CaselessLiteral, alphas, alphanums, alphas8bit
-from reserved import reserved_identifier, reserved_type_identifier
+from .reserved import reserved_identifier, reserved_type_identifier
 
 # TODO: reduce this list when corresponding statements are implemented
 # Handling whitespace in the RE version of reserved_keywords is a nightmare. Track this with a keyword list.

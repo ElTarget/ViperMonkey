@@ -49,8 +49,8 @@ import unidecode
 import string
 
 import logging
-from logger import log
-from utils import safe_str_convert
+from .logger import log
+from .utils import safe_str_convert
 
 class StubbedEngine(object):
     """Stubbed out Vipermonkey analysis engine that just supports
@@ -78,11 +78,11 @@ class StubbedEngine(object):
 
         # Make sure all the action info is a proper string.
         try:
-            if (isinstance(action, str)):
+            if isinstance(action, bytes):
                 action = unidecode.unidecode(action.decode('unicode-escape'))
         except UnicodeDecodeError:
             action = ''.join(filter(lambda x:x in string.printable, action))
-        if (isinstance(params, str)):
+        if isinstance(params, str):
             try:
                 decoded = params.replace("\\", "#ESCAPED_SLASH#").decode('unicode-escape').replace("#ESCAPED_SLASH#", "\\")
                 params = unidecode.unidecode(decoded)
@@ -90,7 +90,7 @@ class StubbedEngine(object):
                 log.warn("Unicode decode of action params failed. " + str(e))
                 params = ''.join(filter(lambda x:x in string.printable, params))
         try:
-            if (isinstance(description, str)):
+            if isinstance(description, bytes):
                 description = unidecode.unidecode(description.decode('unicode-escape'))
         except UnicodeDecodeError as e:
             log.warn("Unicode decode of action description failed. " + str(e))
