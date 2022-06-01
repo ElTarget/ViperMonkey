@@ -43,9 +43,9 @@ import re
 import string
 
 import logging
-from logger import log
+from .logger import log
 
-from utils import safe_str_convert
+from .utils import safe_str_convert
 
 def int_convert(arg, leave_alone=False):
     """Convert a VBA expression to an int, handling VBA NULL.
@@ -90,12 +90,12 @@ def int_convert(arg, leave_alone=False):
             return 0
             
     arg_str = str(arg)
-    if ("." in arg_str):
+    if "." in arg_str:
         arg_str = arg_str[:arg_str.index(".")]
     try:
         return int(arg_str)
     except Exception as e:
-        if (not leave_alone):
+        if not leave_alone:
             log.error("Cannot convert '" + str(arg_str) + "' to int. Defaulting to 0. " + str(e))
             return 0
         log.error("Cannot convert '" + str(arg_str) + "' to int. Leaving unchanged. " + str(e))
@@ -109,15 +109,15 @@ def str_convert(arg):
     @return (str) The thing as a string.
 
     """
-    if (arg == "NULL"):
+    if arg == "NULL":
         return ''
     import excel
-    if (excel.is_cell_dict(arg)):
+    if excel.is_cell_dict(arg):
         arg = arg["value"]
     try:
         return str(arg)
     except Exception as e:
-        if (isinstance(arg, unicode)):
+        if isinstance(arg, str):
             return ''.join(filter(lambda x:x in string.printable, arg))
         log.error("Cannot convert given argument to str. Defaulting to ''. " + str(e))
         return ''
@@ -171,7 +171,7 @@ def coerce_to_str(obj, zero_is_null=False):
     # Not NULL. We have data.
 
     # Easy case. Is this already some sort of a string?
-    if (isinstance(obj, basestring)):
+    if (isinstance(obj, str)):
 
         # Convert to a regular str if needed.
         return safe_str_convert(obj)

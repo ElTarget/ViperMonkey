@@ -50,7 +50,7 @@ import logging
 import os
 from hashlib import sha256
 from datetime import datetime
-from logger import log
+from .logger import log
 import re
 try:
     # sudo pypy -m pip install rure
@@ -64,9 +64,9 @@ import codecs
 import copy
 import struct
 
-import vba_constants
-import utils
-from utils import safe_str_convert
+from . import vba_constants
+from . import utils
+from .utils import safe_str_convert
 
 def to_hex(s):
     """Convert a string to a VBA hex string.
@@ -1165,7 +1165,7 @@ class Context(object):
 
         """
         
-        if (not isinstance(name, basestring)):
+        if (not isinstance(name, str)):
             raise KeyError('Object %r not found' % name)
         
         # Search in the global VBA library:
@@ -1207,7 +1207,7 @@ class Context(object):
         @throws KeyError Thrown if the named variable is not found.
 
         """        
-        if (not isinstance(name, basestring)):
+        if (not isinstance(name, str)):
             raise KeyError('Object %r not found' % name)
 
         # Flag if this is a change handler lookup.
@@ -1609,7 +1609,7 @@ class Context(object):
         @throws KeyError This is thrown if the variable is not found.
 
         """
-        if (not isinstance(var, basestring)):
+        if (not isinstance(var, str)):
             return None
         var = var.lower()
         if (var not in self.types):
@@ -1628,7 +1628,7 @@ class Context(object):
         variable, if not found return None.
 
         """
-        if (not isinstance(var, basestring)):
+        if (not isinstance(var, str)):
             return None
 
         # Normalize the variable name to lower case.
@@ -1734,9 +1734,11 @@ class Context(object):
                 uni_value = value.decode("utf-8")
             except UnicodeDecodeError:
                 pass
+            except AttributeError:
+                pass
             if (uni_value is not None):
                 B64_REGEX = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
-                b64_strs = re2.findall(unicode(B64_REGEX), uni_value)
+                b64_strs = re2.findall(B64_REGEX, uni_value)
                 for curr_value in b64_strs:
                     if (len(curr_value) > 100):
                         got_ioc = True
@@ -1787,8 +1789,8 @@ class Context(object):
             return False
         
         # Are we setting a cell formula?
-        import expressions
-        import vba_object
+        from . import expressions
+        from . import vba_object
         if (not isinstance(name, expressions.MemberAccessExpression)):
             return False
         tmp_rhs = safe_str_convert(name.rhs)
@@ -1846,15 +1848,15 @@ class Context(object):
 
         """
 
-        import procedures
+        from . import procedures
         
         # Do we know the value of the variable?
-        if (not self.contains(name)):
+        if not self.contains(name):
             return False
 
         # Is the current value a property let handler?
         handler = self.get(name)
-        if (not isinstance(handler, procedures.PropertyLet)):
+        if not isinstance(handler, procedures.PropertyLet):
             return False
 
         # We are assigning to a property. Evaluate the handler.
@@ -1913,13 +1915,13 @@ class Context(object):
 
         # We might have a vipermonkey simple name expression. Convert to a string
         # so we can use it.
-        import expressions
+        from . import expressions
         if (isinstance(name, expressions.SimpleNameExpression)):
             name = safe_str_convert(name)
         
         # Does the name make sense?
         orig_name = name
-        if (not isinstance(name, basestring)):
+        if not isinstance(name, str):
             log.warning("context.set() " + safe_str_convert(name) + " is improper type. " + safe_str_convert(type(name)))
             name = safe_str_convert(name)
 
@@ -2172,18 +2174,18 @@ class Context(object):
             # Strip bad characters.
             action = utils.strip_nonvb_chars(action)
             new_params = utils.strip_nonvb_chars(params)
-            if (isinstance(params, list)):
+            if isinstance(params, list):
                 new_params = []
                 for p in params:
                     tmp_p = utils.strip_nonvb_chars(p)
-                    if (len(re.findall(r"NULL", safe_str_convert(tmp_p))) > 20):
+                    if len(re.findall(r"NULL", safe_str_convert(tmp_p))) > 20:
                         tmp_p = safe_str_convert(tmp_p).replace("NULL", "")
                     new_params.append(tmp_p)
             params = new_params
             description = utils.strip_nonvb_chars(description)
-
+            action = str(action)
             # Strip repeated NULLs in the action.
-            if (len(re.findall(r"NULL", action)) > 20):
+            if len(re.findall(r"NULL", action)) > 20:
                 action = action.replace("NULL", "")
             
         # Save the action for reporting.

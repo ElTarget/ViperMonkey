@@ -46,33 +46,34 @@ __version__ = '0.02'
 
 # --- IMPORTS ------------------------------------------------------------------
 
-#import sys
+# import sys
 import logging
 
 # Important: need to change the default pyparsing whitespace setting, because CRLF
 # is not a whitespace for VBA.
 import pyparsing
+
 pyparsing.ParserElement.setDefaultWhitespaceChars(' \t\x19')
 
 from pyparsing import CaselessKeyword, Group, Optional, Suppress, \
     ZeroOrMore, Literal
 
-from vba_context import Context
-from statements import extend_statement_grammar, public_private, simple_statements_line, \
+from .vba_context import Context
+from .statements import extend_statement_grammar, public_private, simple_statements_line, \
     bogus_simple_for_each_statement, do_const_assignments, Do_Statement, While_Statement, \
     For_Each_Statement, For_Statement, FollowedBy, Combine, params_list_paren, bad_next_statement, \
     bad_if_statement, statements_line, function_type2, type_expression
-from identifiers import lex_identifier, identifier, TODO_identifier_or_object_attrib, \
+from .identifiers import lex_identifier, identifier, TODO_identifier_or_object_attrib, \
     type_suffix
-from comments_eol import EOS, comment_single_quote, rem_statement
-from vba_lines import line_terminator
-import utils
-from utils import safe_str_convert
-from logger import log
-from tagged_block_finder_visitor import tagged_block_finder_visitor
-from vba_object import VBA_Object, eval_arg
-from python_jit import to_python, _check_for_iocs, _get_var_vals
-import vba_conversion
+from .comments_eol import EOS, comment_single_quote, rem_statement
+from .vba_lines import line_terminator
+from . import utils, vba_conversion
+from .utils import safe_str_convert
+from .logger import log
+from .tagged_block_finder_visitor import tagged_block_finder_visitor
+from .vba_object import VBA_Object, eval_arg
+from .python_jit import to_python, _check_for_iocs, _get_var_vals
+
 
 # --- SUB --------------------------------------------------------------------
 
@@ -80,7 +81,7 @@ class Sub(VBA_Object):
     """Emulate a VBA/VBScript Sub (subroutine).
 
     """
-    
+
     def __init__(self, original_str, location, tokens):
         super(Sub, self).__init__(original_str, location, tokens)
         self.name = tokens.sub_name
@@ -108,7 +109,7 @@ class Sub(VBA_Object):
         # Get the global variables read in the function body.
         tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
         global_var_info, _ = _get_var_vals(self, tmp_context, global_only=True)
-        
+
         # Set up the initial values for the global variables.
         global_var_init_str = ""
         indent_str = " " * indent
@@ -127,7 +128,7 @@ class Sub(VBA_Object):
 
         # Global variable initialization goes first.
         r = global_var_init_str
-        
+
         # Define the function prototype.
         indent_str = " " * indent
         func_args = "("
@@ -151,16 +152,16 @@ class Sub(VBA_Object):
         for global_var in global_var_info:
             r += indent_str + " " * 4 + "global " + safe_str_convert(global_var) + "\n"
         r += "\n"
-        
+
         # Function body.
-        r += to_python(self.statements, tmp_context, indent=indent+4, statements=True)
+        r += to_python(self.statements, tmp_context, indent=indent + 4, statements=True)
 
         # Check for IOCs.
-        r += "\n" + _check_for_iocs(self, tmp_context, indent=indent+4)
-        
+        r += "\n" + _check_for_iocs(self, tmp_context, indent=indent + 4)
+
         # Done.
         return r
-    
+
     def eval(self, context, params=None):
 
         # create a new context for this execution:
@@ -170,10 +171,10 @@ class Sub(VBA_Object):
 
         # Save the name of the current function so we can handle exit function calls.
         context.curr_func_name = safe_str_convert(self.name)
-        
+
         # We are entering the function so reset whether we executed a goto.
         context.goto_executed = False
-        
+
         # Set the information about labeled code blocks in the called
         # context. This will be used when emulating GOTOs.
         context.tagged_blocks = self.tagged_blocks
@@ -208,7 +209,7 @@ class Sub(VBA_Object):
                 # Coerce parameters to String if needed.
                 if ((self.params[i].my_type == "String") and (not self.params[i].is_array)):
                     param_value = safe_str_convert(param_value)
-                    
+
                 # Add the parameter value to the local function context.
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
@@ -216,19 +217,18 @@ class Sub(VBA_Object):
 
                 # Is this a ByRef parameter?
                 if (self.params[i].mechanism == "ByRef"):
-
                     # Save it so we can pull out the updated value in the Call statement.
                     self.byref_params[(param_name, i)] = None
-            
+
         # Do we have an obvious recursive loop? Detect this by looking for the current call
         # with the exact same arguments appearing in the call stack.
         # TODO: This needs more work and testing.
         if (context.call_stack.count(call_info) > 0):
             log.warn("Recursive infinite loop detected. Aborting call " + safe_str_convert(call_info))
-            #print self
-            #print call_info
-            #print context.call_stack
-            #sys.exit(0)
+            # print self
+            # print call_info
+            # print context.call_stack
+            # sys.exit(0)
             return "NULL"
 
         # Add the current call to the call stack.
@@ -236,7 +236,7 @@ class Sub(VBA_Object):
 
         # Assign all const variables first.
         do_const_assignments(self.statements, context)
-        
+
         # Set the parameter values in the current context.
         for param_name in call_info:
             context.set(param_name, call_info[param_name], force_local=True)
@@ -244,7 +244,7 @@ class Sub(VBA_Object):
         # Variable updates can go in the local scope.
         old_global_scope = context.global_scope
         context.global_scope = False
-                    
+
         # Emulate the function.
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('evaluating Sub %s(%s)' % (self.name, params))
@@ -260,7 +260,7 @@ class Sub(VBA_Object):
                 s.eval(context=context)
 
             # Was there an error that will make us jump to an error handler?
-            #if (context.have_error()):
+            # if (context.have_error()):
             if (context.must_handle_error()):
                 break
             context.clear_error()
@@ -268,18 +268,18 @@ class Sub(VBA_Object):
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
             if (context.goto_executed or
-                (hasattr(s, "exited_with_goto") and s.exited_with_goto)):
+                    (hasattr(s, "exited_with_goto") and s.exited_with_goto)):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("GOTO executed. Control flow handled by GOTO, so skip rest of procedure statements.")
                 break
-            
+
         # Reset variable update scoping.
         context.global_scope = old_global_scope
-            
+
         # Run the error handler if we have one and we broke out of the statement
         # loop with an error.
         context.handle_error(params)
-        
+
         # Handle trailing if's with no end if.
         if (self.bogus_if is not None):
             if (isinstance(self.bogus_if, VBA_Object)):
@@ -298,15 +298,15 @@ class Sub(VBA_Object):
         # We are leaving the function so reset whether we executed a goto.
         context.goto_executed = False
         context.exit_func = False
-        
+
         # Bubble up any unhandled errors to the caller.
         caller_context.got_error = context.got_error
 
         # Same with whether we did any wildcard value tests.
         caller_context.tested_wildcard = context.tested_wildcard
-        
+
         # Handle subs with no return values.
-        try:            
+        try:
             context.get(self.name)
         except KeyError:
 
@@ -318,7 +318,7 @@ class Sub(VBA_Object):
             log.debug("Returning from sub " + safe_str_convert(self))
 
         return "NULL"
-            
+
 
 # 5.3.1.1 Procedure Scope
 #
@@ -366,7 +366,7 @@ function_name = Combine(identifier + Suppress(Optional(type_suffix))) | lifecycl
 #
 # MS-GRAMMAR: end-label = statement-label-definition
 
-#end_label = statement_label_definition
+# end_label = statement_label_definition
 
 # MS-GRAMMAR: procedure-tail = [WS] LINE-END / single-quote comment-body / ":" rem-statement
 
@@ -397,7 +397,8 @@ procedure_tail = FollowedBy(line_terminator) | comment_single_quote | Literal(":
 
 sub_start = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
             public_private + Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
-            CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') + Optional(params_list_paren) + EOS.suppress()
+            CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') + Optional(
+    params_list_paren) + EOS.suppress()
 sub_start_single = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
                    public_private + CaselessKeyword('Sub').suppress() + lex_identifier('sub_name') \
                    + Optional(params_list_paren) + Suppress(':')
@@ -428,6 +429,7 @@ sub_start_line = public_private + CaselessKeyword('Sub').suppress() + lex_identi
                  + Optional(params_list_paren) + EOS.suppress()
 sub_start_line.setParseAction(Sub)
 
+
 # --- FUNCTION --------------------------------------------------------------------
 
 # TODO: Function should inherit from Sub, or use only one class for both
@@ -444,11 +446,12 @@ def is_loop_statement(s):
     """
     return isinstance(s, (Do_Statement, For_Each_Statement, For_Statement, While_Statement))
 
+
 class Function(VBA_Object):
     """Emulate a VBA/VBScript Function.
 
     """
-    
+
     def __init__(self, original_str, location, tokens):
         super(Function, self).__init__(original_str, location, tokens)
         self.return_type = None
@@ -481,18 +484,18 @@ class Function(VBA_Object):
         return 'Function %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
 
     def to_python(self, context, params=None, indent=0):
-        
+
         # Get the global variables read in the function body.
         tmp_context = Context(context=context, _locals=context.locals, copy_globals=True)
         global_var_info, _ = _get_var_vals(self, tmp_context, global_only=True)
-        
+
         # Set up the initial values for the global variables.
         global_var_init_str = ""
         indent_str = " " * indent
         for global_var in global_var_info:
             val = to_python(global_var_info[global_var], context)
             global_var_init_str += indent_str + safe_str_convert(global_var) + " = " + safe_str_convert(val) + "\n"
-        
+
         # Make a copy of the context so we can mark variables as function
         # arguments.
         tmp_context = Context(context=context)
@@ -504,7 +507,7 @@ class Function(VBA_Object):
 
         # Global variable initialization goes first.
         r = global_var_init_str
-        
+
         # Define the function prototype.
         func_args = "("
         first = True
@@ -527,13 +530,13 @@ class Function(VBA_Object):
         for global_var in global_var_info:
             r += indent_str + " " * 4 + "global " + safe_str_convert(global_var) + "\n"
         r += "\n"
-            
+
         # Function body.
-        r += to_python(self.statements, tmp_context, indent=indent+4, statements=True)
+        r += to_python(self.statements, tmp_context, indent=indent + 4, statements=True)
 
         # Check for IOCs.
-        r += "\n" + _check_for_iocs(self, tmp_context, indent=indent+4)
-        
+        r += "\n" + _check_for_iocs(self, tmp_context, indent=indent + 4)
+
         # Return the function return val.
         r += "\n" + indent_str + " " * 4 + "return " + safe_str_convert(self.name) + "\n"
 
@@ -546,9 +549,9 @@ class Function(VBA_Object):
         caller_context = context
         # Looks like local variables from the calling context can be accessed in the called
         # function, so keep those.
-        #context = Context(context=caller_context, _locals=context.locals)
+        # context = Context(context=caller_context, _locals=context.locals)
         # TODO: Local variable inheritence needs to be investigated more...
-        context = Context(context=caller_context)        
+        context = Context(context=caller_context)
         context.in_procedure = True
 
         # We are entering the function so reset whether we executed a goto.
@@ -556,7 +559,7 @@ class Function(VBA_Object):
 
         # Save the name of the current function so we can handle exit function calls.
         context.curr_func_name = safe_str_convert(self.name)
-        
+
         # Set the information about labeled code blocks in the called
         # context. This will be used when emulating GOTOs.
         context.tagged_blocks = self.tagged_blocks
@@ -577,7 +580,7 @@ class Function(VBA_Object):
             if (param.init_val is not None):
                 init_val = eval_arg(param.init_val, context=context)
             call_info[param.name] = (init_val, None)
-            
+
         # Array accesses of calls to functions that return an array are parsed as
         # function calls with the array indices given as function call arguments. Note
         # that this parsing problem only occurs for 0 argument functions (foo(12)).
@@ -587,11 +590,11 @@ class Function(VBA_Object):
         # Check for the 0 parameter function array access case here.
         array_indices = None
         if ((self.params is not None) and
-            (params is not None) and
-            (len(self.params) == 0) and
-            (len(params) > 0)):
+                (params is not None) and
+                (len(self.params) == 0) and
+                (len(params) > 0)):
             array_indices = params
-            
+
         # Set given parameter values.
         self.byref_params = {}
         defined_param_pos = -1
@@ -611,49 +614,48 @@ class Function(VBA_Object):
             # Coerce parameters to String if needed.
             if (defined_param.my_type == "String"):
                 param_value = utils.safe_str_convert(param_value)
-                    
+
             # Add the parameter value to the local function context.
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('Function %s: setting param %s = %r' % (self.name, param_name, param_value))
 
             # Handle params with default values.
             if ((param_name not in call_info) or
-                (call_info[param_name] == ('', None)) or
-                (param_value != "")):
+                    (call_info[param_name] == ('', None)) or
+                    (param_value != "")):
                 call_info[param_name] = (param_value, defined_param.my_type)
 
             # Is this a ByRef parameter?
             if (defined_param.mechanism == "ByRef"):
-
                 # Save it so we can pull out the updated value in the Call statement.
                 self.byref_params[(param_name, defined_param_pos)] = None
-                
+
         # Do we have an obvious recursive loop? Detect this by looking for the current call
         # with the exact same arguments appearing in the call stack.
         # TODO: This needs more work and testing.
         if (context.call_stack.count(call_info) > 0):
             log.warn("Recursive infinite loop detected. Aborting call " + safe_str_convert(call_info))
-            #print self
-            #print call_info
-            #print context.call_stack
-            #sys.exit(0)
+            # print self
+            # print call_info
+            # print context.call_stack
+            # sys.exit(0)
             return "NULL"
 
         # Add the current call to the call stack.
         context.call_stack.append(call_info)
-        
+
         # Assign all const variables first.
         do_const_assignments(self.statements, context)
-        
+
         # Set the parameter values in the current context.
         for param_name in call_info:
             param_val, param_type = call_info[param_name]
             context.set(param_name, param_val, var_type=param_type, force_local=True)
-        
+
         # Variable updates can go in the local scope.
         old_global_scope = context.global_scope
         context.global_scope = False
-        
+
         # Emulate the function.
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('evaluating Function %s(%s)' % (self.name, params))
@@ -680,28 +682,28 @@ class Function(VBA_Object):
             if (is_loop_statement(s)):
                 context.goto_executed = False
                 s.exited_with_goto = False
-                
+
             # Did we just run a GOTO? If so we should not run the
             # statements after the GOTO.
             if (context.goto_executed or s.exited_with_goto):
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("GOTO executed. Go to next loop iteration.")
                 break
-            
+
         # Reset variable update scoping.
         context.global_scope = old_global_scope
-        
+
         # Run the error handler if we have one and we broke out of the statement
         # loop with an error.
         context.handle_error(params)
-        
+
         # Handle trailing if's with no end if.
         if (self.bogus_if is not None):
             self.bogus_if.eval(context=context)
 
         # Done with call. Pop this call off the call stack.
         del context.call_stack[-1]
-        
+
         # We are leaving the function so reset whether we executed a goto.
         context.goto_executed = False
 
@@ -710,7 +712,7 @@ class Function(VBA_Object):
 
         # Same with whether we did any wildcard value tests.
         caller_context.tested_wildcard = context.tested_wildcard
-        
+
         # TODO: get result from context.locals
         context.exit_func = False
         try:
@@ -757,7 +759,7 @@ class Function(VBA_Object):
                 # Function does not return array.
                 else:
                     log.warn(safe_str_convert(self) + " does not return an array. Not doing array access.")
-                    
+
             # Copy all the global variables from the function context to the caller
             # context so global updates are tracked.
             for global_var in context.globals.keys():
@@ -767,14 +769,14 @@ class Function(VBA_Object):
             # for functions that are called multiple times and always
             # return a string value.
             context.track_possible_decoded_str(self.name, return_value)
-                
+
             # Done. Return the function result.
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Returning from func " + safe_str_convert(self))
             return return_value
 
         except KeyError:
-            
+
             # No return value explicitly set. It looks like VBA uses an empty string as
             # these funcion values.
             return ''
@@ -810,14 +812,15 @@ simple_multiline_function = (function_start + \
 
 singleline_function = function_start_single + simple_statements_line('statements') + function_end_single
 function = singleline_function | multiline_function
-simple_function = simple_multiline_function            
+simple_function = simple_multiline_function
 function.setParseAction(Function)
 simple_function.setParseAction(Function)
 
 # for line parser:
 function_start_line = public_private + CaselessKeyword('Function').suppress() + lex_identifier('function_name') \
-                 + Optional(params_list_paren) + Optional(function_type2) + EOS.suppress()
+                      + Optional(params_list_paren) + Optional(function_type2) + EOS.suppress()
 function_start_line.setParseAction(Function)
+
 
 # --- PROPERTY LET --------------------------------------------------------------------
 
@@ -827,7 +830,7 @@ class PropertyLet(Sub):
     """Emulate a VBA/VBScript 'Property Let...' statement.
 
     """
-    
+
     def __init__(self, original_str, location, tokens):
         super(PropertyLet, self).__init__(original_str, location, tokens)
         self.name = tokens.property_name
@@ -851,6 +854,7 @@ class PropertyLet(Sub):
     def __repr__(self):
         return 'Property Let %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
 
+
 # [ Public | Private | Friend ] [ Static ] Property Let name ( [ arglist ], value )
 # [ statements ]
 # [ Exit Property ]
@@ -866,6 +870,7 @@ property_let = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('D
                Group(ZeroOrMore(statements_line)).setResultsName('statements') + \
                (CaselessKeyword('End') + CaselessKeyword('Property') + EOS).suppress()
 property_let.setParseAction(PropertyLet)
+
 
 # --- PROPERTY GET --------------------------------------------------------------------
 
@@ -895,6 +900,7 @@ class PropertyGet(Function):
 
     def __repr__(self):
         return 'Property Get %s (%s): %d statement(s)' % (self.name, self.params, len(self.statements))
+
 
 property_get = Optional(CaselessKeyword('Static')) + Optional(CaselessKeyword('Default')) + \
                public_private + \

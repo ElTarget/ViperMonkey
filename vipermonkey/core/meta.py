@@ -20,15 +20,17 @@ https://github.com/decalage2/ViperMonkey
 import logging
 import subprocess
 
-from logger import log
+from .logger import log
 
-from utils import safe_str_convert
+from .utils import safe_str_convert
+
 
 class FakeMeta(object):
     """Class used to hold Office file metadata fields and values.
 
     """
     pass
+
 
 def get_metadata_exif(filename):
     """Get the Office metadata for a given file with the exiftool
@@ -41,7 +43,7 @@ def get_metadata_exif(filename):
     metadate.
 
     """
-    
+
     # Use exiftool to get the document metadata.
     output = None
     try:
@@ -51,19 +53,19 @@ def get_metadata_exif(filename):
         return {}
 
     # Sanity check results.
-    if (log.getEffectiveLevel() == logging.DEBUG):
+    if log.getEffectiveLevel() == logging.DEBUG:
         log.debug("exiftool output: '" + safe_str_convert(output) + "'")
-    if (":" not in output):
+    if ":" not in output:
         log.warning("Cannot read metadata with exiftool.")
         return {}
-    
+
     # Store the metadata in an object.
     lines = output.split("\n")
     r = FakeMeta()
     for line in lines:
         line = line.strip()
-        if ((len(line) == 0) or (":" not in line)):
-            continue        
+        if (len(line) == 0) or (":" not in line):
+            continue
         field = line[:line.index(":")].strip().lower()
         val = line[line.index(":") + 1:].strip().replace("...", "\r\n")
         setattr(r, field, val)

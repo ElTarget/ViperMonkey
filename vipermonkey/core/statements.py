@@ -65,38 +65,35 @@ from pyparsing import CaselessKeyword, Combine, delimitedList, FollowedBy, \
     ParseException, ParseResults, Regex, Suppress, White, ZeroOrMore, \
     CharsNotIn
 
-from identifiers import identifier, lex_identifier, TODO_identifier_or_object_attrib, \
+from .identifiers import identifier, lex_identifier, TODO_identifier_or_object_attrib, \
     TODO_identifier_or_object_attrib_loose, enum_val_id, unrestricted_name, \
     reserved_type_identifier, typed_name
-from literals import integer, quoted_string, literal, decimal_literal, \
+from .literals import integer, quoted_string, literal, decimal_literal, \
     quoted_string_keep_quotes
-from comments_eol import rem_statement, EOS
-from expressions import any_expression, boolean_expression, BoolExpr, expression, \
+from .comments_eol import rem_statement, EOS
+from .expressions import any_expression, boolean_expression, BoolExpr, expression, \
     file_pointer, function_call, Function_Call, member_access_expression, \
     MemberAccessExpression, simple_name_expression, SimpleNameExpression, \
     file_pointer_loose, expr_list, expr_const, expr_list_strict, \
     function_call_limited
-from vba_context import Context, is_procedure
-from reserved import reserved_complex_type_identifier
-from from_unicode_str import from_unicode_str
-from vba_object import eval_arg, eval_args, VbaLibraryFunc, VBA_Object
-from python_jit import _loop_vars_to_python, to_python, _updated_vars_to_python, _eval_python, \
+from .vba_context import Context, is_procedure
+from .reserved import reserved_complex_type_identifier
+from .from_unicode_str import from_unicode_str
+from .vba_object import eval_arg, eval_args, VbaLibraryFunc, VBA_Object
+from .python_jit import _loop_vars_to_python, to_python, _updated_vars_to_python, _eval_python, \
     enter_loop, exit_loop
-import procedures
-from var_in_expr_visitor import var_in_expr_visitor
-from function_call_visitor import function_call_visitor
-import vb_str
-import loop_transform
-import utils
-from utils import safe_str_convert
-import vba_conversion
+from . import procedures,vb_str,loop_transform,utils,vba_conversion
+from .var_in_expr_visitor import var_in_expr_visitor
+from .function_call_visitor import function_call_visitor
+
+from .utils import safe_str_convert
 
 import traceback
-from logger import log
+from .logger import log
 import sys
 import re
 import base64
-from curses_ascii import isprint
+from .curses_ascii import isprint
 import hashlib
 
 def is_simple_statement(s):
@@ -4015,8 +4012,8 @@ class If_Statement(VBA_Object):
             r += body + " "
 
         if (full_str):
-            print guard
-            print body
+            print(guard)
+            print(body)
             sys.exit(0)
         return r
 
@@ -4460,19 +4457,19 @@ class Call_Statement(VBA_Object):
         params = params
         
         # Exit if an exit function statement was previously called.
-        if (context.exit_func):
+        if context.exit_func:
             log.info("Exit function previously called. Not evaluating '" + safe_str_convert(self) + "'")
             return None
 
         # Save the unresolved argument values.
-        import vba_library
+        from . import vba_library
         vba_library.var_names = self.params
         
         # Reset the called function name if this is an alias for an imported external
         # DLL function.
         dll_func_name = context.get_true_name(self.name)
         is_external = False
-        if (dll_func_name is not None):
+        if dll_func_name is not None:
             is_external = True
             self.name = dll_func_name
 
@@ -4480,7 +4477,7 @@ class Call_Statement(VBA_Object):
         if isinstance(self.name, MemberAccessExpression):
 
             # Just evaluate the expression as the call.
-            if (log.getEffectiveLevel() == logging.DEBUG):
+            if log.getEffectiveLevel() == logging.DEBUG:
                 log.debug("Call of member access expression " + safe_str_convert(self.name))
             r = self.name.eval(context, self.params)
             return r
@@ -4488,7 +4485,7 @@ class Call_Statement(VBA_Object):
         # TODO: The following should share the same code as MemberAccessExpression and Function_Call?
 
         # Get argument values.
-        if (log.getEffectiveLevel() == logging.DEBUG):
+        if log.getEffectiveLevel() == logging.DEBUG:
             log.debug("Call: eval params: " + safe_str_convert(self.params))
         call_params = eval_args(self.params, context=context)
         str_params = repr(call_params)

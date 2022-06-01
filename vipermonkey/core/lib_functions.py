@@ -47,17 +47,17 @@ __version__ = '0.02'
 # --- IMPORTS ------------------------------------------------------------------
 
 import re
-from curses_ascii import isprint
+from .curses_ascii import isprint
 import logging
 from pyparsing import Suppress, Regex, CaselessKeyword, Optional, \
     CaselessLiteral, Literal, Forward
 
-from vba_object import eval_arg, VBA_Object
-from python_jit import to_python
-import vb_str
-from utils import safe_str_convert
+from .vba_object import eval_arg, VBA_Object
+from .python_jit import to_python
+from . import vb_str
+from .utils import safe_str_convert
 
-from logger import log
+from .logger import log
 
 # --- VBA Expressions ---------------------------------------------------------
 

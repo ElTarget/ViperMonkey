@@ -93,25 +93,20 @@ import re
 from pyparsing import ParseException
 import prettytable
 
-from logger import log
-from procedures import Function
-from procedures import Sub
-from function_call_visitor import function_call_visitor
-from function_defn_visitor import function_defn_visitor
-from function_import_visitor import function_import_visitor
-from var_defn_visitor import var_defn_visitor
-import filetype
-import read_ole_fields
-from meta import FakeMeta
-from vba_lines import vba_collapse_long_lines
-from modules import module
+from .logger import log
+from .procedures import Function, Sub
+from .function_call_visitor import function_call_visitor
+from .function_defn_visitor import function_defn_visitor
+from .function_import_visitor import function_import_visitor
+from .var_defn_visitor import var_defn_visitor
+from . import filetype, read_ole_fields, vba_library, expressions, vba_context, excel
+from .meta import FakeMeta
+from .vba_lines import vba_collapse_long_lines
+from .modules import module
 # Make sure we populate the VBA Library:
-import vba_library
-from stubbed_engine import StubbedEngine
-import expressions
-import vba_context
-import excel
-from utils import safe_str_convert
+from .stubbed_engine import StubbedEngine
+from .utils import safe_str_convert
+
 
 # === FUNCTIONS ==============================================================
 
@@ -163,11 +158,11 @@ def pull_urls_excel_sheets(workbook):
         try:
             value = safe_str_convert(cell["value"]).strip()
         except UnicodeEncodeError:
-            value = ''.join(filter(lambda x:x in string.printable, cell["value"])).strip()
+            value = ''.join(filter(lambda x: x in string.printable, cell["value"])).strip()
 
         if (len(value) == 0):
             continue
-        
+
         # Add http:// for cells that look like they might be URLs
         # missing the http part.        
         pat = r"[A-Za-z0-9_]{3,50}\.[A-Za-z]{2,10}/(?:[A-Za-z0-9_]{1,50}/)*[A-Za-z0-9_\.]{3,50}"
@@ -180,6 +175,7 @@ def pull_urls_excel_sheets(workbook):
 
     # Return any URLs found in cells.
     return r
+
 
 def pull_b64_excel_sheets(workbook):
     """Pull bas64 blobs from cells in a given ExcelBook object.
@@ -199,7 +195,7 @@ def pull_b64_excel_sheets(workbook):
     # multiple cells.
     pe_blobs = []
     curr_pe_blob = None
-    
+
     # Look through each cell.
     all_cells = excel.pull_cells_workbook(workbook)
     r = set()
@@ -210,7 +206,7 @@ def pull_b64_excel_sheets(workbook):
         try:
             value = safe_str_convert(cell["value"]).strip()
         except UnicodeEncodeError:
-            value = ''.join(filter(lambda x:x in string.printable, cell["value"])).strip()
+            value = ''.join(filter(lambda x: x in string.printable, cell["value"])).strip()
 
         if (len(value) == 0):
             continue
@@ -224,7 +220,7 @@ def pull_b64_excel_sheets(workbook):
 
             # Start a new PE blob.
             curr_pe_blob = ""
-        
+
         # Look for strict base64 strings in the cell value.
         base64_pat_strict = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{0,4}=?=?)?"
         for b64 in re.findall(base64_pat_strict, value):
@@ -243,9 +239,10 @@ def pull_b64_excel_sheets(workbook):
         pe_blobs.append(curr_pe_blob)
     for pe_blob in pe_blobs:
         r.add(pe_blob)
-                
+
     # Return any base64 found in cells.
     return r
+
 
 # === ViperMonkey class ======================================================
 
@@ -254,7 +251,7 @@ class ViperMonkey(StubbedEngine):
     emulator.
 
     """
-    
+
     # TODO: load multiple modules from a file using olevba
 
     def __init__(self, filename, data, do_jit=False):
@@ -270,7 +267,7 @@ class ViperMonkey(StubbedEngine):
 
         """
         super(ViperMonkey, self).__init__()
-        
+
         self.do_jit = do_jit
         self.comments = None
         self.metadata = None
@@ -298,16 +295,16 @@ class ViperMonkey(StubbedEngine):
         else:
             self.is_vbscript = True
             log.info("Emulating a VBScript file.")
-        #print "\n\nREMOVE THIS!!\n\n"
-        #self.is_vbscript = False
-            
+        # print "\n\nREMOVE THIS!!\n\n"
+        # self.is_vbscript = False
+
         # Olevba uses '\n' as EOL, regular VBScript uses '\r\n'.
         if self.is_vbscript:
             vba_library.VBA_LIBRARY['vbCrLf'] = '\r\n'
-            
+
         # Track the loaded Excel spreadsheet (xlrd).
         self.loaded_excel = None
-        
+
         # Track data saved in document variables.
         self.doc_vars = {}
 
@@ -316,7 +313,7 @@ class ViperMonkey(StubbedEngine):
 
         # Track document tables.
         self.doc_tables = []
-        
+
         # List of entry point functions to emulate.
         self.entry_points = ['autoopen', 'document_open', 'autoclose',
                              'document_close', 'auto_open', 'autoexec',
@@ -367,7 +364,7 @@ class ViperMonkey(StubbedEngine):
                                   '_Zoom',
                                   '_Scroll',
                                   '_BeforeDropOrPaste']
-                                  
+
     def set_metadata(self, dat):
         """Save Office metadata of the file being analyzed.
 
@@ -375,7 +372,7 @@ class ViperMonkey(StubbedEngine):
         metadata vales.
 
         """
-        
+
         # Handle meta information represented as a dict.
         new_dat = dat
         if (isinstance(dat, dict)):
@@ -383,7 +380,7 @@ class ViperMonkey(StubbedEngine):
             for field in dat.keys():
                 setattr(new_dat, safe_str_convert(field), dat[field])
         self.metadata = new_dat
-        
+
     def add_compiled_module(self, m, stream):
         """Add an already parsed and processed module.
 
@@ -439,14 +436,14 @@ class ViperMonkey(StubbedEngine):
             if (isinstance(name, list)):
                 self.globals[name[0].lower()] = _var
                 self.types[name[0].lower()] = name[1]
-        
+
     def add_module(self, vba_code):
         """Parse and then add the given VBA module.
 
         @param vba_code (str) The module source code.
 
         """
-        
+
         # collapse long lines ending with " _"
         vba_code = vba_collapse_long_lines(vba_code)
 
@@ -458,11 +455,11 @@ class ViperMonkey(StubbedEngine):
             self.add_compiled_module(m)
 
         except ParseException as err:
-            print '*** PARSING ERROR (1) ***'
-            print err.line
-            print " " * (err.column - 1) + "^"
-            print err
-            
+            print('*** PARSING ERROR (1) ***')
+            print(err.line)
+            print(" " * (err.column - 1) + "^")
+            print(err)
+
     def _get_external_funcs(self):
         """Get a list of external (or VB builtin) functions called in the
         VBA/VBScript code.
@@ -487,9 +484,9 @@ class ViperMonkey(StubbedEngine):
         r = []
         for f in call_visitor.called_funcs:
             if ((f in defn_visitor.funcs) or
-                (f in var_visitor.variables) or
-                (len(f) == 0) or
-                (("." in f) and ("Shell" not in f))):
+                    (f in var_visitor.variables) or
+                    (len(f) == 0) or
+                    (("." in f) and ("Shell" not in f))):
                 continue
 
             # Resolve aliases of imported functions to the actual function.
@@ -504,16 +501,16 @@ class ViperMonkey(StubbedEngine):
         # Sort and return the fingerprint function list.
         r.sort()
         return r
-        
+
     def trace(self, entrypoint='*auto', regular_emulation=True):
         """Perform the VBA/VBScript emulation.
         """
-        
+
         # Clear out any intermediate IOCs from a previous run.
         vba_context.intermediate_iocs = set()
         vba_context.num_b64_iocs = 0
         vba_context.shellcode = {}
-        
+
         # Create the global context for the engine
         context = vba_context.Context(_globals=self.globals,
                                       engine=self,
@@ -523,7 +520,7 @@ class ViperMonkey(StubbedEngine):
                                       metadata=self.metadata)
         context.is_vbscript = self.is_vbscript
         context.do_jit = self.do_jit
-            
+
         # Add any URLs we can pull directly from the file being analyzed.
         fname = self.filename
         is_data = False
@@ -541,7 +538,7 @@ class ViperMonkey(StubbedEngine):
         cell_b64_blobs = pull_b64_excel_sheets(self.loaded_excel)
         for cell_b64_blob in cell_b64_blobs:
             context.save_intermediate_iocs(cell_b64_blob)
-            
+
         # Save the true names of imported external functions.
         for func_name in self.externals:
             func = self.externals[func_name]
@@ -549,7 +546,7 @@ class ViperMonkey(StubbedEngine):
 
         # Save the document tables in the context.
         context.globals["__DOC_TABLE_CONTENTS__"] = self.doc_tables
-            
+
         # Save the document text in the proper variable in the context.
         context.globals["Range.Text".lower()] = "\n".join(self.doc_text)
         context.globals["Me.Content".lower()] = "\n".join(self.doc_text)
@@ -593,7 +590,7 @@ class ViperMonkey(StubbedEngine):
         context.globals["['ThisDocument'].Paragraphs".lower()] = self.doc_text
         context.globals["['ActiveDocument'].Characters".lower()] = list("\n".join(self.doc_text))
         context.globals["ActiveDocument.Characters".lower()] = list("\n".join(self.doc_text))
-        context.globals["ActiveDocument.Characters.Count".lower()] = long(len(self.doc_text))
+        context.globals["ActiveDocument.Characters.Count".lower()] = int(len(self.doc_text))
         context.globals["Count".lower()] = 1
         context.globals[".Pages.Count".lower()] = 1
         context.globals["me.Pages.Count".lower()] = 1
@@ -612,7 +609,7 @@ class ViperMonkey(StubbedEngine):
             doc_words.append(word.strip())
         context.globals["ActiveDocument.Words".lower()] = doc_words
         context.globals["ThisDocument.Words".lower()] = doc_words
-            
+
         # Fake up some comments if needed.
         if (self.comments is None):
             context.globals["ActiveDocument.Comments".lower()] = ["Comment 1", "Comment 2"]
@@ -626,7 +623,7 @@ class ViperMonkey(StubbedEngine):
                 for comment in self.comments:
                     all_comments += comment + "/n"
                 self.metadata.comments = all_comments
-            
+
         # Reset the actions list, in case it is called several times
         if regular_emulation:
             self.actions = []
@@ -636,13 +633,13 @@ class ViperMonkey(StubbedEngine):
 
         # Set whether wildcard matches will always match or always fail to match.
         context.wildcard_match_value = regular_emulation
-        
+
         # Track the external functions called.
         self.external_funcs = self._get_external_funcs()
         context.external_funcs = self.external_funcs
 
         # Track decoded strings.
-        self.decoded_strs = set()        
+        self.decoded_strs = set()
 
         # First emulate any Visual Basic that appears outside of subs/funcs.
         if (regular_emulation):
@@ -657,20 +654,20 @@ class ViperMonkey(StubbedEngine):
                 done_emulation = context.got_actions
                 tested_wildcard = tested_wildcard or context.tested_wildcard
                 self.decoded_strs.update(context.get_decoded_strs())
-                
+
         # Only start from user specified entry points if we have any.
         tmp_entry_points = self.entry_points
         only_user_entry_points = (len(self.user_entry_points) > 0)
         if only_user_entry_points:
             tmp_entry_points = self.user_entry_points
-            
+
         # Perform analysis starting at given entry functions.
         for entry_point in tmp_entry_points:
             entry_point = entry_point.lower()
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Trying entry point " + entry_point)
             if ((entry_point in self.globals) and
-                (hasattr(self.globals[entry_point], "eval"))):
+                    (hasattr(self.globals[entry_point], "eval"))):
                 context.report_action('Found Entry Point', safe_str_convert(entry_point), '')
                 # We will be trying multiple entry points, so make a copy
                 # of the context so we don't accumulate stage changes across
@@ -679,7 +676,7 @@ class ViperMonkey(StubbedEngine):
                 self.globals[entry_point].eval(context=tmp_context)
                 tmp_context.dump_all_files(autoclose=True)
                 self.decoded_strs.update(tmp_context.get_decoded_strs())
-                
+
                 # Save whether we got actions from this entry point.
                 context.got_actions = tmp_context.got_actions
                 done_emulation = True
@@ -703,7 +700,6 @@ class ViperMonkey(StubbedEngine):
                     # Is this a function?
                     item = self.globals[name]
                     if isinstance(item, (Function, Sub)):
-
                         # Emulate it.
                         context.report_action('Found Entry Point', safe_str_convert(name), '')
                         # We will be trying multiple entry points, so make a copy
@@ -716,20 +712,20 @@ class ViperMonkey(StubbedEngine):
                         context.got_actions = tmp_context.got_actions
                         tested_wildcard = tested_wildcard or tmp_context.tested_wildcard
                         self.decoded_strs.update(tmp_context.get_decoded_strs())
-                        
+
         # Did we find a proper entry point?
         if (not done_emulation):
 
             # Try heuristics to find possible entry points.
             log.warn("No entry points found. Using heuristics to find entry points...")
-            
+
             # Find any 0 argument subroutines. We will try emulating these as potential entry points.
             zero_arg_subs = []
             for name in self.globals:
                 item = self.globals[name]
                 if ((isinstance(item, Sub)) and (len(item.params) == 0)):
                     zero_arg_subs.append(item)
-                    
+
             # Emulate all 0 argument subroutines as potential entry points.
             for only_sub in zero_arg_subs:
                 sub_name = only_sub.name
@@ -742,14 +738,14 @@ class ViperMonkey(StubbedEngine):
                 tmp_context.dump_all_files(autoclose=True)
                 tested_wildcard = tested_wildcard or tmp_context.tested_wildcard
                 self.decoded_strs.update(tmp_context.get_decoded_strs())
-                
+
         # If we used some wildcard boolean values in boolean expressions we now have
         # an opportunity to do some really simple speculative emulation. We just
         # emulated the behavior where all comparisons to a wild card value match, now
         # see what the behavior looks like if NONE of the comparisons match.
         if (tested_wildcard and regular_emulation):
             self.trace(regular_emulation=False)
-            
+
     def eval(self, expr):
         """Parse and evaluate a single VBA expression.
 
@@ -795,6 +791,7 @@ class ViperMonkey(StubbedEngine):
             t.add_row(action)
         return t
 
+
 def scan_expressions(vba_code):
     """Scan VBA code to extract constant VBA expressions,
     i.e. expressions that can be evaluated as a constant
@@ -814,6 +811,5 @@ def scan_expressions(vba_code):
         # a VBA expression should have an eval() method:
         if hasattr(e, 'eval'):
             yield (e, e.eval(context))
-
 
 # Soundtrack: This code was developed while listening to The Chameleons "Monkeyland"

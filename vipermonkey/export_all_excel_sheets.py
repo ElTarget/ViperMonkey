@@ -29,6 +29,7 @@ sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
 HOST = "127.0.0.1"
 PORT = 2002
 
+
 def strip_unprintable(the_str):
     """Strip out unprinatble chars from a string.
 
@@ -38,21 +39,22 @@ def strip_unprintable(the_str):
     out.
 
     """
-    
+
     # Grr. Python2 unprintable stripping.
     r = the_str
     if ((isinstance(r, str)) or (not isinstance(r, bytes))):
-        r = ''.join(filter(lambda x:x in string.printable, r))
-        
+        r = ''.join(filter(lambda x: x in string.printable, r))
+
     # Grr. Python3 unprintable stripping.
     else:
         tmp_r = ""
-        for char_code in filter(lambda x:chr(x) in string.printable, r):
+        for char_code in filter(lambda x: chr(x) in string.printable, r):
             tmp_r += chr(char_code)
         r = tmp_r
 
     # Done.
     return r
+
 
 def to_str(s):
     """
@@ -72,6 +74,7 @@ def to_str(s):
             return strip_unprintable(s)
     return s
 
+
 def is_excel_file(maldoc):
     """Check to see if the given file is an Excel file.
 
@@ -85,6 +88,7 @@ def is_excel_file(maldoc):
         return True
     typ = subprocess.check_output(["exiftool", maldoc])
     return (b"vnd.ms-excel" in typ)
+
 
 ###################################################################################################
 def wait_for_uno_api():
@@ -107,6 +111,7 @@ def wait_for_uno_api():
 
     raise Exception("libreoffice UNO API failed to start")
 
+
 ###################################################################################################
 def get_office_proc():
     """Returns the process info for the headless LibreOffice
@@ -126,6 +131,7 @@ def get_office_proc():
                 return pinfo
     return None
 
+
 ###################################################################################################
 def is_office_running():
     """Check to see if the headless LibreOffice process is running.
@@ -136,6 +142,7 @@ def is_office_running():
 
     return True if get_office_proc() else False
 
+
 ###################################################################################################
 def run_soffice():
     """Start the headless, UNO supporting, LibreOffice process to access
@@ -145,7 +152,6 @@ def run_soffice():
 
     # start the process
     if not is_office_running():
-
         # soffice is not running. Run it in listening mode.
         cmd = "/usr/lib/libreoffice/program/soffice.bin --headless --invisible " + \
               "--nocrashreport --nodefault --nofirststartwizard --nologo " + \
@@ -153,6 +159,7 @@ def run_soffice():
               '--accept="socket,host=127.0.0.1,port=2002,tcpNoDelay=1;urp;StarOffice.ComponentContext"'
         subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
         wait_for_uno_api()
+
 
 def get_component(fname, context):
     """Load the object for the Excel spreadsheet.
@@ -169,6 +176,7 @@ def get_component(fname, context):
     component = Calc(context, url)
     return component
 
+
 def fix_file_name(fname):
     """
     Replace non-printable ASCII characters in the given file name.
@@ -181,6 +189,7 @@ def fix_file_name(fname):
         r += c
 
     return r
+
 
 def convert_csv(fname):
     """Convert all of the sheets in a given Excel spreadsheet to CSV
@@ -196,21 +205,20 @@ def convert_csv(fname):
     """
 
     # Make sure this is an Excel file.
-    if (not is_excel_file(fname)):
-
+    if not is_excel_file(fname):
         # Not Excel, so no sheets.
         return []
 
     # Run soffice in listening mode if it is not already running.
     run_soffice()
-    
+
     # TODO: Make sure soffice is running in listening mode.
     # 
-    
+
     # Connect to the local LibreOffice server.
     context = None
     attempts = 0
-    while (attempts < 5):
+    while attempts < 5:
         attempts += 1
         try:
             context = connect(Socket(HOST, PORT))
@@ -219,8 +227,7 @@ def convert_csv(fname):
             time.sleep(1)
 
     # Do we have a connection to the headless LibreOffice?
-    if (context is None):        
-
+    if context is None:
         # Can't connect to LibreOffice. Punt.
         print("ERROR: Cannot connect to headless LibreOffice.")
         return []
@@ -235,14 +242,14 @@ def convert_csv(fname):
     if hasattr(controller, "ActiveSheet"):
         active_sheet = controller.ActiveSheet
     active_sheet_name = "NO_ACTIVE_SHEET"
-    if (active_sheet is not None):
+    if active_sheet is not None:
         active_sheet_name = fix_file_name(active_sheet.getName())
     r.append(active_sheet_name)
 
     # Bomb out if this is not an Excel file.
-    if (not hasattr(component, "getSheets")):
+    if not hasattr(component, "getSheets"):
         return r
-    
+
     # Iterate on all the sheets in the spreadsheet.
     sheets = component.getSheets()
     enumeration = sheets.createEnumeration()
@@ -253,23 +260,23 @@ def convert_csv(fname):
             # Move to next sheet.
             sheet = enumeration.nextElement()
             name = sheet.getName()
-            if (name.count(" ") > 10):
+            if name.count(" ") > 10:
                 name = name.replace(" ", "")
             name = fix_file_name(name)
             controller.setActiveSheet(sheet)
 
             # Set up the output URL.
             short_name = fname
-            if (os.path.sep in short_name):
+            if os.path.sep in short_name:
                 short_name = short_name[short_name.rindex(os.path.sep) + 1:]
             short_name = fix_file_name(short_name)
-            outfilename =  "/tmp/sheet_%s-%s--%s.csv" % (short_name, str(pos), name.replace(' ', '_SPACE_'))
+            outfilename = "/tmp/sheet_%s-%s--%s.csv" % (short_name, str(pos), name.replace(' ', '_SPACE_'))
             pos += 1
             r.append(outfilename)
             url = convert_path_to_url(outfilename)
 
             # Export the CSV.
-            component.store_to_url(url,'FilterName','Text - txt - csv (StarCalc)')
+            component.store_to_url(url, 'FilterName', 'Text - txt - csv (StarCalc)')
 
     # Close the spreadsheet.
     component.close(True)
@@ -279,6 +286,7 @@ def convert_csv(fname):
 
     # Done.
     return r
+
 
 ###########################################################################
 ## Main Program

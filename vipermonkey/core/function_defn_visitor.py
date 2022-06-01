@@ -62,9 +62,9 @@ _parent_dir = os.path.normpath(os.path.join(_thismodule_dir, '../..'))
 if _parent_dir not in sys.path:
     sys.path.insert(0, _parent_dir)
 
-import procedures
-from visitor import visitor
-from utils import safe_str_convert
+from . import procedures
+from .visitor import visitor
+from .utils import safe_str_convert
 
 class function_defn_visitor(visitor):
     """Collect the names of all locally declared functions.
