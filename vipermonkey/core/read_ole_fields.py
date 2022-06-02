@@ -3843,10 +3843,10 @@ def _read_doc_text_libreoffice(data):
             f = open(out_dir, "r")
             # Already exists.
             f.close()
-        except IOError:
+        except FileNotFoundError:
             # Does not exist.
             break
-        except FileNotFoundError:
+        except IOError:
             # Does not exist.
             break
 

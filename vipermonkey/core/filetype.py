@@ -56,7 +56,6 @@ pe_magic_num = "4D 5A"
 
 def bytes2hex(data):
     num = len(data)
-    print(data)
     hex_str = u""
     for i in range(num):
         t = u"%x" % data[i]
@@ -96,7 +95,6 @@ def get_1st_8_bytes(fname, is_data):
         return curr_magic
     for b in info:
         curr_magic += hex(b).replace("0x", "").upper() + " "
-    # curr_magic = bytes2hex(info)
     return curr_magic
 
 

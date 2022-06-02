@@ -4703,7 +4703,7 @@ class CreateObject(VbaLibraryFunc):
     """
 
     def eval(self, context, params=None):
-        if ((params is None) or (len(params) == 0)):
+        if ((params is None) or (len(list(params)) == 0)):
             return ""
 
         # Track contents of data written to 'ADODB.Stream'.
@@ -5125,7 +5125,7 @@ class Sheets(VbaLibraryFunc):
             log.debug("Get sheet Sheets(" + utils.safe_str_convert(params) + ") ...")
 
         # Sanity check.
-        if ((params is None) or (len(params) == 0)):
+        if ((params is None) or (len(list(params)) == 0)):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Sheets() params are bad. Returning None")
             return None

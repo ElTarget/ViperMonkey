@@ -277,18 +277,18 @@ def parse_stream(subfilename,
     """
 
     # Set local func list if needed.
-    if (local_funcs is None):
+    if local_funcs is None:
         local_funcs = []
 
     # Check for timeouts.
     core.vba_object.limits_exceeded(throw_error=True)
 
     # Are the arguments all in a single tuple?
-    if (stream_path is None):
+    if stream_path is None:
         subfilename, stream_path, vba_filename, vba_code = subfilename
 
     # Skip old-style XLM macros.
-    if (repr(stream_path).strip() == "'xlm_macro'"):
+    if repr(stream_path).strip() == "'xlm_macro'":
         log.warning("Skipping XLM macro stream...")
         return "empty"
 
@@ -303,17 +303,17 @@ def parse_stream(subfilename,
     vba_code = get_vb_contents_from_hta(vba_code)
 
     # Do not analyze the file if the VBA looks like garbage characters.
-    if (read_ole_fields.is_garbage_vba(vba_code, no_html=True)):
+    if read_ole_fields.is_garbage_vba(vba_code, no_html=True):
         log.warning("Failed to extract VBScript from HTA. Skipping.")
         return "empty"
 
     # Skip some XML that olevba gives for some 2007+ streams.
-    if (vba_code.strip().startswith("<?xml")):
+    if vba_code.strip().startswith("<?xml"):
         log.warning("Skipping XML stream.")
         return "empty"
 
     # Strip out code that does not affect the end result of the program.
-    if (strip_useless):
+    if strip_useless:
         vba_code = core.strip_lines.strip_useless_code(vba_code, local_funcs)
     safe_print('-' * 79)
     safe_print('VBA MACRO %s ' % vba_filename)
@@ -402,10 +402,11 @@ def parse_streams(vba, strip_useless=False):
     r = []
     for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
         m = parse_stream(subfilename, stream_path, vba_filename, vba_code, strip_useless, local_funcs)
-        if (m is None):
+        if m is None:
             continue
         r.append((m, stream_path))
-    if (len(r) == 0): return None
+    if len(r) == 0:
+        return None
     return r
 
 
@@ -788,7 +789,7 @@ def _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file
     safe_print('')
 
     # Report decoded strings.
-    if (len(vm.decoded_strs) > 0):
+    if len(vm.decoded_strs) > 0:
         safe_print("Decoded Strings (" + str(len(vm.decoded_strs)) + "):")
         for s in vm.decoded_strs:
             safe_print("  " + s)
@@ -1041,7 +1042,7 @@ def _process_file(filename,
                                                                               out_file_name)
 
             # Save any embedded files as artifacts.
-            _save_embedded_files(out_dir, vm)
+            # _save_embedded_files(out_dir, vm)
 
             # Return the results.
             return str_actions, vm.external_funcs, tmp_iocs, shellcode_bytes
@@ -1218,8 +1219,8 @@ def main():
                       help="number of bytes to limit the tee'd log to")
 
     (options, args) = parser.parse_args()
-    # args.append(r"D:\download_malware\output_daily\2022-04-12\7b8a3db8ad89f6f0ef0415fbbd6befce941821f8afa58adecaa0d4f78676a689.xlsm")
-    args.append(r"D:\download_malware\output_daily\2022-04-12\5d49f41af791b10750d3e24b3e26ed0c525b6a01b21419c4c6a8ecfd6078a7d0.xlsm")
+    options.loglevel = "warning"
+    # args.append(r"D:\download_malware\output_daily\2022-04-12\5d49f41af791b10750d3e24b3e26ed0c525b6a01b21419c4c6a8ecfd6078a7d0.xlsm")
     # args.append(r"C:\Users\792293\Desktop\test.xlsm")
     # Print version information and exit?
     if options.print_version:
