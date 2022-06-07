@@ -3655,7 +3655,7 @@ def _get_inlineshapes_text_values(data):
         # It looks like maybe(?) the shapes text appears as text blocks starting at
         # ^@p^@i^@x^@e^@l (wide char "pixel") and ended by several null bytes.
         pat = r"\x00p\x00i\x00x\x00e\x00l\x00*((?:\x00?[\x20-\x7e])+)\x00\x00\x00"
-        strs = re.findall(pat, data)
+        strs = re.findall(pat, str(data))
 
         # Hope that the InlineShapes() object indexing follows the same order as the strings
         # we found.
@@ -3685,7 +3685,7 @@ def _get_inlineshapes_text_values(data):
         log.error("Cannot read associated InlineShapes text. " + safe_str_convert(e))
 
         # See if we can read Shapes() info from an XML file.
-        if ("not an OLE2 structured storage file" in safe_str_convert(e)):
+        if "not an OLE2 structured storage file" in safe_str_convert(e):
             r = get_shapes_text_values_xml(data)
 
     return r
@@ -3829,7 +3829,7 @@ def _read_doc_text_libreoffice(data):
     """
 
     # Don't try this if it is not an Office file.
-    if (not filetype.is_office_file(data, True)):
+    if not filetype.is_office_file(data, True):
         log.warning("The file is not an Office file. Not extracting document text with LibreOffice.")
         return None
 
@@ -3843,10 +3843,10 @@ def _read_doc_text_libreoffice(data):
             f = open(out_dir, "r")
             # Already exists.
             f.close()
-        except IOError:
+        except FileNotFoundError:
             # Does not exist.
             break
-        except FileNotFoundError:
+        except IOError:
             # Does not exist.
             break
 
@@ -3944,7 +3944,7 @@ def _read_doc_text(fname, data=None):
     """
 
     # Read in the file.
-    if (data is None):
+    if data is None:
         try:
             f = open(fname, 'rb')
             data = f.read()
@@ -3955,7 +3955,7 @@ def _read_doc_text(fname, data=None):
 
     # First try to read the doc text with LibreOffice.
     r = _read_doc_text_libreoffice(data)
-    if (r is not None):
+    if r is not None:
         return r
 
     # LibreOffice might not be installed or this is not a Word doc. Punt and
@@ -3981,7 +3981,7 @@ def _get_doc_var_info(ole):
     """
 
     # Read the WordDocument stream. This contains the FIB.
-    if (not ole.exists('worddocument')):
+    if not ole.exists('worddocument'):
         return (None, None)
     data = ole.openstream("worddocument").read()
 
@@ -4028,9 +4028,9 @@ def _read_payload_default_target_frame(data, vm):
 
     # Save DefaultTargetFrame value. This only works for 2007+ files.
     def_targ_frame_val = get_defaulttargetframe_text(data)
-    if (def_targ_frame_val is not None):
+    if def_targ_frame_val is not None:
         vm.globals["DefaultTargetFrame"] = def_targ_frame_val
-        if (log.getEffectiveLevel() == logging.DEBUG):
+        if log.getEffectiveLevel() == logging.DEBUG:
             log.debug("Added DefaultTargetFrame = " + safe_str_convert(def_targ_frame_val) + " to globals.")
 
 
@@ -4054,7 +4054,7 @@ def _read_payload_form_strings(vba, vm):
     stream_form_map = {}
     for string_info in tmp_form_strings:
         stream_name = string_info[0]
-        if (stream_name not in stream_form_map):
+        if stream_name not in stream_form_map:
             stream_form_map[stream_name] = []
         curr_form_string = string_info[1]
         stream_form_map[stream_name].append(curr_form_string)
@@ -4065,7 +4065,7 @@ def _read_payload_form_strings(vba, vm):
         tmp_name = (stream_name + ".Controls").lower()
         form_strings = stream_form_map[stream_name]
         vm.globals[tmp_name] = form_strings
-        if (log.getEffectiveLevel() == logging.DEBUG):
+        if log.getEffectiveLevel() == logging.DEBUG:
             log.debug("Added VBA form Control values %r = %r to globals." % (tmp_name, form_strings))
 
 
@@ -4113,12 +4113,12 @@ def _read_payload_form_vars(vba, vm):
 
                 # Var name.
                 var_name = form_variables['name']
-                if (var_name is None):
+                if var_name is None:
                     continue
 
                 # Where var is defined.
                 macro_name = stream_path
-                if ("/" in macro_name):
+                if "/" in macro_name:
                     start = macro_name.rindex("/") + 1
                     macro_name = macro_name[start:]
 
@@ -4138,15 +4138,15 @@ def _read_payload_form_vars(vba, vm):
 
                 # Group name for form var.
                 group_name = _get_form_var_val('group_name', form_variables)
-                if (len(group_name) > 10):
+                if len(group_name) > 10:
                     group_name = group_name[3:]
 
                 # Maybe the caption is used for the text when the text is not there?
-                if (val is None):
+                if val is None:
                     val = caption
 
                 # Skip form vars for which we have no interesting text.
-                if ((val == '') and (tag == '') and (caption == '')):
+                if (val == '') and (tag == '') and (caption == ''):
                     continue
 
                 # We will not skip variables for which we already have a value.
@@ -4157,40 +4157,40 @@ def _read_payload_form_vars(vba, vm):
                 # Save full form variable names.
                 name = global_var_name.lower()
                 vm.globals[name] = val
-                if (log.getEffectiveLevel() == logging.DEBUG):
+                if log.getEffectiveLevel() == logging.DEBUG:
                     log.debug("1. Added VBA form variable %r = %r to globals." % \
                               (global_var_name, val))
                 vm.globals[name + ".tag"] = tag
-                if (log.getEffectiveLevel() == logging.DEBUG):
+                if log.getEffectiveLevel() == logging.DEBUG:
                     log.debug("1. Added VBA form variable %r = %r to globals." % \
                               (global_var_name + ".Tag", tag))
                 vm.globals[name + ".caption"] = caption
-                if (log.getEffectiveLevel() == logging.DEBUG):
+                if log.getEffectiveLevel() == logging.DEBUG:
                     log.debug("1. Added VBA form variable %r = %r to globals." % \
                               (global_var_name + ".Caption", caption))
                 vm.globals[name + ".controltiptext"] = control_tip_text
-                if (log.getEffectiveLevel() == logging.DEBUG):
+                if log.getEffectiveLevel() == logging.DEBUG:
                     log.debug("1. Added VBA form variable %r = %r to globals." % \
                               (global_var_name + ".ControlTipText", control_tip_text))
                 vm.globals[name + ".text"] = val
-                if (log.getEffectiveLevel() == logging.DEBUG):
+                if log.getEffectiveLevel() == logging.DEBUG:
                     log.debug("1. Added VBA form variable %r = %r to globals." % \
                               (global_var_name + ".Text", val))
                 vm.globals[name + ".value"] = val
-                if (log.getEffectiveLevel() == logging.DEBUG):
+                if log.getEffectiveLevel() == logging.DEBUG:
                     log.debug("1. Added VBA form variable %r = %r to globals." % \
                               (global_var_name + ".Value", val))
                 vm.globals[name + ".groupname"] = group_name
-                if (log.getEffectiveLevel() == logging.DEBUG):
+                if log.getEffectiveLevel() == logging.DEBUG:
                     log.debug("1. Added VBA form variable %r = %r to globals." % \
                               (global_var_name + ".GroupName", group_name))
 
                 # Save control in a list so it can be accessed by index.
-                if ("." in name):
+                if "." in name:
 
                     # Initialize the control list for this form if it does not exist.
                     control_name = name[:name.index(".")] + ".controls"
-                    if (control_name not in vm.globals):
+                    if control_name not in vm.globals:
                         vm.globals[control_name] = []
 
                     # Create a dict representing the various data items for the current control.
@@ -4204,7 +4204,7 @@ def _read_payload_form_vars(vba, vm):
 
                     # Assuming we are getting these for controls in order, append the current
                     # control information to the list for the form.
-                    if (log.getEffectiveLevel() == logging.DEBUG):
+                    if log.getEffectiveLevel() == logging.DEBUG:
                         log.debug("Added index VBA form control data " + control_name + \
                                   "(" + safe_str_convert(len(vm.globals[control_name])) + ") = " + safe_str_convert(
                             control_data))
@@ -4212,35 +4212,33 @@ def _read_payload_form_vars(vba, vm):
 
                 # Save short form variable names.
                 short_name = global_var_name.lower()
-                if ("." in short_name):
+                if "." in short_name:
                     short_name = short_name[short_name.rindex(".") + 1:]
                     vm.globals[short_name] = val
-                    if (log.getEffectiveLevel() == logging.DEBUG):
+                    if log.getEffectiveLevel() == logging.DEBUG:
                         log.debug("1. Added VBA form variable %r = %r to globals." % \
                                   (short_name, val))
                     vm.globals[short_name + ".tag"] = tag
-                    if (log.getEffectiveLevel() == logging.DEBUG):
+                    if log.getEffectiveLevel() == logging.DEBUG:
                         log.debug("1. Added VBA form variable %r = %r to globals." % \
                                   (short_name + ".Tag", tag))
                     vm.globals[short_name + ".caption"] = caption
-                    if (log.getEffectiveLevel() == logging.DEBUG):
+                    if log.getEffectiveLevel() == logging.DEBUG:
                         log.debug("1. Added VBA form variable %r = %r to globals." % \
                                   (short_name + ".Caption", caption))
                     vm.globals[short_name + ".controltiptext"] = control_tip_text
-                    if (log.getEffectiveLevel() == logging.DEBUG):
+                    if log.getEffectiveLevel() == logging.DEBUG:
                         log.debug("1. Added VBA form variable %r = %r to globals." % \
                                   (short_name + ".ControlTipText", control_tip_text))
                     vm.globals[short_name + ".text"] = val
-                    if (log.getEffectiveLevel() == logging.DEBUG):
+                    if log.getEffectiveLevel() == logging.DEBUG:
                         log.debug("1. Added VBA form variable %r = %r to globals." % \
                                   (short_name + ".Text", val))
                         vm.globals[short_name + ".groupname"] = group_name
-                    if (log.getEffectiveLevel() == logging.DEBUG):
+                    if log.getEffectiveLevel() == logging.DEBUG:
                         log.debug("1. Added VBA form variable %r = %r to globals." % \
                                   (short_name + ".GroupName", group_name))
-
     except Exception as e:
-
         # We are not getting variable names this way. Assign wildcarded names that we can use
         # later to try to heuristically guess form variables.
         log.warning("Cannot read form strings. " + safe_str_convert(e) + ". Trying fallback method.")
@@ -4251,19 +4249,19 @@ def _read_payload_form_vars(vba, vm):
             skip_strings = ["Tahoma", "Tahomaz"]
             for (_, stream_path, form_string) in vba.extract_form_strings():
                 # Skip strings that are large and almost all the same character.
-                if ((len(form_string) > 100) and (entropy(form_string) < 1)):
+                if (len(form_string) > 100) and (entropy(form_string) < 1):
                     continue
                 # Skip default strings.
-                if (form_string.startswith("\x80")):
+                if form_string.startswith("\x80"):
                     form_string = form_string[1:]
-                if (form_string in skip_strings):
+                if form_string in skip_strings:
                     continue
                 # Skip unprintable strings. Accept < 10% bad chars.
                 bad_char_count = 0
                 for c in form_string:
-                    if (not (ord(c) > 31 and ord(c) < 127)):
+                    if not (ord(c) > 31 and ord(c) < 127):
                         bad_char_count += 1
-                if (((bad_char_count + 0.0) / len(form_string)) > .1):
+                if ((bad_char_count + 0.0) / len(form_string)) > .1:
                     continue
 
                 # String looks good. Keep it.

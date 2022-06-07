@@ -353,15 +353,14 @@ def load_excel(data):
 
     # Load the sheet with Libreoffice.
     wb = load_excel_libreoffice(data)
-    if (wb is not None):
-
+    if wb is not None:
         # Did we load sheets with libreoffice?
-        if (len(wb.sheet_names()) > 0):
+        if len(wb.sheet_names()) > 0:
             return wb
 
     # Next try loading the sheets with xlrd2.
     wb = load_excel_xlrd(data)
-    if (wb is not None):
+    if wb is not None:
         return wb
 
     # Nothing worked.
@@ -377,7 +376,7 @@ def is_cell_dict(x):
     @return (boolean) True if it is a cell dict, False is not.
 
     """
-    return (isinstance(x, dict) and ("value" in x))
+    return isinstance(x, dict) and ("value" in x)
 
 def _get_alphanum_cell_index(row, col):
     """Convert a (row, col) cell index to a AB123 style index.
@@ -396,7 +395,7 @@ def _get_alphanum_cell_index(row, col):
     dividend = col
     column_name = ""
     modulo = 0
-    while (dividend > 0):
+    while dividend > 0:
         modulo = (dividend - 1) % 26
         column_name = chr(65 + modulo) + column_name
         dividend = int((dividend - modulo) / 26)
@@ -416,7 +415,7 @@ def get_largest_sheet(workbook):
     """
 
     # Have we already computed this?
-    if (hasattr(workbook, "__largest_sheet__")):
+    if hasattr(workbook, "__largest_sheet__"):
         return workbook.__largest_sheet__
     
     # Look at all the sheets.

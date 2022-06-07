@@ -2169,7 +2169,7 @@ class Context(object):
         """
         
         # Strip out bad characters if needed.
-        if (strip_null_bytes):
+        if strip_null_bytes:
 
             # Strip bad characters.
             action = utils.strip_nonvb_chars(action)

@@ -375,7 +375,7 @@ class ViperMonkey(StubbedEngine):
 
         # Handle meta information represented as a dict.
         new_dat = dat
-        if (isinstance(dat, dict)):
+        if isinstance(dat, dict):
             new_dat = FakeMeta()
             for field in dat.keys():
                 setattr(new_dat, safe_str_convert(field), dat[field])
@@ -389,51 +389,51 @@ class ViperMonkey(StubbedEngine):
         @param stream (str) The OLE stream name containing the module.
 
         """
-        if (m is None):
+        if m is None:
             return
         self.modules.append(m)
         for name, _sub in m.subs.items():
 
             # Append the stream name for duplicate subs
-            if (name in self.globals):
+            if name in self.globals:
                 new_name = safe_str_convert(stream) + "::" + safe_str_convert(name)
                 log.warn("Renaming duplicate function " + name + " to " + new_name)
                 name = new_name
 
             # Save the sub.
-            if (log.getEffectiveLevel() == logging.DEBUG):
+            if log.getEffectiveLevel() == logging.DEBUG:
                 log.debug('(1) storing sub "%s" in globals' % name)
-            self.globals[name.lower()] = _sub
+            # self.globals[name.lower()] = _sub
             self.globals[name] = _sub
 
         # Functions.
         for name, _function in m.functions.items():
-            if (log.getEffectiveLevel() == logging.DEBUG):
+            if log.getEffectiveLevel() == logging.DEBUG:
                 log.debug('(1) storing function "%s" in globals' % name)
             self.globals[name.lower()] = _function
             self.globals[name] = _function
 
         # Properties.
         for name, _prop in m.functions.items():
-            if (log.getEffectiveLevel() == logging.DEBUG):
+            if log.getEffectiveLevel() == logging.DEBUG:
                 log.debug('(1) storing property let "%s" in globals' % name)
             self.globals[name.lower()] = _prop
             self.globals[name] = _prop
 
         # External DLL functions.
         for name, _function in m.external_functions.items():
-            if (log.getEffectiveLevel() == logging.DEBUG):
+            if log.getEffectiveLevel() == logging.DEBUG:
                 log.debug('(1) storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function
             self.externals[name.lower()] = _function
 
         # Global variables.
         for name, _var in m.global_vars.items():
-            if (log.getEffectiveLevel() == logging.DEBUG):
+            if log.getEffectiveLevel() == logging.DEBUG:
                 log.debug('(1) storing global var "%s" = %s in globals (1)' % (name, safe_str_convert(_var)))
-            if (isinstance(name, str)):
+            if isinstance(name, str):
                 self.globals[name.lower()] = _var
-            if (isinstance(name, list)):
+            if isinstance(name, list):
                 self.globals[name[0].lower()] = _var
                 self.types[name[0].lower()] = name[1]
 
@@ -524,7 +524,7 @@ class ViperMonkey(StubbedEngine):
         # Add any URLs we can pull directly from the file being analyzed.
         fname = self.filename
         is_data = False
-        if ((fname is None) or (len(fname.strip()) == 0)):
+        if (fname is None) or (len(fname.strip()) == 0):
             fname = self.data
             is_data = True
         direct_urls = read_ole_fields.pull_urls_office97(fname, is_data, self.vba)
@@ -603,7 +603,7 @@ class ViperMonkey(StubbedEngine):
         doc_words = []
         for word in re.split(r"[ \n]", "\n".join(self.doc_text)):
             word = word.strip()
-            if (word.startswith("-")):
+            if word.startswith("-"):
                 word = word[1:]
                 doc_words.append("-")
             doc_words.append(word.strip())
@@ -611,13 +611,13 @@ class ViperMonkey(StubbedEngine):
         context.globals["ThisDocument.Words".lower()] = doc_words
 
         # Fake up some comments if needed.
-        if (self.comments is None):
+        if self.comments is None:
             context.globals["ActiveDocument.Comments".lower()] = ["Comment 1", "Comment 2"]
             context.globals["ThisDocument.Comments".lower()] = ["Comment 1", "Comment 2"]
         else:
             context.globals["ActiveDocument.Comments".lower()] = self.comments
             context.globals["ThisDocument.Comments".lower()] = self.comments
-            if (self.metadata is not None):
+            if self.metadata is not None:
                 all_comments = ""
                 # pylint: disable=not-an-iterable
                 for comment in self.comments:
@@ -642,14 +642,14 @@ class ViperMonkey(StubbedEngine):
         self.decoded_strs = set()
 
         # First emulate any Visual Basic that appears outside of subs/funcs.
-        if (regular_emulation):
+        if regular_emulation:
             context.report_action('Start Regular Emulation', '', 'All wildcard matches will match')
         else:
             context.report_action('Start Speculative Emulation', '', 'All wildcard matches will fail')
         log.info("Emulating loose statements...")
         done_emulation = False
         for m in self.modules:
-            if (m.eval(context=context)):
+            if m.eval(context=context):
                 context.dump_all_files(autoclose=True)
                 done_emulation = context.got_actions
                 tested_wildcard = tested_wildcard or context.tested_wildcard
@@ -664,7 +664,7 @@ class ViperMonkey(StubbedEngine):
         # Perform analysis starting at given entry functions.
         for entry_point in tmp_entry_points:
             entry_point = entry_point.lower()
-            if (log.getEffectiveLevel() == logging.DEBUG):
+            if log.getEffectiveLevel() == logging.DEBUG:
                 log.debug("Trying entry point " + entry_point)
             if ((entry_point in self.globals) and
                     (hasattr(self.globals[entry_point], "eval"))):
@@ -684,7 +684,7 @@ class ViperMonkey(StubbedEngine):
 
         # Stop analysis at the user specified analysis points if we have some.
         if only_user_entry_points:
-            if (tested_wildcard and regular_emulation):
+            if tested_wildcard and regular_emulation:
                 self.trace(regular_emulation=False)
             return
 
@@ -695,7 +695,7 @@ class ViperMonkey(StubbedEngine):
             for suffix in self.callback_suffixes:
 
                 # Is this a callback?
-                if (safe_str_convert(name).lower().endswith(suffix.lower())):
+                if safe_str_convert(name).lower().endswith(suffix.lower()):
 
                     # Is this a function?
                     item = self.globals[name]
@@ -714,7 +714,7 @@ class ViperMonkey(StubbedEngine):
                         self.decoded_strs.update(tmp_context.get_decoded_strs())
 
         # Did we find a proper entry point?
-        if (not done_emulation):
+        if not done_emulation:
 
             # Try heuristics to find possible entry points.
             log.warn("No entry points found. Using heuristics to find entry points...")
@@ -723,7 +723,7 @@ class ViperMonkey(StubbedEngine):
             zero_arg_subs = []
             for name in self.globals:
                 item = self.globals[name]
-                if ((isinstance(item, Sub)) and (len(item.params) == 0)):
+                if (isinstance(item, Sub)) and (len(item.params) == 0):
                     zero_arg_subs.append(item)
 
             # Emulate all 0 argument subroutines as potential entry points.
@@ -743,7 +743,7 @@ class ViperMonkey(StubbedEngine):
         # an opportunity to do some really simple speculative emulation. We just
         # emulated the behavior where all comparisons to a wild card value match, now
         # see what the behavior looks like if NONE of the comparisons match.
-        if (tested_wildcard and regular_emulation):
+        if tested_wildcard and regular_emulation:
             self.trace(regular_emulation=False)
 
     def eval(self, expr):
@@ -762,7 +762,7 @@ class ViperMonkey(StubbedEngine):
         # reset the actions list, in case it is called several times
         self.actions = []
         e = expressions.expression.parseString(expr)[0]
-        if (log.getEffectiveLevel() == logging.DEBUG):
+        if log.getEffectiveLevel() == logging.DEBUG:
             log.debug('e=%r - type=%s' % (e, type(e)))
         value = e.eval(context=context)
         return value
@@ -783,9 +783,9 @@ class ViperMonkey(StubbedEngine):
         for action in self.actions:
             # Cut insanely large results down to size.
             str_action = safe_str_convert(action)
-            if (len(str_action) > 50000):
+            if len(str_action) > 50000:
                 new_params = safe_str_convert(action[1])
-                if (len(new_params) > 50000):
+                if len(new_params) > 50000:
                     new_params = new_params[:25000] + "... <SNIP> ..." + new_params[-25000:]
                 action = (action[0], new_params, action[2])
             t.add_row(action)
