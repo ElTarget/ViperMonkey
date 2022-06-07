@@ -67,7 +67,7 @@ def to_str(s):
     """
 
     # Needs conversion?
-    if (isinstance(s, bytes)):
+    if isinstance(s, bytes):
         try:
             return s.decode()
         except UnicodeDecodeError:
@@ -84,10 +84,10 @@ def is_excel_file(maldoc):
 
     """
     typ = subprocess.check_output(["file", maldoc])
-    if ((b"Excel" in typ) or (b"Microsoft OOXML" in typ)):
+    if (b"Excel" in typ) or (b"Microsoft OOXML" in typ):
         return True
     typ = subprocess.check_output(["exiftool", maldoc])
-    return (b"vnd.ms-excel" in typ)
+    return b"vnd.ms-excel" in typ
 
 
 ###################################################################################################
@@ -127,7 +127,7 @@ def get_office_proc():
         except psutil.NoSuchProcess:
             pass
         else:
-            if (pinfo["name"].startswith("soffice")):
+            if pinfo["name"].startswith("soffice"):
                 return pinfo
     return None
 
@@ -292,5 +292,6 @@ def convert_csv(fname):
 ## Main Program
 ###########################################################################
 if __name__ == '__main__':
+    print(sys.argv[1])
     r = to_str(str(convert_csv(sys.argv[1])))
     print(r)

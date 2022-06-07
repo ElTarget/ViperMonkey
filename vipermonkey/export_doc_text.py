@@ -192,7 +192,7 @@ if __name__ == '__main__':
     args = arg_parser.parse_args()
 
     # Make sure this is a word file.
-    if (not is_word_file(args.file)):
+    if not is_word_file(args.file):
 
         # Not Word, so no text.
         exit()
