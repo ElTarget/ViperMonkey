@@ -85,7 +85,7 @@ from .python_jit import _loop_vars_to_python, to_python, _updated_vars_to_python
 from . import procedures,vb_str,loop_transform,utils,vba_conversion
 from .var_in_expr_visitor import var_in_expr_visitor
 from .function_call_visitor import function_call_visitor
-
+from .contains_statement_visitor import contains_statement_visitor
 from .utils import safe_str_convert
 
 import traceback
@@ -130,12 +130,16 @@ class UnknownStatement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(UnknownStatement, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.text = tokens.text
-        if (log.getEffectiveLevel() == logging.DEBUG):
+        if log.getEffectiveLevel() == logging.DEBUG:
             log.debug('parsed %r' % self)
 
     def __repr__(self):
-        return 'Unknown statement: %s' % repr(self.text)
+        if self.gloss is not None:
+            return self.gloss
+        self.gloss = 'Unknown statement: %s' % repr(self.text)
+        return self.gloss
 
     def eval(self, context, params=None):
 
@@ -179,13 +183,17 @@ class Attribute_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Attribute_Statement, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.name = tokens.name
         self.value = tokens.value
-        if (log.getEffectiveLevel() == logging.DEBUG):
+        if log.getEffectiveLevel() == logging.DEBUG:
             log.debug('parsed %r' % self)
 
     def __repr__(self):
-        return 'Attribute %s = %r' % (self.name, self.value)
+        if self.gloss is not None:
+            return self.gloss
+        self.gloss = 'Attribute %s = %r' % (self.name, self.value)
+        return self.gloss
 
 
 # MS-GRAMMAR: procedural-module-header = attribute "VB_Name" attr-eq quoted-identifier attr-end
@@ -217,12 +225,16 @@ class Option_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Option_Statement, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.name = tokens.name
-        if (log.getEffectiveLevel() == logging.DEBUG):
+        if log.getEffectiveLevel() == logging.DEBUG:
             log.debug('parsed %r as Option_Statement' % self)
 
     def __repr__(self):
-        return 'Option %s' % (self.name)
+        if self.gloss is not None:
+            return self.gloss
+        self.gloss = 'Option %s' % (self.name)
+        return self.gloss
 
 
 option_statement = CaselessKeyword('Option').suppress() + unrestricted_name + Optional(unrestricted_name)
@@ -277,6 +289,7 @@ class Parameter(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Parameter, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.name = tokens.name
         self.my_type = tokens.type
         self.init_val = tokens.init_val
@@ -296,6 +309,8 @@ class Parameter(VBA_Object):
             log.debug('parsed %r as Parameter' % self)
 
     def __repr__(self):
+        if self.gloss is not None:
+            return self.gloss
         r = ""
         if (self.mechanism):
             r += safe_str_convert(self.mechanism) + " "
@@ -304,7 +319,8 @@ class Parameter(VBA_Object):
             r += ' as ' + safe_str_convert(self.my_type)
         if (self.init_val):
             r += ' = ' + safe_str_convert(self.init_val)
-        return r
+        self.gloss = r
+        return self.gloss
 
     def to_python(self, context, params=None, indent=0):
 
@@ -413,6 +429,7 @@ class TaggedBlock(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(TaggedBlock, self).__init__(original_str, location, tokens)
+        self.gloss = None
         if (tokens is None):
             # Make empty tagged block object.
             return
@@ -422,13 +439,15 @@ class TaggedBlock(VBA_Object):
             log.debug('parsed %r' % self)
 
     def __repr__(self):
-        return 'Tagged Block: %s: %s' % (repr(self.label), repr(self.block))
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = 'Tagged Block: %s: %s' % (repr(self.label), repr(self.block))
+        return self.gloss
 
     def eval(self, context, params=None):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
-            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
 
         # Assign all const variables first.
@@ -509,6 +528,7 @@ class Dim_Statement(VBA_Object):
         super(Dim_Statement, self).__init__(original_str, location, tokens)
 
         # Track whether this is a const variable.
+        self.gloss = None
         self.decl_type = ""
         var_info = []
         for f in tokens:
@@ -563,6 +583,8 @@ class Dim_Statement(VBA_Object):
             log.debug('parsed %r as Dim_Statement' % safe_str_convert(self))
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         r = "Dim "
         first = True
         for var in self.variables:
@@ -579,7 +601,8 @@ class Dim_Statement(VBA_Object):
                 r += " As " + safe_str_convert(var[2])
         if (self.init_val is not None):
             r += " = " + safe_str_convert(self.init_val)
-        return r
+        self.gloss = r
+        return self.gloss
 
     def to_python(self, context, params=None, indent=0):
 
@@ -601,9 +624,7 @@ class Dim_Statement(VBA_Object):
             if (curr_type is not None):
 
                 # Get the initial value.
-                if ((curr_type == "Long") or
-                    (curr_type == "Byte") or
-                    (curr_type == "Integer")):
+                if ((curr_type == "Long") or (curr_type == "Integer")):
                     curr_init_val = "0"
                 if (curr_type == "String"):
                     curr_init_val = '""'
@@ -615,14 +636,10 @@ class Dim_Statement(VBA_Object):
                     curr_type += " Array"
                     curr_init_val = []
                     if ((var[3] is not None) and
-                        ((curr_type == "Byte Array") or
-                         (curr_type == "Long Array") or
-                         (curr_type == "Integer Array"))):
+                        ((curr_type == "Byte Array") or (curr_type == "Integer Array"))):
                         curr_init_val = safe_str_convert([0] * (var[3] + 1))
                     if ((var[3] is not None) and (curr_type == "String Array")):
                         curr_init_val = safe_str_convert([''] * var[3])
-                    if ((var[3] is not None) and (curr_type == "Boolean Array")):
-                        curr_init_val = [False] * var[3]
 
             # Handle untyped arrays.
             elif (var[1]):
@@ -664,7 +681,6 @@ class Dim_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
-            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
 
         # Evaluate the initial variable value(s).
@@ -682,7 +698,9 @@ class Dim_Statement(VBA_Object):
 
                 # Get the initial value.
                 curr_type = safe_str_convert(curr_type)
-                if ((curr_type == "Long") or (curr_type == "Integer")):
+                if ((curr_type == "Long") or
+                    (curr_type == "Byte") or
+                    (curr_type == "Integer")):
                     curr_init_val = 0
                 if (curr_type == "String"):
                     curr_init_val = ''
@@ -694,10 +712,14 @@ class Dim_Statement(VBA_Object):
                     curr_type += " Array"
                     curr_init_val = []
                     if ((var[3] is not None) and
-                        ((curr_type == "Byte Array") or (curr_type == "Integer Array"))):
-                        curr_init_val = [0] * (var[3] + 1)
+                        ((curr_type == "Byte Array") or
+                         (curr_type == "Long Array") or
+                         (curr_type == "Integer Array"))):
+                        curr_init_val = [0] * var[3]
                     if ((var[3] is not None) and (curr_type == "String Array")):
                         curr_init_val = [''] * var[3]
+                    if ((var[3] is not None) and (curr_type == "Boolean Array")):
+                        curr_init_val = [False] * var[3]
 
             # Handle untyped arrays.
             elif (var[1]):
@@ -705,7 +727,7 @@ class Dim_Statement(VBA_Object):
                 # Know # of elements?
                 if (var[3] is not None):
                     # Assume NULL.
-                    curr_init_val = [0] * (var[3] + 1)
+                    curr_init_val = [0] * var[3]
 
             # Handle uninitialized global variables.
             if ((context.global_scope) and (curr_init_val is None)):
@@ -838,6 +860,7 @@ class Let_Statement(VBA_Object):
         super(Let_Statement, self).__init__(original_str, location, tokens)
 
         # Are we just making an empty Let_Statement object?
+        self.gloss = None
         self.string_op = None
         self.index = None
         self.index1 = None
@@ -854,6 +877,12 @@ class Let_Statement(VBA_Object):
             self.string_op = {}
             self.string_op["op"] = self.name[0].lower()
             self.string_op["args"] = self.name[1:]
+        # Regular variable assignment.
+        else:
+            # Add an attribute with a VBA object for the LHS
+            # variable. This will make the LHS show up when visiting
+            # with a visitor.
+            self.name_vba_obj = SimpleNameExpression(None, None, None, name=self.name)
         self.expression = tokens.expression
         self.index = None
         if (tokens.index != ''):
@@ -866,9 +895,36 @@ class Let_Statement(VBA_Object):
             log.debug('parsed %r as Let_Statement' % self)
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         if (self.index is None):
-            return 'Let %s %s %r' % (self.name, self.op, self.expression)
-        return 'Let %s(%r) %s %r' % (self.name, self.index, self.op, self.expression)
+            self.gloss = 'Let %s %s %r' % (self.name, self.op, self.expression)
+            return self.gloss
+        self.gloss = 'Let %s(%r) %s %r' % (self.name, self.index, self.op, self.expression)
+        return self.gloss
+
+    def _handle_excel_formula_assign(self, context):
+        """Handle 'Sheets(1). ... .Formula = VVV' assignments.
+
+        @param context (Context object) The context containing the
+        current variable state.
+
+        @return (str) The Python code for the formula assignment if it
+        is one, None if it is not.
+
+        """
+
+        # Is this a formula assignment?
+        lhs_str = safe_str_convert(self.name).strip()
+        if ((not lhs_str.startswith("Sheets(")) or
+            (not lhs_str.endswith(".Formula"))):
+            return None
+
+        # We are setting a formula. Call the Formula() emulator to
+        # save the formula.
+        args = to_python(self.expression, context)
+        r = "core.vba_library.run_function(\"ExcelFormula\", vm_context, [" + args + "])"
+        return r
 
     def to_python(self, context, params=None, indent=0):
 
@@ -877,6 +933,12 @@ class Let_Statement(VBA_Object):
         old_in_bitwise = context.in_bitwise_expression
         if (context.get_type(self.name) != "Boolean"):
             context.in_bitwise_expression = True
+
+        # Handle Excel cell formula assignments.
+        spaces = " " * indent
+        code = self._handle_excel_formula_assign(context)
+        if (code is not None):
+            return spaces + code
 
         # Are we updating a global variable?
         r = ""
@@ -888,10 +950,10 @@ class Let_Statement(VBA_Object):
                 (var_val != "__FUNC_ARG__") and
                 (var_val != "__ALREADY_SET__")):
 
-                # It's global and not a func. Treat as global in Python.
-                spaces = " " * indent
-                r += "global " + utils.fix_python_overlap(safe_str_convert(self.name)) + \
-                     "\n" + spaces
+                # It's global and not a func. Treat as global in Python if we are in a function body.
+                if (procedures.function_depth > 0):
+                    r += "global " + utils.fix_python_overlap(safe_str_convert(self.name)) + \
+                        "\n" + spaces
 
         # Not a global.
         except KeyError:
@@ -1317,7 +1379,6 @@ class Let_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
-            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
 
         # If a function return value is being set (LHS == current function name),
@@ -1331,21 +1392,21 @@ class Let_Statement(VBA_Object):
             context.set(self.name, 'NULL', force_local=True)
 
         # evaluate value of right operand:
-        if (log.getEffectiveLevel() == logging.DEBUG):
+        if log.getEffectiveLevel() == logging.DEBUG:
             log.debug('try eval expression: %s' % self.expression)
         value = eval_arg(self.expression, context=context)
-        if (context.have_error()):
+        if context.have_error():
             log.warn('Short circuiting assignment %s due to thrown VB error.' % safe_str_convert(self))
             return
-        if (log.getEffectiveLevel() == logging.DEBUG):
+        if log.getEffectiveLevel() == logging.DEBUG:
             log.debug('eval expression: %s = %s' % (self.expression, value))
 
         # Doing base64 decode with VBA? Maybe?
-        if (self.name == ".Text"):
+        if self.name == ".Text":
 
             # Try converting the text from base64.
             try:
-                tmp_str = filter(isprint, safe_str_convert(value).strip())
+                tmp_str = safe_str_convert(value).strip()
                 value = base64.b64decode(tmp_str)
             except Exception as e:
                 log.warning("base64 conversion of '" + safe_str_convert(value) + "' failed. " + safe_str_convert(e))
@@ -1399,7 +1460,7 @@ class Let_Statement(VBA_Object):
                   (context.get_type(self.name) == "Long")) and
                  (isinstance(value, str)))):
                 try:
-                    if (value == "NULL"):
+                    if value == "NULL":
                         value = 0
                     else:
                         value = int(value)
@@ -1626,14 +1687,26 @@ class Prop_Assign_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Prop_Assign_Statement, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.prop = tokens.prop
-        self.param = tokens.param
-        self.value = tokens.value
+        self.args = []
+        self.args.append((tokens.param1, tokens.value1))
+        for i in tokens.more_values:
+            self.args.append((i[0], i[1]))
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as Prop_Assign_Statement' % self)
 
     def __repr__(self):
-        return safe_str_convert(self.prop) + " " + safe_str_convert(self.param) + ":=" + safe_str_convert(self.value)
+        if self.gloss is not None:
+            return self.gloss
+        self.gloss = safe_str_convert(self.prop) + " "
+        first = True
+        for arg in self.args:
+            if not first:
+                self.gloss += ", "
+            first = False
+            self.gloss += safe_str_convert(arg[0]) + ":=" + safe_str_convert(arg[1])
+        return self.gloss
 
     def to_python(self, context, params=None, indent=0):
 
@@ -1643,6 +1716,92 @@ class Prop_Assign_Statement(VBA_Object):
 
         return " " * indent + "pass"
 
+    def _handle_doc_find_replace(self, context):
+        """Handle ActiveDocument.Content.Find.Execute() calls (find/replace
+        on Word doc text contents).
+
+        @param context (Context object) Current emulation context.
+
+        """
+
+        # Do we have a doc find/replace call?
+        if ((safe_str_convert(self.prop).strip() != "Execute") or
+            (len(self.args) != 3)):
+            return
+
+        # Maybe we have one. Pull out the arguments.
+        find = None
+        replace = None
+        # Look for named arguments. All the examples I found used named args.
+        for p in self.args:
+            if (p[0] == "FindText"):
+                find = safe_str_convert(eval_arg(p[1], context))
+            if (p[0] == "ReplaceWith"):
+                replace = safe_str_convert(eval_arg(p[1], context))
+
+        # Got the find and replace values?
+        if ((find is None) or (replace is None)):
+            log.warning("Missing named arguments for find/replace Execute() call. Skipping.")
+            return
+
+        # TODO: We are assuming a global find/replace.
+        if (find.startswith('"') and find.endswith('"')):
+            find = find[1:-1]
+        if (replace.startswith('"') and replace.endswith('"')):
+            replace = replace[1:-1]
+        try:
+            paragraphs = context.get("ActiveDocument.Paragraphs".lower())
+            new_paragraphs = []
+            for p in paragraphs:
+                new_paragraphs.append(p.replace(find, replace))
+            context.set("ActiveDocument.Paragraphs", new_paragraphs)
+        except KeyError:
+            log.warning("Can't find ActiveDocument.Paragraphs. Skipping find/replace Execute() call.")
+
+        log.info("Performed Word doc find/replace.")
+
+    def _handle_saveas2(self, context):
+        """Handle SaveAs2() and SaveAs() calls (save Word document).
+
+        @param context (Context object) Current emulation context.
+
+        """
+
+        # Do we have a doc find/replace call?
+        if (((safe_str_convert(self.prop).strip() != "SaveAs2") and
+             (safe_str_convert(self.prop).strip() != "SaveAs")) or
+            (len(self.args) != 2)):
+            return
+
+        # Maybe we have one. Pull out the arguments.
+        fname = None
+        fmt = None
+        # Look for named arguments.
+        for p in self.args:
+            if (p[0] == "FileName"):
+                fname = safe_str_convert(eval_arg(p[1], context))
+            if (p[0] == "FileFormat"):
+                fmt = vba_conversion.coerce_to_int(safe_str_convert(eval_arg(p[1], context)))
+
+        # Got the file name and format?
+        if ((fname is None) or (fmt is None)):
+            log.warning("Missing named arguments for SaveAs2() call. Skipping.")
+            return
+
+        # Make the SaveAs2() call as an actual call.
+        call_str = "SaveAs2(\"" + fname + "\", " + safe_str_convert(fmt) + ")"
+
+        # Parse it. Assume this is an expression.
+        r = None
+        try:
+            obj = expression.parseString(call_str, parseAll=True)[0]
+
+            # Evaluate the expression in the current context.
+            obj.eval(context, params=None)
+
+        except ParseException:
+            log.error("Failed to parse SaveAs2() call.")
+
     def eval(self, context, params=None):
 
         # pylint.
@@ -1650,17 +1809,22 @@ class Prop_Assign_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
-            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
+
+        # Special handling for Word Find/Replaceall functionality.
+        self._handle_doc_find_replace(context)
+
+        # Special handling for SaveAs2() call.
+        self._handle_saveas2(context)
 
 
 prop_assign_statement = (
     Optional(Suppress("."))
     + (member_access_expression("prop") ^ lex_identifier("prop"))
-    + lex_identifier('param')
+    + lex_identifier('param1')
     + Suppress(':=')
-    + expression('value')
-    + ZeroOrMore(',' + lex_identifier('param') + Suppress(':=') + expression('value'))
+    + expression('value1')
+    + ZeroOrMore(Suppress(',') + Group(lex_identifier('param2') + Suppress(':=') + expression('value2')))('more_values')
 )
 prop_assign_statement.setParseAction(Prop_Assign_Statement)
 
@@ -1673,6 +1837,7 @@ class For_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(For_Statement, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.is_loop = True
         self.name = tokens.name
         self.start_value = tokens.start_value
@@ -1687,10 +1852,12 @@ class For_Statement(VBA_Object):
             log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
-        r = 'For %s = %r to %r step %r' % (self.name,
-                                           self.start_value, self.end_value, self.step_value)
-        r += "\\n" + str(self.body)
-        return r
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = 'For %s = %r to %r step %r' % (self.name,
+                                                    self.start_value, self.end_value, self.step_value)
+        self.gloss += "\\n" + str(self.body)
+        return self.gloss
 
     def _get_loop_indices(self, context):
         """Get the start index, end index, and step for the loop.
@@ -1709,19 +1876,39 @@ class For_Statement(VBA_Object):
         start = eval_arg(self.start_value, context=context)
         if isinstance(start, str):
             start = vba_conversion.int_convert(start)
+        if (start == "NULL"):
+            start = 0
 
-        if log.getEffectiveLevel() == logging.DEBUG:
+        # The start value could be an unitialized variable. Set it here
+        # so that JIT generation will know it is an int.
+        if isinstance(self.start_value, SimpleNameExpression):
+            var_name = safe_str_convert(self.start_value)
+            if (not context.contains(var_name)):
+                context.set(var_name, start)
+
+        if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('FOR loop - start: %r = %r' % (self.start_value, start))
 
         # Get the end index. If this is a string, convert to an int.
         end = eval_arg(self.end_value, context=context)
         if (isinstance(end, str)):
             end = vba_conversion.int_convert(end)
-        if (end is None):
-            log.warning("Not emulating For loop. Loop end '" + safe_str_convert(self.end_value) + "' evaluated to None.")
+        if (end == "NULL"):
+            end = 0
+        if isinstance(end, float):
+            end = int(end)
+        if (not isinstance(end, int)):
+            log.warning("Not emulating For loop. Loop end '" + safe_str_convert(self.end_value) + "' evaluated to " + safe_str_convert(end))
             return (None, None, None)
 
-        if log.getEffectiveLevel() == logging.DEBUG:
+        # The end value could be an unitialized variable. Set it here
+        # so that JIT generation will know it is an int.
+        if isinstance(self.end_value, SimpleNameExpression):
+            var_name = safe_str_convert(self.end_value)
+            if (not context.contains(var_name)):
+                context.set(var_name, end)
+
+        if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('FOR loop - end: %r = %r' % (self.end_value, end))
 
         # Get the loop step value.
@@ -1729,14 +1916,20 @@ class For_Statement(VBA_Object):
             step = eval_arg(self.step_value, context=context)
             if isinstance(step, str):
                 step = vba_conversion.int_convert(step)
-            if log.getEffectiveLevel() == logging.DEBUG:
+            if (step == "NULL"):
+                step = 0
+            if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('FOR loop - step: %r = %r' % (self.step_value, step))
         else:
             step = 1
 
         # Handle backwards loops.
-        if ((start > end) and (step > 0)):
-            step = step * -1
+        try:
+            if ((start > end) and (step > 0)):
+                step = step * -1
+        except TypeError as e:
+            log.error("Cannot set loop step. " + str(e) + ". Not emulating loop.")
+            return (None, None, None)
 
         # Done.
         return (start, end, step)
@@ -1815,10 +2008,8 @@ class For_Statement(VBA_Object):
             return r
 
         # Set up doing this for loop in Python.
-        if (step < 0):
-            step = abs(step)
         loop_start = indent_str + "exit_all_loops = False\n"
-        loop_start += indent_str + loop_var + " = " + safe_str_convert(start) + "\n"
+        loop_start += indent_str + loop_var + " = coerce_to_num(" + safe_str_convert(start) + ")\n"
         loop_start += indent_str + "while (((" + loop_var + " <= coerce_to_int(" + safe_str_convert(end) + ")) and (" + safe_str_convert(step) + " > 0)) or " + \
                       "((" + loop_var + " >= coerce_to_int(" + safe_str_convert(end) + ")) and (" + safe_str_convert(step) + " < 0))):\n"
         loop_start += indent_str + " " * 4 + "if exit_all_loops:\n"
@@ -2031,7 +2222,8 @@ class For_Statement(VBA_Object):
         # Are we just modifying a single variable each loop iteration by a single literal value?
         #   VXjDxrfvbG0vUiQ = VXjDxrfvbG0vUiQ + 1
         #   v787311 = v787311 + v350504 - v979958
-        fields = body.split(" ")
+        body_raw = (body_raw + "\n").replace(")\n", "\n").replace("= (", "= ").strip()
+        fields = body_raw.split(" ")
         if (len(fields) < 5):
             return (None, None)
         op = fields[3].strip()
@@ -2039,6 +2231,10 @@ class For_Statement(VBA_Object):
         if (var != fields[2].strip()):
             return (None, None)
         if (op not in ['+', '-', '*']):
+            return (None, None)
+
+        # Skip loops that are updating an array.
+        if (("(" in var) and (")" in var)):
             return (None, None)
 
         # Skip loops where the computation depends on the loop
@@ -2166,7 +2362,6 @@ class For_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
-            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
 
         # evaluate values:
@@ -2429,6 +2624,7 @@ class For_Each_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(For_Each_Statement, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.is_loop = True
         self.statements = tokens.statements
         self.body = self.statements
@@ -2438,7 +2634,10 @@ class For_Each_Statement(VBA_Object):
             log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
-        return 'For Each %r In %r ...' % (self.item, self.container)
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = 'For Each %r In %r ...' % (self.item, self.container)
+        return self.gloss
 
     def to_python(self, context, params=None, indent=0):
         """Convert this loop to Python code.
@@ -2518,7 +2717,6 @@ class For_Each_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
-            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
 
         # Track that the current loop is running.
@@ -2672,6 +2870,7 @@ class While_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(While_Statement, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.is_loop = True
         self.original_str = original_str[location:]
         self.loop_type = tokens.clause.type
@@ -2682,9 +2881,12 @@ class While_Statement(VBA_Object):
             log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         r = "Do " + safe_str_convert(self.loop_type) + " " + safe_str_convert(self.guard) + "\\n"
         r += safe_str_convert(self.body) + "\\nLoop"
-        return r
+        self.gloss = r
+        return self.gloss
 
     def to_python(self, context, params=None, indent=0):
         """Convert this loop to Python code.
@@ -2716,7 +2918,7 @@ class While_Statement(VBA_Object):
 
         # Set up doing this for loop in Python.
         loop_start = indent_str + "exit_all_loops = False\n"
-        loop_start += indent_str + "max_errors = " + safe_str_convert(VBA_Object.loop_upper_bound/10) + "\n"
+        loop_start += indent_str + "max_errors = " + safe_str_convert(VBA_Object.loop_upper_bound) + "\n"
         loop_start += indent_str + "while " + until_pre + to_python(self.guard, context) + until_post + ":\n"
         loop_start += indent_str + " " * 4 + "if exit_all_loops:\n"
         loop_start += indent_str + " " * 8 + "break\n"
@@ -3032,6 +3234,58 @@ class While_Statement(VBA_Object):
         r = (prev_context == curr_context)
         return r
 
+    def _is_possible_infinite_loop(self, context):
+        """Check to see if the variables in the loop guard are never even
+        used in the loop body.
+
+        @param context (Context object) The context containing the
+        current variable state.
+
+        @return (boolean) Return True if the variables in the guard
+        are never even read, much less updated. Return False if
+        anything at all is done with the guard variables.
+
+        """
+
+        # If the guard contains no variables it may be infinite.
+        guard_var_visitor = var_in_expr_visitor()
+        self.guard.accept(guard_var_visitor)
+        possible_infinite = (len(guard_var_visitor.variables) == 0)
+
+        # If the guard has variables see if any of them are referenced
+        # in the loop body.
+        if (not possible_infinite):
+
+            # Get the variables in the loop body. We're being conservative and will look
+            # at all the variables in called functions also.
+            body_var_visitor = var_in_expr_visitor(context=context, follow_calls=True)
+            for s in self.body:
+                s.accept(body_var_visitor)
+
+            # See if any of the guard variables appear in the body.
+            got_guard_var = False
+            for body_var in body_var_visitor.variables:
+                if (body_var in guard_var_visitor.variables):
+                    got_guard_var = True
+                    break
+
+            # If no guard variables appear in the body it may be an
+            # infinite loop.
+            if (not got_guard_var):
+                possible_infinite = True
+
+        # If no guard vars are referenced check to see if any exit
+        # statements are called in the loop.
+        if possible_infinite:
+            for s in self.body:
+                exit_visitor = contains_statement_visitor([Exit_For_Statement, Exit_Function_Statement, Exit_While_Statement])
+                s.accept(exit_visitor)
+                if exit_visitor.found:
+                    possible_infinite = False
+                    break
+
+        return possible_infinite
+
     def _has_constant_loop_guard(self):
         """Check to see if the loop guard is a literal expression that always
         evaluates True or False.
@@ -3062,7 +3316,6 @@ class While_Statement(VBA_Object):
     def eval(self, context, params=None):
 
         if (context.exit_func):
-            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return None
 
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -3114,6 +3367,15 @@ class While_Statement(VBA_Object):
             else:
                 log.warn("Found loop that never runs w. constant loop guard. Skipping.")
                 return None
+
+        # If this looks like potential infinite loop (guard vars never
+        # updated), only run it a few times.
+        if self._is_possible_infinite_loop(context):
+
+            # Just run the loop a few times.
+            log.warn("Found infinite loop w. guard variables that are never updated. Limiting iterations.")
+            max_loop_iters = 2
+            is_infinite_loop = True
 
         # Try converting the loop to Python and running that.
         # Don't do Python JIT on short circuited infinite loops.
@@ -3273,9 +3535,12 @@ class Do_Statement(VBA_Object):
             log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         r = "Do\\n" + safe_str_convert(self.body) + "\\n"
         r += "Loop " + safe_str_convert(self.loop_type) + " " + safe_str_convert(self.guard)
-        return r
+        self.gloss = r
+        return self.gloss
 
     def to_python(self, context, params=None, indent=0):
         """
@@ -3339,7 +3604,6 @@ class Do_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
-            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
 
         if (log.getEffectiveLevel() == logging.DEBUG):
@@ -3477,18 +3741,22 @@ class Select_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Select_Statement, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.select_val = tokens.select_val
         self.cases = tokens.cases
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         r = ""
         r += safe_str_convert(self.select_val)
         for case in self.cases:
             r += safe_str_convert(case)
         r += "End Select"
-        return r
+        self.gloss = r
+        return self.gloss
 
     def _to_python_if(self, context, indent, case, first):
         """
@@ -3594,6 +3862,7 @@ class Select_Clause(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Select_Clause, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.select_val = tokens.select_val
         try:
             self.select_val = tokens.select_val[0]
@@ -3603,9 +3872,12 @@ class Select_Clause(VBA_Object):
             log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         r = ""
         r += "Select Case " + safe_str_convert(self.select_val) + "\\n "
-        return r
+        self.gloss = r
+        return self.gloss
 
     def to_python(self, context, params=None, indent=0):
 
@@ -3634,6 +3906,7 @@ class Case_Clause_Atomic(VBA_Object):
         super(Case_Clause_Atomic, self).__init__(original_str, location, tokens)
 
         # Parsed Else clause?
+        self.gloss = None
         if (tokens[0] == "Else"):
             self.case_val = ["Else"]
 
@@ -3661,6 +3934,8 @@ class Case_Clause_Atomic(VBA_Object):
             log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         r = ""
         if (self.test_range):
             r += safe_str_convert(self.case_val[0]) + " To " + safe_str_convert(self.case_val[1])
@@ -3673,7 +3948,8 @@ class Case_Clause_Atomic(VBA_Object):
                 r += safe_str_convert(val)
         else:
             r += safe_str_convert(self.case_val[0])
-        return r
+        self.gloss = r
+        return self.gloss
 
     def to_python(self, context, params=None, indent=0):
 
@@ -3712,7 +3988,6 @@ class Case_Clause_Atomic(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
-            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return False
 
         # Get the value against which to test the guard. This must already be
@@ -3776,6 +4051,7 @@ class Case_Clause(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Case_Clause, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.clauses = []
         for clause in tokens:
             self.clauses.append(clause)
@@ -3783,6 +4059,8 @@ class Case_Clause(VBA_Object):
             log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         r = "Case "
         first = True
         for clause in self.clauses:
@@ -3790,7 +4068,8 @@ class Case_Clause(VBA_Object):
                 r += ", "
             first = False
             r += safe_str_convert(clause)
-        return r
+        self.gloss = r
+        return self.gloss
 
     def to_python(self, context, params=None, indent=0):
 
@@ -3815,7 +4094,6 @@ class Case_Clause(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
-            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return False
 
         # Check each clause.
@@ -3832,15 +4110,19 @@ class Select_Case(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Select_Case, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.case_val = tokens.case_val
         self.body = tokens.body
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as %s' % (self, self.__class__.__name__))
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         r = ""
         r += safe_str_convert(self.case_val) + " " + safe_str_convert(self.body)
-        return r
+        self.gloss = r
+        return self.gloss
 
     def eval(self, context, params=None):
 
@@ -3893,6 +4175,7 @@ class If_Statement(VBA_Object):
         super(If_Statement, self).__init__(original_str, location, tokens)
 
         # Copy constructor?
+        self.gloss = None
         self.is_bogus = False
         if (isinstance(tokens, If_Statement)):
             self.pieces = tokens.pieces
@@ -3945,7 +4228,7 @@ class If_Statement(VBA_Object):
                     if (isinstance(i, VBA_Object)):
                         self._children.append(i)
             if (isinstance(piece["body"], dict)):
-                for i in piece["body"].values():
+                for i in list(piece["body"].values()):
                     if (isinstance(i, VBA_Object)):
                         self._children.append(i)
 
@@ -3957,7 +4240,7 @@ class If_Statement(VBA_Object):
                     if (isinstance(i, VBA_Object)):
                         self._children.append(i)
             if (isinstance(piece["guard"], dict)):
-                for i in piece["guard"].values():
+                for i in list(piece["guard"].values()):
                     if (isinstance(i, VBA_Object)):
                         self._children.append(i)
 
@@ -3965,7 +4248,10 @@ class If_Statement(VBA_Object):
         return self._children
 
     def __repr__(self):
-        return self._to_str(False)
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = self._to_str(False)
+        return self.gloss
 
     def full_str(self):
         return self._to_str(True)
@@ -4070,7 +4356,6 @@ class If_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
-            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
 
         # Walk through each case of the if, seeing which one applies (if any).
@@ -4079,7 +4364,21 @@ class If_Statement(VBA_Object):
             # Evaluate the guard, if it has one. Else parts have no guard.
             guard = True
             if (piece["guard"] is not None):
+
+                # Get the evaluated guard. In most cases this will directly evaluate to
+                # true or false.
                 guard = piece["guard"].eval(context)
+
+                # Did this evaluate to ViperMonkey's logic wildcard value?
+                if (guard == "**MATCH ANY**"):
+
+                    # Track that we have evaluated a wildcard expression.
+                    context.tested_wildcard = True
+
+                    # Set the guard to the current wildcard value. We do 2 emulation runs,
+                    # 1 run with the wildcard always set to true, 1 run with the wildcard
+                    # always set to false.
+                    guard = context.wildcard_match_value
 
             # Does this case apply?
             if (guard):
@@ -4153,6 +4452,7 @@ class If_Statement_Macro(If_Statement):
 
     def __init__(self, original_str, location, tokens):
         super(If_Statement_Macro, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.external_functions = {}
         for piece in self.pieces:
             for token in piece["body"]:
@@ -4214,6 +4514,7 @@ class Call_Statement(VBA_Object):
         super(Call_Statement, self).__init__(original_str, location, tokens)
 
         # Direct creation.
+        self.gloss = None
         if ((name is not None) and (params is not None)):
             self.name = name
             self.params = params
@@ -4241,7 +4542,10 @@ class Call_Statement(VBA_Object):
             log.debug('parsed %r' % self)
 
     def __repr__(self):
-        return 'Call_Statement: %s(%r)' % (self.name, self.params)
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = 'Call_Statement: %s(%s)' % (self.name, safe_str_convert(self.params))
+        return self.gloss
 
     def _to_python_handle_with_calls(self, context, indent):
         """Convert a method call of an object specified with a With statement
@@ -4384,7 +4688,7 @@ class Call_Statement(VBA_Object):
 
         # It's a method call. Is it one we are handling as a member
         # access expression?
-        memb_funcs = set(["AddItem", "Append_3"])
+        memb_funcs = set(["AddItem", "Append_3", "SaveToFile"])
         if (short_func_name not in memb_funcs):
             return None
 
@@ -4406,7 +4710,8 @@ class Call_Statement(VBA_Object):
             memb_exp = member_access_expression.parseString(func_call_str, parseAll=True)[0]
 
             # Evaluate the call as a member access expression.
-            return memb_exp.eval(context)
+            r = memb_exp.eval(context)
+            return r
         except ParseException as e:
 
             if (log.getEffectiveLevel() == logging.DEBUG):
@@ -4499,7 +4804,7 @@ class Call_Statement(VBA_Object):
 
         # Log functions of interest.
         if (not context.throttle_logging):
-            log.info('Calling Procedure: %s(%r)' % (self.name, str_params))
+            log.info('Calling Procedure: %s(%s)' % (self.name, safe_str_convert(str_params)))
         if (is_external):
             context.report_action("External Call", self.name + "(" + safe_str_convert(call_params) + ")", self.name, strip_null_bytes=True)
         # pylint: disable=protected-access
@@ -4567,7 +4872,7 @@ class Call_Statement(VBA_Object):
 
                 # Set the values of the arguments passed as ByRef parameters.
                 if (hasattr(s, "byref_params") and s.byref_params):
-                    for byref_param_info in s.byref_params.keys():
+                    for byref_param_info in list(s.byref_params.keys()):
                         if (byref_param_info[1] < len(self.params)):
                             arg_var_name = safe_str_convert(self.params[byref_param_info[1]])
                             context.set(arg_var_name, s.byref_params[byref_param_info])
@@ -4665,7 +4970,10 @@ call_params_strict = (
 )
 call_statement0 = NotAny(known_keywords_statement_start) + \
                   Optional(CaselessKeyword('Call').suppress()) + \
-                  (member_access_expression('name'))  + \
+                  (
+                      member_access_expression('name') |
+                      (Suppress("[") + member_access_expression('name') + Suppress("]"))
+                  ) + \
                   Suppress(Optional(NotAny(White()) + '$') + \
                            Optional(NotAny(White()) + '#') + \
                            Optional(NotAny(White()) + '@') + \
@@ -4677,7 +4985,10 @@ call_statement0 = NotAny(known_keywords_statement_start) + \
 
 call_statement1 = NotAny(known_keywords_statement_start) + \
                   Optional(CaselessKeyword('Call').suppress()) + \
-                  (TODO_identifier_or_object_attrib_loose('name')) + \
+                  (
+                      TODO_identifier_or_object_attrib_loose('name') |
+                      (Suppress("[") + TODO_identifier_or_object_attrib_loose('name') + Suppress("]"))
+                  ) + \
                   Suppress(Optional(NotAny(White()) + '$') + \
                            Optional(NotAny(White()) + '#') + \
                            Optional(NotAny(White()) + '@') + \
@@ -4735,7 +5046,6 @@ class Exit_For_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
-            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
         # Update the loop stack to indicate that the current loop should exit.
         if (len(context.loop_stack) > 0):
@@ -4811,6 +5121,7 @@ class Redim_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Redim_Statement, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.item = safe_str_convert(tokens.item)
         self.raw_item = tokens.item
         self.start = None
@@ -4822,16 +5133,25 @@ class Redim_Statement(VBA_Object):
         self.data_type = None
         if (hasattr(tokens, "data_type")):
             self.data_type = tokens.data_type
+        self.preserve = False
+        if ((hasattr(tokens, "preserve")) and (tokens.preserve == "Preserve")):
+            self.preserve = True
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r' % self)
 
     def __repr__(self):
-        r = 'ReDim ' + safe_str_convert(self.item)
+        if (self.gloss is not None):
+            return self.gloss
+        preserve = ""
+        if (self.preserve):
+            preserve = "Preserve "
+        r = 'ReDim ' + preserve + safe_str_convert(self.item)
         if ((self.start is not None) and (self.end is not None)):
             r += "(" + safe_str_convert(self.start) + " To " + safe_str_convert(self.end) + ")"
         if (self.data_type is not None):
             r += " As " + self.data_type
-        return r
+        self.gloss = r
+        return self.gloss
 
     def to_python(self, context, params=None, indent=0):
 
@@ -4841,6 +5161,7 @@ class Redim_Statement(VBA_Object):
         indent = indent
 
         # TODO: Needs work.
+        log.warn("Python JIT of ReDim currently not supported.")
         return "ERROR: ReDim JIT generation needs work."
     # pylint: disable=pointless-string-statement
     """
@@ -4900,11 +5221,6 @@ class Redim_Statement(VBA_Object):
         # pylint.
         params = params
 
-        # Pull out the variable being redimmed.
-        redim_var = safe_str_convert(self.item)
-        if ("(" in redim_var):
-            redim_var = redim_var[:redim_var.index("(")]
-
         # Is this a Variant type?
         if (safe_str_convert(context.get_type(self.item)) == "Variant"):
 
@@ -4921,7 +5237,11 @@ class Redim_Statement(VBA_Object):
               (len(safe_str_convert(self.start).strip()) > 0) and
               (len(safe_str_convert(self.end).strip()) > 0)):
 
-            # We have a start and end for the new size.
+            # Save the current array value. We'll use this if we are
+            # supposed to preserve old values.
+            old_val = None
+            if (self.preserve and context.contains(self.item)):
+                old_val = context.get(self.item)
 
             # Compute the new array size.
             start = None
@@ -4934,6 +5254,17 @@ class Redim_Statement(VBA_Object):
 
                 # Resize the list.
                 new_list = [0] * (end - start)
+
+                # Add in old values if needed.
+                if (old_val is not None):
+                    pos = 0
+                    for v in old_val:
+                        if (pos >= len(new_list)):
+                            break
+                        new_list[pos] = v
+                        pos += 1
+
+                # Save the resized array.
                 context.set(self.item, new_list)
 
             except Exception:
@@ -4950,15 +5281,34 @@ class Redim_Statement(VBA_Object):
 
                 # Got a value we can work with?
                 if (isinstance(new_size, int)):
+
+                    # Make value for resized array.
                     new_list = [0] * (new_size + 1)
+
+                    # Save the current array value. We'll use this if we are
+                    # supposed to preserve old values.
                     var_name = self.raw_item.name
+                    old_val = None
+                    if (self.preserve and context.contains(var_name)):
+                        old_val = context.get(var_name)
+
+                    # Add in old values if needed.
+                    if (old_val is not None):
+                        pos = 0
+                        for v in old_val:
+                            if (pos >= len(new_list)):
+                                break
+                            new_list[pos] = v
+                            pos += 1
+
+                    # Save the resized array.
                     context.set(var_name, new_list)
 
         return
 
 
 # Array redim statement
-redim_item = Optional(CaselessKeyword('Preserve')) + \
+redim_item = Optional(CaselessKeyword('Preserve')('preserve')) + \
              expression('item') + \
              Optional('(' + expression('start') + CaselessKeyword('To') + expression('end') + \
                       ZeroOrMore("," + expression + CaselessKeyword('To') + expression) + ')') + \
@@ -4976,6 +5326,7 @@ class With_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(With_Statement, self).__init__(original_str, location, tokens)
+        self.gloss = None
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("tokens = " + safe_str_convert(tokens))
         self.body = tokens[-1]
@@ -4984,7 +5335,10 @@ class With_Statement(VBA_Object):
             log.debug('parsed %r' % self)
 
     def __repr__(self):
-        return 'With ' + safe_str_convert(self.env) + "\\n" + safe_str_convert(self.body) + " End With"
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = 'With ' + safe_str_convert(self.env) + "\\n" + safe_str_convert(self.body) + " End With"
+        return self.gloss
 
     def to_python(self, context, params=None, indent=0):
 
@@ -5018,7 +5372,6 @@ class With_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
-            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
 
         # Evaluate the with prefix value. This calls any functions that appear in the
@@ -5101,18 +5454,21 @@ class Goto_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Goto_Statement, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.label = tokens.label
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as Goto_Statement' % self)
 
     def __repr__(self):
-        return 'Goto ' + safe_str_convert(self.label)
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = 'Goto ' + safe_str_convert(self.label)
+        return self.gloss
 
     def eval(self, context, params=None):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
-            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
 
         # Do we know the code block associated with the GOTO label?
@@ -5190,12 +5546,16 @@ class Label_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Label_Statement, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.label = tokens.label
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as Label_Statement' % self)
 
     def __repr__(self):
-        return safe_str_convert(self.label) + ':'
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = safe_str_convert(self.label) + ':'
+        return self.gloss
 
     def eval(self, context, params=None):
 
@@ -5220,6 +5580,7 @@ class On_Error_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(On_Error_Statement, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.tokens = tokens
         self.label = None
         if ((len(tokens) == 4) and (tokens[2].lower() == "goto")):
@@ -5228,7 +5589,10 @@ class On_Error_Statement(VBA_Object):
             log.debug('parsed %r as On_Error_Statement' % self)
 
     def __repr__(self):
-        return safe_str_convert(self.tokens)
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = safe_str_convert(self.tokens)
+        return self.gloss
 
     def to_python(self, context, params=None, indent=0):
 
@@ -5282,6 +5646,7 @@ class File_Open(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(File_Open, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.file_name = tokens.file_name
         self.file_id = tokens.file_id
         self.file_mode = None
@@ -5294,11 +5659,14 @@ class File_Open(VBA_Object):
             log.debug('parsed %r as File_Open' % self)
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         r = "Open " + safe_str_convert(self.file_name) + " For " + safe_str_convert(self.file_mode)
         if (self.file_access is not None):
             r += " Access " + safe_str_convert(self.file_access)
         r += " As " + safe_str_convert(self.file_id)
-        return r
+        self.gloss = r
+        return self.gloss
 
     def eval(self, context, params=None):
 
@@ -5307,7 +5675,6 @@ class File_Open(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
-            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
 
         # Get the file name.
@@ -5378,6 +5745,7 @@ file_type = (
             ^ CaselessKeyword("Read Shared")
             ^ CaselessKeyword("Read")
             ^ CaselessKeyword("Shared")
+            ^ CaselessKeyword("Write Shared")
             ^ CaselessKeyword("Write")
         )("access")
     )
@@ -5404,6 +5772,7 @@ class Print_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Print_Statement, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.file_id = tokens.file_id
         self.value = tokens.value
         # TODO: Actually write the ';' values to the file.
@@ -5412,8 +5781,11 @@ class Print_Statement(VBA_Object):
             log.debug('parsed %r as Print_Statement' % self)
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         r = "Print " + safe_str_convert(self.file_id) + ", " + safe_str_convert(self.value)
-        return r
+        self.gloss = r
+        return self.gloss
 
     def eval(self, context, params=None):
 
@@ -5422,7 +5794,6 @@ class Print_Statement(VBA_Object):
 
         # Exit if an exit function statement was previously called.
         if (context.exit_func):
-            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
             return
 
         # Get the ID of the file.
@@ -5439,7 +5810,7 @@ class Print_Statement(VBA_Object):
         data = eval_arg(self.value, context=context)
 
         context.write_file(file_id, data)
-        if (isinstance(data, str)):
+        if isinstance(data, str):
             context.write_file(file_id, '\r\n')
 
 
@@ -5602,6 +5973,7 @@ class External_Function(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(External_Function, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.name = safe_str_convert(tokens.function_name)
         self.params = tokens.params
         self.lib_name = safe_str_convert(tokens.lib_info.lib_name)
@@ -5623,7 +5995,10 @@ class External_Function(VBA_Object):
             log.debug('parsed %r' % self)
 
     def __repr__(self):
-        return 'External Function %s (%s) from %s alias %s' % (self.name, self.params, self.lib_name, self.alias_name)
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = 'External Function %s (%s) from %s alias %s' % (self.name, self.params, self.lib_name, self.alias_name)
+        return self.gloss
 
     def to_python(self, context, params=None, indent=0):
 
@@ -5642,8 +6017,7 @@ class External_Function(VBA_Object):
     def eval(self, context, params=None):
 
         # Exit if an exit function statement was previously called.
-        if context.exit_func:
-            log.info("Exiting " + str(type(self)) + " due to explicit function exit.")
+        if (context.exit_func):
             return 0
 
         # If we emulate an external function we are treating it like a VBA builtin function.
@@ -5739,6 +6113,7 @@ class TryCatch(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(TryCatch, self).__init__(original_str, location, tokens)
+        self.gloss = None
         tmp = TaggedBlock(original_str, location, None)
         tmp.block = tokens["try_block"]
         tmp.label = "try_block"
@@ -5752,7 +6127,11 @@ class TryCatch(VBA_Object):
             log.debug('parsed %r' % self)
 
     def __repr__(self):
-        return "Try::" + safe_str_convert(self.try_block) + "::Catch " + safe_str_convert(self.except_var) + " As Exception::" + safe_str_convert(self.catch_block) + "::End Try"
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss =  "Try::" + safe_str_convert(self.try_block) + "::Catch " + \
+            safe_str_convert(self.except_var) + " As Exception::" + safe_str_convert(self.catch_block) + "::End Try"
+        return self.gloss
 
     def eval(self, context, params=None):
 
@@ -5786,13 +6165,17 @@ class NameStatement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(NameStatement, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.old_name = tokens.old_name
         self.new_name = tokens.new_name
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as NameStatement' % self)
 
     def __repr__(self):
-        return "Name " + safe_str_convert(self.old_name) + " As " + safe_str_convert(self.new_name)
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = "Name " + safe_str_convert(self.old_name) + " As " + safe_str_convert(self.new_name)
+        return self.gloss
 
     def eval(self, context, params=None):
 
@@ -5842,13 +6225,17 @@ class Line_Input_Statement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(Line_Input_Statement, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.file_id = tokens.file_id
         self.var = tokens.var
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as Line_Input_Statement' % self)
 
     def __repr__(self):
-        return 'Line Input #' + safe_str_convert(self.file_id) + ", " + safe_str_convert(self.var)
+        if (self.gloss is not None):
+            return self.gloss
+        self.gloss = 'Line Input #' + safe_str_convert(self.file_id) + ", " + safe_str_convert(self.var)
+        return self.gloss
 
     def eval(self, context, params=None):
 
@@ -5995,25 +6382,32 @@ class EnumStatement(VBA_Object):
 
     def __init__(self, original_str, location, tokens):
         super(EnumStatement, self).__init__(original_str, location, tokens)
+        self.gloss = None
         self.name = safe_str_convert(tokens[0])
         self.values = []
         enum_vals = tokens[1]
         last_val = -1
         for enum_val in enum_vals:
-            last_val += 1
             if (len(enum_val) == 2):
                 last_val = enum_val[1]
             self.values.append((safe_str_convert(enum_val[0]), last_val))
+            try:
+                last_val = expression.parseString(str(last_val) + " + 1", parseAll=True)[0]
+            except ParseException:
+                last_val = -1
 
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug('parsed %r as Enum_Statement' % self)
 
     def __repr__(self):
+        if (self.gloss is not None):
+            return self.gloss
         r = "Enum " + self.name + "\\n"
         for enum_val in self.values:
             r += "  " + enum_val[0] + " = " + safe_str_convert(enum_val[1]) + " \\n"
         r += "End Enum"
-        return r
+        self.gloss = r
+        return self.gloss
 
     def eval(self, context, params=None):
 
@@ -6022,10 +6416,10 @@ class EnumStatement(VBA_Object):
 
         # Add the enum values as variables to the context.
         for enum_val in self.values:
-            context.set(enum_val[0], enum_val[1], force_global=True)
+            context.set(enum_val[0], eval_arg(enum_val[1], context=context), force_global=True)
 
 
-enum_value = Group((lex_identifier | enum_val_id)("name") + Optional(Suppress(Literal("=")) + integer("value")))
+enum_value = Group((lex_identifier ^ enum_val_id)("name") + Optional(Suppress(Literal("=")) + expression("value")))
 enum_statement = Suppress(Optional(CaselessKeyword('Public') | CaselessKeyword('Private'))) + \
                  Suppress(CaselessKeyword("Enum")) + lex_identifier("enum_name") + Suppress(EOS) + \
                  Group(ZeroOrMore(enum_value + Suppress(EOS))("enum_values")) + \

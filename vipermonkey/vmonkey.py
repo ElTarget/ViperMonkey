@@ -103,7 +103,6 @@ from logging import FileHandler
 
 __version__ = '1.0.2'
 
-
 # ------------------------------------------------------------------------------
 # TODO:
 # TODO: detect subs/functions with same name (in different modules)
@@ -133,6 +132,14 @@ __version__ = '1.0.2'
 # - [MS-OVBA]: Microsoft Office VBA File Format Structure
 #   http://msdn.microsoft.com/en-us/library/office/cc313094%28v=office.12%29.aspx
 
+## Globals
+
+# Track whether there was a parse error.
+got_parse_error = False
+# Track whether emulation crashed with an exception.
+got_crash_error = False
+
+
 def get_vb_contents_from_hta(vba_code):
     """Pull out Visual Basic code from .hta file contents.
 
@@ -147,7 +154,8 @@ def get_vb_contents_from_hta(vba_code):
 
     # Fix some obfuscation if needed.
     # '&#86;'
-    if re.search(r"&#\d{1,3};", str(vba_code)) is not None:
+    vba_code = safe_str_convert(vba_code)
+    if re.search(r"&#\d{1,3};", vba_code) is not None:
         for i in range(0, 256):
             curr_c = chr(i)
             vba_code = vba_code.replace("&#" + safe_str_convert(i) + ";", curr_c)
@@ -165,12 +173,11 @@ def get_vb_contents_from_hta(vba_code):
         r"<[Ss][Cc][Rr][Ii][Pp][Tt] +[Tt][Yy][Pp][Ee] *= *" + \
         r"[\"'](?:[Tt][Ee][Xx][Tt]/)?(?:(?:[Vv][Bb])|(?:[Jj][Aa]?[Vv]?[Aa]?))[Ss][Cc][Rr][Ii][Pp][Tt][\"']" + \
         r"(?: +[Ll][Aa][Nn][Gg][Uu][Aa][Gg][Ee] *= *[\"'][Vv][Bb][Ss][Cc][Rr][Ii][Pp][Tt][\"'])?[^>]*>" + \
-        r"(.{20,}?)(?:(?:</\s*[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>)|$)"
+        r"(.{20,}?)</\s*[Ss][Cc][Rr][Ii][Pp][Tt][^>]*>"
     ]
-
     code = []
     for pat in hta_regexes:
-        code = re.findall(pat, str(vba_code.strip()), re.DOTALL)
+        code = re.findall(pat, vba_code.strip(), re.DOTALL)
         if len(code) > 0:
             # for c in code:
             #    print("\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n")
@@ -178,9 +185,7 @@ def get_vb_contents_from_hta(vba_code):
             break
     if len(code) == 0:
         return vba_code
-
         # We have script block VB code.
-
     # Return the code.    
     r = ""
     for b in code:
@@ -289,10 +294,16 @@ def parse_stream(subfilename, stream_path=None, vba_filename=None, vba_code=None
             safe_print(" " * (err.column - 1) + "^")
             safe_print(err)
             log.error("Parse Error. Processing Aborted.")
+            global got_parse_error
+            got_parse_error = True
             return None
 
     # Check for timeouts.
     core.vba_object.limits_exceeded(throw_error=True)
+
+    # Differentiate between no macros and macros that failed to parse.
+    if m is None:
+        m = "empty"
 
     # Return the parsed macro.
     return m
@@ -312,9 +323,8 @@ def get_all_local_funcs(vba):
     pat = r"(?:Sub |Function )([^\(]+)"
     r = []
     for (_, _, _, vba_code) in vba.extract_macros():
-        if (vba_code is None):
+        if vba_code is None:
             continue
-
         # Get local func names.
         for line in vba_code.split("\n"):
             names = re.findall(pat, line)
@@ -348,12 +358,24 @@ def parse_streams(vba, strip_useless=False):
 
     # Parse the VBA streams.
     r = []
+    got_vba = False
     for (subfilename, stream_path, vba_filename, vba_code) in vba.extract_macros():
+        got_vba = True
         m = parse_stream(subfilename, stream_path, vba_filename, vba_code, strip_useless, local_funcs)
         if m is None:
+            got_vba = False
+            r = []
+            break
+        if m == "empty":
             continue
         r.append((m, stream_path))
+
+    # Did we parse any VBA?
     if len(r) == 0:
+        # No VBA macros?
+        if not got_vba:
+            return "empty"
+        # Got VBA, but cannot parse.
         return None
     return r
 
@@ -399,20 +421,9 @@ def pull_urls_office97(fname):
 # === Top level Programatic Interface ================================================================================    
 
 # pylint: disable=too-many-arguments
-def process_file(container,
-                 filename,
-                 data,
-                 strip_useless=False,
-                 entry_points=None,
-                 time_limit=None,
-                 verbose=False,
-                 display_int_iocs=False,
-                 set_log=False,
-                 tee_log=False,
-                 tee_bytes=0,
-                 artifact_dir=None,
-                 out_file_name=None,
-                 do_jit=False):
+def process_file(container, filename, data, strip_useless=False, entry_points=None, time_limit=None, verbose=False,
+                 display_int_iocs=False, set_log=False, tee_log=False, tee_bytes=0, artifact_dir=None,
+                 out_file_name=None, do_jit=False):
     """Process an Office file with VBA macros, a VBScript file, or
     VBScript HTA file with ViperMonkey. This is the main programatic
     interface for ViperMonkey.
@@ -425,13 +436,13 @@ def process_file(container,
 
     @param data (bytes) content of the file if it is in a container,
     None if it is a file on disk.
- 
+
     @param strip_useless (boolean) Flag turning on/off modification of
     VB code prior to parsing.
 
     @param entry_points (list) A list of the names (str) of the VB functions
     from which to start emulation.
-    
+
     @param time_limit (int) The emulation time limit, in minutes. If
     None there is not time limit.
 
@@ -544,6 +555,7 @@ def _remove_duplicate_iocs(iocs):
     for ioc1 in iocs:
 
         # Does this IOC look like straight up garbage?
+        ioc1 = safe_str_convert(ioc1)
         if read_ole_fields.is_garbage_vba(ioc1, test_all=True, bad_pct=.25):
             skip.add(ioc1)
             continue
@@ -551,6 +563,7 @@ def _remove_duplicate_iocs(iocs):
         # Looks somewhat sensible. See if it is a duplicate.
         keep_curr = True
         for ioc2 in iocs:
+            ioc2 = safe_str_convert(ioc2)
             if ioc2 in skip:
                 continue
             if (ioc1 != ioc2) and (ioc1 in ioc2):
@@ -578,6 +591,10 @@ def _get_vba_parser(data):
 
     """
 
+    # Reset the parse error flag.
+    global got_parse_error
+    got_parse_error = False
+
     # First just try the most common case where olevba can directly get the VBA.
     vba = None
     try:
@@ -588,7 +605,7 @@ def _get_vba_parser(data):
             log.debug("Creating VBA_PArser() Failed. Trying as HTA. " + safe_str_convert(e))
 
         # If that did not work see if we can pull HTA wrapped VB from the data.
-        extracted_data = get_vb_contents_from_hta(data)
+        extracted_data = bytes(get_vb_contents_from_hta(data), "latin-1")
 
         # If this throws an exception it will get passed up.
         vba = VBA_Parser('', extracted_data, relaxed=True)
@@ -623,8 +640,8 @@ def pull_embedded_pe_files(data, out_dir):
         return
 
     # Is a PE file in the data at all?
-    pe_pat = r"MZ.{70,80}This program (?:(?:cannot be run in DOS mode\.)|(?:must be run under Win32))"
-    if re.search(pe_pat, str(data)) is None:
+    pe_pat = br"MZ.{70,80}This program (?:(?:cannot be run in DOS mode\.)|(?:must be run under Win32))"
+    if re.search(pe_pat, data) is None:
         return
 
     # There is an embedded PE. Break them out.
@@ -698,9 +715,10 @@ def _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file
         core.vba_context.num_b64_iocs += 1
 
     # Print table of all recorded actions
-    safe_print('\nRecorded Actions:')
-    safe_print(vm.dump_actions())
-    safe_print('')
+    if len(vm.actions) > 0:
+        safe_print('\nRecorded Actions:')
+        safe_print(vm.dump_actions())
+        safe_print('')
 
     # Report intermediate IOCs.
     tmp_iocs = []
@@ -727,8 +745,9 @@ def _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file
     pull_embedded_pe_files(data, core.vba_context.out_dir)
 
     # Report VBA builtin fingerprint.
-    safe_print('VBA Builtins Called: ' + safe_str_convert(vm.external_funcs))
-    safe_print('')
+    if len(vm.external_funcs) > 0:
+        safe_print('VBA Builtins Called: ' + safe_str_convert(vm.external_funcs))
+        safe_print('')
 
     # Report decoded strings.
     if len(vm.decoded_strs) > 0:
@@ -753,6 +772,8 @@ def _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file
             })
 
         out_data = {
+            "parse_error": got_parse_error,
+            "crash_error": got_crash_error,
             "file_name": orig_filename,
             "potential_iocs": list(tmp_iocs),
             "shellcode": shellcode_bytes,
@@ -775,7 +796,7 @@ def _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file
                             safe_str_convert(action[1]),
                             safe_str_convert(action[2])))
 
-        # Done.
+    # Done.
     return str_actions, tmp_iocs, shellcode_bytes
 
 
@@ -859,6 +880,10 @@ def _process_file(filename, data, strip_useless=False, entry_points=None, time_l
     if time_limit is not None:
         core.vba_object.max_emulation_time = datetime.now() + timedelta(minutes=time_limit)
 
+    # Clear out any old crash information.
+    global got_crash_error
+    got_crash_error = False
+
     # Create the emulator.
     log.info("Starting emulation...")
     vm = core.ViperMonkey(filename, data, do_jit=do_jit)
@@ -870,17 +895,19 @@ def _process_file(filename, data, strip_useless=False, entry_points=None, time_l
         # TODO: handle olefile errors, when an OLE file is malformed
         if isinstance(data, Exception):
             data = None
+        vba = None
         try:
             vba = _get_vba_parser(data)
         except FileOpenError as e:
+
             # Is this an unrecognized format?
-            if ("Failed to open file  is not a supported file type, cannot extract VBA Macros." not in safe_str_convert(
-                    e)):
+            if "Failed to open file  is not a supported file type, cannot extract VBA Macros." not in safe_str_convert(
+                    e):
                 # No, it is some other problem. Pass on the exception.
                 raise e
 
             # This may be VBScript with some null characters. Remove those and try again.
-            data = data.replace("\x00", "")
+            data = data.replace(b"\x00", b"")
             vba = _get_vba_parser(data)
         # Do we have analyzable VBA/VBScript? Do the analysis even
         # without VBA/VBScript if we are scraping for intermediate
@@ -899,13 +926,22 @@ def _process_file(filename, data, strip_useless=False, entry_points=None, time_l
             vm.loaded_excel = excel.load_excel(data)
 
             # Set where to store directly dropped files if needed.
-            if artifact_dir is None:
+            # 不确定
+            if (artifact_dir is None):
                 artifact_dir = "./"
-                if (filename is not None) and (r"\\" in filename):
-                    artifact_dir = filename[:filename.rindex(r"\\")]
+                if ((filename is not None) and ("/" in filename)):
+                    artifact_dir = filename[:filename.rindex("/")]
             only_filename = filename
-            if (filename is not None) and (r"\\" in filename):
-                only_filename = filename[filename.rindex(r"\\") + 1:]
+            if ((filename is not None) and ("/" in filename)):
+                only_filename = filename[filename.rindex("/") + 1:]
+
+            # if artifact_dir is None:
+            #     artifact_dir = "./"
+            #     if (filename is not None) and (r"\\" in filename):
+            #         artifact_dir = filename[:filename.rindex(r"\\")]
+            # only_filename = filename
+            # if (filename is not None) and (r"\\" in filename):
+            #     only_filename = filename[filename.rindex(r"\\") + 1:]
 
             # Set the output directory in which to put dumped files generated by
             # the macros.
@@ -931,7 +967,20 @@ def _process_file(filename, data, strip_useless=False, entry_points=None, time_l
             comp_modules = parse_streams(vba, strip_useless)  # 获取宏
             if comp_modules is None:
                 return None
+            if comp_modules == "empty":
+                # No VBA.
+                if not display_int_iocs:
+                    safe_print("")
+                    _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file_name)
+                    safe_print('No VBA macros found.')
+                    safe_print('')
+                    return [], [], [], []
+                else:
+                    comp_modules = []
+
+            # We have VB. Analyze it.
             got_code = False
+            code_info = {}
             for module_info in comp_modules:
                 m = module_info[0]
                 stream = module_info[1]
@@ -939,7 +988,7 @@ def _process_file(filename, data, strip_useless=False, entry_points=None, time_l
                     vm.add_compiled_module(m, stream)
                     # for k, v in m.subs.items():
                     #     code_info[stream] = v.original_str
-                    code_info = {stream: v.original_str for k, v in m.subs.items()}
+                    code_info.update({stream: m.original_str})
                     got_code = True
             if (not got_code) and (not display_int_iocs):
                 log.info("No VBA or VBScript found. Exiting.")
@@ -976,14 +1025,14 @@ def _process_file(filename, data, strip_useless=False, entry_points=None, time_l
             str_actions, tmp_iocs, shellcode_bytes = _report_analysis_results(vm, data, display_int_iocs, orig_filename,
                                                                               out_file_name)
             # Save any embedded files as artifacts.
-            # _save_embedded_files(out_dir, vm)
+            _save_embedded_files(out_dir, vm)
 
             # Return the results.
             # return str_actions, vm.external_funcs, tmp_iocs, shellcode_bytes
             # Recorded Actions(Action,Parameters,Description),VBA Builtins Called,[],[],vba_code,original code
             return str_actions, vm.external_funcs, tmp_iocs, shellcode_bytes, vba_code, code_info
         else:  # No VBA/VBScript found?
-            safe_print('Finished analyzing ' + safe_str_convert(orig_filename) + " .\n")
+            _report_analysis_results(vm, data, display_int_iocs, orig_filename, out_file_name)
             safe_print('No VBA macros found.')
             safe_print('')
             return [], [], [], []
@@ -994,6 +1043,7 @@ def _process_file(filename, data, strip_useless=False, entry_points=None, time_l
         # Print error info.
         if ("SystemExit" not in safe_str_convert(e)) and (". Aborting analysis." not in safe_str_convert(e)):
             traceback.print_exc()
+        got_crash_error = True
         log.error(safe_str_convert(e))
 
         # If this is an out of memory error terminate the process with an
@@ -1086,9 +1136,7 @@ def process_file_scanexpr(container, filename, data):
 
 def print_version():
     """Print ViperMonkey version information.
-
     """
-
     safe_print("Version Information:\n")
     safe_print("ViperMonkey:\t\t" + safe_str_convert(__version__))
     safe_print("Python:\t\t\t" + safe_str_convert(sys.version_info))
@@ -1098,12 +1146,8 @@ def print_version():
     safe_print("olevba:\t\t\t" + safe_str_convert(oletools.olevba.__version__))
 
 
-def main():
-    """Main function, called when vipermonkey is run from the command
-    line.
-
-    """
-
+def vmonkey_scan(scan_file=''):
+    """ Main function, called when vipermonkey is run from the command line. """
     # Increase recursion stack depth.
     sys.setrecursionlimit(13000)
 
@@ -1117,14 +1161,7 @@ def main():
 
     usage = 'usage: %prog [options] <filename> [filename2 ...]'
     parser = optparse.OptionParser(usage=usage)
-    parser.add_option("-r", action="store_true", dest="recursive",
-                      help='find files recursively in subdirectories.')
-    parser.add_option("-z", "--zip", dest='zip_password', type='str', default=None,
-                      help='if the file is a zip archive, open first file from it, using the '
-                           'provided password (requires Python 2.6+)')
-    parser.add_option("-f", "--zipfname", dest='zip_fname', type='str', default='*',
-                      help='if the file is a zip archive, file(s) to be opened within the zip. '
-                           'Wildcards * and ? are supported. (default:*)')
+
     parser.add_option("-e", action="store_true", dest="scan_expressions",
                       help='Extract and evaluate/deobfuscate constant expressions')
     parser.add_option('-l', '--loglevel', dest="loglevel", action="store", default=DEFAULT_LOG_LEVEL,
@@ -1149,20 +1186,27 @@ def main():
                       help="output also to a file in addition to standard out")
     parser.add_option("-b", "--tee-bytes", action="store", default=0, type="int",
                       help="number of bytes to limit the tee'd log to")
+    parser.add_option("-a", "--artifacts-dir", action="store", default=None, type="str",
+                      help="Top level Directory in which to store artifacts subdirectories containing files dropped during emulation. " + \
+                           "Default is ./ .")
 
     (options, args) = parser.parse_args()
     options.loglevel = "warning"
-    # args.append(r"D:\gitPro\ViperMonkey\new_test1\0f0d40304fc53e1990ed8b499803d14f91d0bb65daad57bfea11837a43083d30.xlsx")
-    args.append(r"D:\gitPro\ViperMonkey\new_test1\00367d927216bdf6e8d8e9d825efce6f356f469e5358e604bd26d2e9396e27de.xlsm")
-    # args.append(r"C:\Users\792293\Desktop\test.xlsm")
-    # Print version information and exit?
+    if os.path.isfile(scan_file):
+        args.append(scan_file)
+    if options.print_version:
+        print_version()
+        sys.exit(0)
 
+    # Print help if no arguments are passed
+    if len(args) == 0:
+        safe_print(__doc__)
+        parser.print_help()
+        sys.exit(0)
     colorlog.basicConfig(level=LOG_LEVELS[options.loglevel], format='%(log_color)s%(levelname)-8s %(message)s')
     json_results = []
-    for container, filename, data in xglob.iter_files(args, recursive=options.recursive,
-                                                      zip_password=options.zip_password,
-                                                      zip_fname=options.zip_fname):
-
+    curr_artifact_dir = options.artifacts_dir
+    for container, filename, data in xglob.iter_files(args, ):
         # ignore directory names stored in zip files:
         if container and filename.endswith('/'):
             continue
@@ -1176,9 +1220,8 @@ def main():
                                          entry_points=entry_points, time_limit=options.time_limit,
                                          display_int_iocs=options.display_int_iocs, tee_log=options.tee_log,
                                          tee_bytes=options.tee_bytes, out_file_name=options.out_file,
-                                         do_jit=options.do_jit)
-            print('result_report:', len(result_report))
-            if len(result_report) == 6:
+                                         do_jit=options.do_jit, artifact_dir=curr_artifact_dir)
+            if result_report and len(result_report) == 6:
                 # Recorded Actions(Action,Parameters,Description),VBA Builtins Called,[],[],vba_code,original code
                 str_actions = result_report[0]
                 external_funcs = result_report[1]
@@ -1190,27 +1233,37 @@ def main():
                                'shellcode_bytes': shellcode_bytes, 'vba_code': vba_code, 'original_code': code_info}
                 # return scan_result
                 # print(scan_result)
+                json_results.append(scan_result)
             else:
-                print('No have')
+                pass
             # add json results to list
             if options.out_file:
-                with open(options.out_file, 'r') as json_file:
-                    try:
-                        json_results.append(json.loads(json_file.read()))
-                    except ValueError:
-                        pass
+                if not got_crash_error:
+                    with open(options.out_file, 'r') as json_file:
+                        try:
+                            json_results.append(json.loads(json_file.read()))
+                        except ValueError:
+                            pass
+                else:
+                    # Save that analysis crashed.
+                    json_results.append({"crash_error": got_crash_error})
 
     if options.out_file:
-        with open(options.out_file, 'w') as json_file:
-            if len(json_results) > 1:
-                json_file.write(json.dumps(json_results, indent=2))
+        if isinstance(json_results, list):
+            if len(json_results) == 0:
+                json_results = {}
             else:
-                json_file.write(json.dumps(json_results[0], indent=2))
+                json_results = json_results[0]
+        with open(options.out_file, 'w') as json_file:
+            json_file.write(json.dumps(json_results, indent=2))
 
         log.info("Saved results JSON to output file " + options.out_file)
+    return json_results
 
 
 if __name__ == '__main__':
-    main()
+    # scan_file =  r"C:\Users\792293\Desktop\test.xlsm"
+    scan_file = r"D:\gitPro\ViperMonkey\new_test2\05aa485c6efbef1c65e5876428d00cbb72b85b0c16530ec9f0ed47355f8189d6.xlsm"
+    print(vmonkey_scan(scan_file))
 
 # Soundtrack: This code was developed while listening to The Pixies "Monkey Gone to Heaven"

@@ -43,9 +43,23 @@ def tes1t():
 
 
 if __name__ == '__main__':
-    tes1t()
-    # path="D:\download_malware\output_daily\2022-04-12\5d49f41af791b10750d3e24b3e26ed0c525b6a01b21419c4c6a8ecfd6078a7d0.xlsm"
-    # cmd_str = r'python vmonkey.py {}'.format(path)
-    # cmd_str = r'python vmonkey.py '
-    # print(exec_cmd(cmd_str))
-    # os.remove('C:\\Users\\792293\\AppData\\Local\\Temp\\tmpz2fmvuz1')
+    # tes1t()
+    from vmonkey import vmonkey_scan
+
+    # fileinfo = {'path': r"D:\gitPro\ViperMonkey\new_test1\0f0d40304fc53e1990ed8b499803d14f91d0bb65daad57bfea11837a43083d30.xlsx"}
+    # fileinfo = {'path': r"D:\gitPro\ViperMonkey\new_test1\00367d927216bdf6e8d8e9d825efce6f356f469e5358e604bd26d2e9396e27de.xlsm"}
+    dir_path = r'D:\gitPro\ViperMonkey\new_test2'
+    office_files = []
+    no_found = {}
+    vba_builtins_called_dict = {}
+    for root, dirs, files in os.walk(dir_path):
+        for file in files:
+            filesize = os.path.getsize(os.path.join(root, file)) / 1024
+            path = os.path.join(root, file)
+            office_files.append(path)
+    for path in office_files:
+        fileinfo = {'path': path}
+        print('开始',path)
+        res = vmonkey_scan(fileinfo["path"])
+        print(path,res)
+

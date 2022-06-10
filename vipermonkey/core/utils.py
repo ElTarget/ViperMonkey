@@ -84,15 +84,25 @@ def safe_str_convert(s, strict=False):
 
     # Do the actual string conversion.
     try:
+
+        # Handle bytes-like objects.
+        if isinstance(s, bytes):
+            s = s.decode('latin-1')
+
         # Strip unprintable characters if needed.
         if strict and isinstance(s, str):
-            s = filter(_test_char, s)
+            s = ''.join(list(filter(_test_char, s)))
         return str(s)
-    except UnicodeDecodeError:
-        return filter(_test_char, s)
-    except UnicodeEncodeError:
-        return filter(_test_char, s)
 
+    except (UnicodeDecodeError, UnicodeEncodeError, SystemError):
+        if isinstance(s, bytes):
+            r = ""
+            for c in s:
+                curr_char = chr(c)
+                if isprint(curr_char):
+                    r += curr_char
+            return r
+        return ''.join(list(filter(_test_char, s)))
 
 class Infix(object):
     """Used to define our own infix operators.
@@ -117,6 +127,31 @@ class Infix(object):
     def __call__(self, value1, value2):
         return self.function(value1, value2)
 
+def wild_not(x, wildcard_val):
+    """
+    A definition of boolean not that handles ViperMonkey wildcard boolean
+    value strings.
+
+    @param x (bool or str) The value to negate. Can be the "**MATCH ANY**"
+    wildcard string.
+
+    @param wildcard_val (bool) The boolean value to use for the "**MATCH ANY**"
+    string.
+
+    @retval (bool) The negation of the given value.
+    """
+
+    # Handle wildcard matching.
+    wildcards = ["CURRENT_FILE_NAME", "SOME_FILE_NAME", "**MATCH ANY**"]
+    if x in wildcards:
+        x = wildcard_val
+
+    # Negate the parameter.
+    return (not x)
+
+# Boolean negation that handles ViperMonkey boolean wildcard values.
+# pylint: disable=unnecessary-lambda
+bool_not=Infix(lambda x,y: wild_not(x, y))
 
 def safe_plus(x, y):
     """Handle "x + y" where x and y could be some combination of ints and
@@ -152,17 +187,17 @@ def safe_plus(x, y):
     # Loosely typed languages are terrible. 1 + "3" == 4 while "1" + 3
     # = "13". The type of the 1st argument drives the dynamic type
     # casting (I think) minus variable type information (Dim a as
-    # String:a = 1 + "3" gets "13", we're ignoring that here). Pure
+    # String: a = 1 + "3" gets "13", we're ignoring that here). Pure
     # garbage.
     import vba_conversion
-    if (isinstance(x, str)):
+    if isinstance(x, str) and (not isinstance(y, str)):
         y = vba_conversion.str_convert(y)
-    if (isinstance(x, int)):
+    if isinstance(x, int) and (not isinstance(y, int)):
         y = vba_conversion.int_convert(y)
 
     # Easy case first.
     if (isinstance(x, (float, int)) and
-            isinstance(y, (float, int))):
+        isinstance(y, (float, int))):
         return x + y
 
     # Fix data types.
@@ -217,9 +252,9 @@ def safe_equals(x, y):
     # Handle equality checks on a wildcarded file name. The
     # current file name is never going to be equal to "".
     if (((x == "CURRENT_FILE_NAME") and (y == "")) or
-            ((y == "CURRENT_FILE_NAME") and (x == "")) or
-            ((x == "SOME_FILE_NAME") and (y == "")) or
-            ((y == "SOME_FILE_NAME") and (x == ""))):
+        ((y == "CURRENT_FILE_NAME") and (x == "")) or
+        ((x == "SOME_FILE_NAME") and (y == "")) or
+        ((y == "SOME_FILE_NAME") and (x == ""))):
         return False
 
     # Handle wildcard matching.
@@ -234,7 +269,7 @@ def safe_equals(x, y):
 
     # Booleans and ints can be directly compared.
     if ((isinstance(x, bool) and (isinstance(y, int))) or
-            (isinstance(y, bool) and (isinstance(x, int)))):
+        (isinstance(y, bool) and (isinstance(x, int)))):
         return x == y
 
     # Punt. Just convert things to strings and hope for the best.
@@ -277,7 +312,11 @@ def safe_gt(x, y):
         x = coerce_to_num(x)
         y = coerce_to_num(y)
     except ValueError:
-        return False
+
+        # One of them can't be converted to a number. Convert both to strings
+        # and hope for the best.
+        x = safe_str_convert(x)
+        y = safe_str_convert(y)
 
     # Return the numeric comparison.
     return (x > y)
@@ -285,10 +324,10 @@ def safe_gt(x, y):
 
 # Safe > and < infix operators. Ugh. Loosely typed languages are terrible.
 # pylint: disable=unnecessary-lambda
-gt = Infix(lambda x, y: safe_gt(x, y))
-lt = Infix(lambda x, y: (not safe_gt(x, y)))
-gte = Infix(lambda x, y: (safe_gt(x, y) or safe_equals(x, y)))
-lte = Infix(lambda x, y: (not safe_gt(x, y) or safe_equals(x, y)))
+gt=Infix(lambda x,y: safe_gt(x, y))
+lt=Infix(lambda x,y: (not safe_gt(x, y)) and (not safe_equals(x,y)))
+gte=Infix(lambda x,y: (safe_gt(x, y) or safe_equals(x,y)))
+lte=Infix(lambda x,y: (not safe_gt(x, y) or safe_equals(x,y)))
 
 
 def safe_print(text):
@@ -301,13 +340,15 @@ def safe_print(text):
     """
     text = safe_str_convert(text)
     try:
-        print(text)
+        pass
+        # print(text)
     except Exception as e:
         msg = "ERROR: Printing text failed (len text = " + str(len(text)) + ". " + str(e)
-        if (len(msg) > 100):
+        if len(msg) > 100:
             msg = msg[:100]
         try:
-            print(msg)
+            pass
+            # print(msg)
         except Exception:
             pass
 
@@ -331,12 +372,12 @@ def fix_python_overlap(var_name):
 
     """
     builtins = set(["str", "list", "bytes", "pass"])
-    if (var_name.lower() in builtins):
+    if var_name.lower() in builtins:
         var_name = "MAKE_UNIQUE_" + var_name
     var_name = var_name.replace("$", "__DOLLAR__")
     # RegExp object?
     if ((not var_name.endswith(".Pattern")) and
-            (not var_name.endswith(".Global"))):
+        (not var_name.endswith(".Global"))):
         var_name = var_name.replace(".", "")
     return var_name
 
@@ -353,23 +394,18 @@ def b64_decode(value):
 
     try:
         # Make sure this is a potentially valid base64 string
-        tmp_str = ""
-        try:
-            tmp_str = filter(isascii, str(value).strip())
-        except UnicodeDecodeError:
-            return None
-        tmp_str = tmp_str.replace(" ", "").replace("\x00", "")
+        tmp_str = safe_str_convert(value).replace(" ", "").replace("\x00", "")
         b64_pat = r"^[A-Za-z0-9+/=]+$"
         if (re.match(b64_pat, tmp_str) is not None):
 
             # Pad out the b64 string if needed.
             missing_padding = len(tmp_str) % 4
             if missing_padding:
-                tmp_str += b'=' * (4 - missing_padding)
+                tmp_str += b'='* (4 - missing_padding)
 
             # Return the decoded value.
             conv_val = base64.b64decode(tmp_str)
-            return conv_val
+            return safe_str_convert(conv_val)
 
     # Base64 conversion error.
     except Exception:
@@ -478,13 +514,7 @@ def strip_nonvb_chars(s):
     """
 
     # Handle unicode strings.
-    # if isinstance(s,unicode):
-    if isinstance(s, six.string_types):
-        s = s.encode('ascii', 'replace')
-
-    # Sanity check.
-    if (not isinstance(s, str)):
-        return s
+    s = safe_str_convert(s)
 
     # Do we need to do this?
     if (re.search(r"[^\x09-\x7e]", s) is None):
@@ -497,3 +527,4 @@ def strip_nonvb_chars(s):
     if (r.count("NULL") > 10):
         r = r.replace("NULL", "")
     return r
+
