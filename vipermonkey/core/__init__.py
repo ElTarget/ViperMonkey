@@ -146,9 +146,11 @@ def pull_urls_excel_sheets(workbook):
 
     # Got an Excel workbook?
     if (workbook is None):
+        log.info("No Excel workbook loaded. Not pulling IOCs from cells.")
         return set()
 
     # Look through each cell.
+    log.info("Excel workbook loaded. Pulling IOCs from cells.")
     all_cells = excel.pull_cells_workbook(workbook)
     r = set()
     for cell in all_cells:
@@ -158,10 +160,14 @@ def pull_urls_excel_sheets(workbook):
         try:
             value = safe_str_convert(cell["value"]).strip()
         except UnicodeEncodeError:
-            value = ''.join(filter(lambda x: x in string.printable, cell["value"])).strip()
+            value = ''.join([x for x in cell["value"] if x in string.printable]).strip()
 
-        if (len(value) == 0):
+        if ((value is None) or (len(value) == 0) or (value == "None")):
             continue
+
+        # Handle some basic XLM 4.0 string concatenation.
+        #print(value)
+        value = value.replace('"', "").replace("&", "")
 
         # Add http:// for cells that look like they might be URLs
         # missing the http part.        
@@ -206,7 +212,7 @@ def pull_b64_excel_sheets(workbook):
         try:
             value = safe_str_convert(cell["value"]).strip()
         except UnicodeEncodeError:
-            value = ''.join(filter(lambda x: x in string.printable, cell["value"])).strip()
+            value = ''.join([x for x in cell["value"] if x in string.printable]).strip()
 
         if (len(value) == 0):
             continue
@@ -280,7 +286,9 @@ class ViperMonkey(StubbedEngine):
         self.externals = {}
         # list of actions (stored as tuples by report_action)
         self.actions = []
+        self.types = []
         self.vba = None
+        self.external_funcs = []
 
         # Figure out whether this is VBScript or VBA.
         vba_pointer = self.filename
@@ -363,12 +371,13 @@ class ViperMonkey(StubbedEngine):
                                   '_OnEnterFullScreenMode',
                                   '_Zoom',
                                   '_Scroll',
-                                  '_BeforeDropOrPaste']
+                                  '_BeforeDropOrPaste',
+                                  '_SelectionChange']
 
     def set_metadata(self, dat):
         """Save Office metadata of the file being analyzed.
 
-        @pram dat (dict) A mapping from metadata field names to
+        @param dat (dict) A mapping from metadata field names to
         metadata vales.
 
         """
@@ -377,8 +386,9 @@ class ViperMonkey(StubbedEngine):
         new_dat = dat
         if isinstance(dat, dict):
             new_dat = FakeMeta()
-            for field in dat.keys():
+            for field in list(dat.keys()):
                 setattr(new_dat, safe_str_convert(field), dat[field])
+                setattr(new_dat, safe_str_convert(field).lower(), dat[field])
         self.metadata = new_dat
 
     def add_compiled_module(self, m, stream):
@@ -392,7 +402,7 @@ class ViperMonkey(StubbedEngine):
         if m is None:
             return
         self.modules.append(m)
-        for name, _sub in m.subs.items():
+        for name, _sub in list(m.subs.items()):
 
             # Append the stream name for duplicate subs
             if name in self.globals:
@@ -403,33 +413,33 @@ class ViperMonkey(StubbedEngine):
             # Save the sub.
             if log.getEffectiveLevel() == logging.DEBUG:
                 log.debug('(1) storing sub "%s" in globals' % name)
-            # self.globals[name.lower()] = _sub
+            self.globals[name.lower()] = _sub
             self.globals[name] = _sub
 
         # Functions.
-        for name, _function in m.functions.items():
-            if log.getEffectiveLevel() == logging.DEBUG:
+        for name, _function in list(m.functions.items()):
+            if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing function "%s" in globals' % name)
             self.globals[name.lower()] = _function
             self.globals[name] = _function
 
         # Properties.
-        for name, _prop in m.functions.items():
-            if log.getEffectiveLevel() == logging.DEBUG:
+        for name, _prop in list(m.functions.items()):
+            if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing property let "%s" in globals' % name)
             self.globals[name.lower()] = _prop
             self.globals[name] = _prop
 
         # External DLL functions.
-        for name, _function in m.external_functions.items():
-            if log.getEffectiveLevel() == logging.DEBUG:
+        for name, _function in list(m.external_functions.items()):
+            if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing external function "%s" in globals' % name)
             self.globals[name.lower()] = _function
             self.externals[name.lower()] = _function
 
         # Global variables.
-        for name, _var in m.global_vars.items():
-            if log.getEffectiveLevel() == logging.DEBUG:
+        for name, _var in list(m.global_vars.items()):
+            if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug('(1) storing global var "%s" = %s in globals (1)' % (name, safe_str_convert(_var)))
             if isinstance(name, str):
                 self.globals[name.lower()] = _var
@@ -484,9 +494,9 @@ class ViperMonkey(StubbedEngine):
         r = []
         for f in call_visitor.called_funcs:
             if ((f in defn_visitor.funcs) or
-                    (f in var_visitor.variables) or
-                    (len(f) == 0) or
-                    (("." in f) and ("Shell" not in f))):
+                (f in var_visitor.variables) or
+                (len(f) == 0) or
+                (("." in f) and ("Shell" not in f))):
                 continue
 
             # Resolve aliases of imported functions to the actual function.
@@ -548,6 +558,11 @@ class ViperMonkey(StubbedEngine):
         context.globals["__DOC_TABLE_CONTENTS__"] = self.doc_tables
 
         # Save the document text in the proper variable in the context.
+        if isinstance(self.doc_text, list):
+            tmp_text = []
+            for para in self.doc_text:
+                tmp_text.append(safe_str_convert(para))
+            self.doc_text = tmp_text
         context.globals["Range.Text".lower()] = "\n".join(self.doc_text)
         context.globals["Me.Content".lower()] = "\n".join(self.doc_text)
         context.globals["Me.Content.Text".lower()] = "\n".join(self.doc_text)
@@ -563,6 +578,9 @@ class ViperMonkey(StubbedEngine):
         context.globals["ActiveDocument.Content.Start".lower()] = 0
         context.globals["ActiveDocument.Content.End".lower()] = len("\n".join(self.doc_text))
         context.globals["ActiveDocument.Paragraphs".lower()] = self.doc_text
+        context.globals["ActiveDocument.Paragraphs.Count".lower()] = len(self.doc_text)
+        context.globals["Paragraphs.Count".lower()] = len(self.doc_text)
+        context.globals[".Paragraphs.Count".lower()] = len(self.doc_text)
         context.globals["ThisDocument.Content".lower()] = "\n".join(self.doc_text)
         context.globals["ThisDocument.Content.Text".lower()] = "\n".join(self.doc_text)
         context.globals["ThisDocument.Range.Text".lower()] = "\n".join(self.doc_text)
@@ -591,7 +609,6 @@ class ViperMonkey(StubbedEngine):
         context.globals["['ActiveDocument'].Characters".lower()] = list("\n".join(self.doc_text))
         context.globals["ActiveDocument.Characters".lower()] = list("\n".join(self.doc_text))
         context.globals["ActiveDocument.Characters.Count".lower()] = int(len(self.doc_text))
-        context.globals["Count".lower()] = 1
         context.globals[".Pages.Count".lower()] = 1
         context.globals["me.Pages.Count".lower()] = 1
         context.globals["['ThisDocument'].Characters".lower()] = list("\n".join(self.doc_text))
@@ -601,12 +618,20 @@ class ViperMonkey(StubbedEngine):
 
         # Break out document words.
         doc_words = []
-        for word in re.split(r"[ \n]", "\n".join(self.doc_text)):
+        # Looks like newlines are counted as a word for some reason.
+        word_txt = ("\n".join(self.doc_text)).replace("\n", "\n\\n\n")
+        # Word indexing starts at 1, so add an empty string at the start of
+        # the ViperMonkey word list.
+        doc_words.append("")
+        for word in re.split(r"[ \n]", word_txt):
             word = word.strip()
-            if word.startswith("-"):
+            if (word.startswith(chr(0x0c))):
+                word = word[1:]
+            if (word.startswith("-")):
                 word = word[1:]
                 doc_words.append("-")
-            doc_words.append(word.strip())
+            word = word.replace(" ", "").replace("\\n", "\n")
+            doc_words.append(word)
         context.globals["ActiveDocument.Words".lower()] = doc_words
         context.globals["ThisDocument.Words".lower()] = doc_words
 
@@ -627,6 +652,8 @@ class ViperMonkey(StubbedEngine):
         # Reset the actions list, in case it is called several times
         if regular_emulation:
             self.actions = []
+            # Reset the time the emulated program has "slept".
+            vba_library.reset_time_slept()
 
         # Track whether wild card values have been checked in boolean expressions.
         tested_wildcard = False
@@ -654,6 +681,8 @@ class ViperMonkey(StubbedEngine):
                 done_emulation = context.got_actions
                 tested_wildcard = tested_wildcard or context.tested_wildcard
                 self.decoded_strs.update(context.get_decoded_strs())
+                # Reset the time the emulated program has "slept".
+                vba_library.reset_time_slept()
 
         # Only start from user specified entry points if we have any.
         tmp_entry_points = self.entry_points
@@ -682,6 +711,9 @@ class ViperMonkey(StubbedEngine):
                 done_emulation = True
                 tested_wildcard = tested_wildcard or tmp_context.tested_wildcard
 
+                # Reset the time the emulated program has "slept".
+                vba_library.reset_time_slept()
+
         # Stop analysis at the user specified analysis points if we have some.
         if only_user_entry_points:
             if tested_wildcard and regular_emulation:
@@ -708,10 +740,14 @@ class ViperMonkey(StubbedEngine):
                         tmp_context = vba_context.Context(context=context, _locals=context.locals, copy_globals=True)
                         item.eval(context=tmp_context)
                         tmp_context.dump_all_files(autoclose=True)
+                        self.decoded_strs.update(tmp_context.get_decoded_strs())
+
                         # Save whether we got actions from this entry point.
                         context.got_actions = tmp_context.got_actions
                         tested_wildcard = tested_wildcard or tmp_context.tested_wildcard
-                        self.decoded_strs.update(tmp_context.get_decoded_strs())
+
+                        # Reset the time the emulated program has "slept".
+                        vba_library.reset_time_slept()
 
         # Did we find a proper entry point?
         if not done_emulation:
@@ -736,8 +772,11 @@ class ViperMonkey(StubbedEngine):
                 tmp_context = vba_context.Context(context=context, _locals=context.locals, copy_globals=True)
                 only_sub.eval(context=tmp_context)
                 tmp_context.dump_all_files(autoclose=True)
-                tested_wildcard = tested_wildcard or tmp_context.tested_wildcard
                 self.decoded_strs.update(tmp_context.get_decoded_strs())
+                tested_wildcard = tested_wildcard or tmp_context.tested_wildcard
+
+                # Reset the time the emulated program has "slept".
+                vba_library.reset_time_slept()
 
         # If we used some wildcard boolean values in boolean expressions we now have
         # an opportunity to do some really simple speculative emulation. We just
@@ -761,6 +800,8 @@ class ViperMonkey(StubbedEngine):
                                       loaded_excel=self.loaded_excel)
         # reset the actions list, in case it is called several times
         self.actions = []
+        # Reset the time the emulated program has "slept".
+        vba_library.reset_time_slept()
         e = expressions.expression.parseString(expr)[0]
         if log.getEffectiveLevel() == logging.DEBUG:
             log.debug('e=%r - type=%s' % (e, type(e)))

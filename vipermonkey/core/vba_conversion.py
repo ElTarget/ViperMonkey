@@ -46,6 +46,7 @@ import logging
 from .logger import log
 
 from .utils import safe_str_convert
+from . import excel
 
 def int_convert(arg, leave_alone=False):
     """Convert a VBA expression to an int, handling VBA NULL.
@@ -61,15 +62,15 @@ def int_convert(arg, leave_alone=False):
     """
 
     # Easy case.
-    if (isinstance(arg, int)):
+    if isinstance(arg, int):
         return arg
     
     # NULLs are 0.
-    if (arg == "NULL"):
+    if (isinstance(arg, str)) and (arg.strip() == "NULL"):
         return 0
 
     # Empty strings are NULL.
-    if (arg == ""):
+    if arg == "":
         return "NULL"
     
     # Leave the wildcard matching value alone.
@@ -77,11 +78,11 @@ def int_convert(arg, leave_alone=False):
         return arg
 
     # Convert float to int?
-    if (isinstance(arg, float)):
+    if isinstance(arg, float):
         arg = int(round(arg))
 
     # Convert hex to int?
-    if (isinstance(arg, str) and (arg.strip().lower().startswith("&h"))):
+    if isinstance(arg, str) and (arg.strip().lower().startswith("&h")):
         hex_str = "0x" + arg.strip()[2:]
         try:
             return int(hex_str, 16)
@@ -118,7 +119,7 @@ def str_convert(arg):
         return str(arg)
     except Exception as e:
         if isinstance(arg, str):
-            return ''.join(filter(lambda x:x in string.printable, arg))
+            return ''.join([x for x in arg if x in string.printable])
         log.error("Cannot convert given argument to str. Defaulting to ''. " + str(e))
         return ''
 
@@ -287,10 +288,11 @@ def coerce_to_num(obj):
     converted to a number.
 
     """
+
     # in VBA, Null/None is equivalent to 0
     if ((obj is None) or
         (obj == "NULL") or
-        (isinstance(obj, str) and (obj.strip() == ""))):
+        (safe_str_convert(obj).strip() == "")):
         return 0
 
     # Already have float or int?
@@ -298,12 +300,16 @@ def coerce_to_num(obj):
         return obj
     
     # Do we have a string?
-    if (isinstance(obj, str)):
+    if isinstance(obj, str):
+
+        # Strings are null terminated, so "" is 0.
+        if len(obj) == 0:
+            return 0
 
         # Stupid "123,456,7890" string where everything after the
         # 1st comma is ignored?
         dumb_pat = r"(?:\d+,)+\d+"
-        if (re.match(dumb_pat, obj) is not None):
+        if re.match(dumb_pat, obj) is not None:
             obj = obj[:obj.index(",")]
         
         # Float string?
@@ -360,13 +366,23 @@ def coerce_args(orig_args, preferred_type=None):
     if (len(orig_args) == 0):
         return orig_args
 
-    # Convert args with None value to 'NULL'.
+    # Convert args with None value to 'NULL'. Also extract cell values from
+    # Excel cell dicts.
     args = []
     for arg in orig_args:
+
+        # Convert None to "NULL"?
         if (arg is None):
             args.append("NULL")
-        else:
-            args.append(arg)
+            continue
+
+        # Excel cell value represented as a dict?
+        if excel.is_cell_dict(arg):
+            args.append(arg["value"])
+            continue
+
+        # Regular argument. Don't change.
+        args.append(arg)
             
     # Find the 1st type in the arg list.
     first_type = None

@@ -64,7 +64,7 @@ import codecs
 import copy
 import struct
 
-from . import vba_constants
+from . import vba_constants,excel
 from . import utils
 from .utils import safe_str_convert
 
@@ -122,7 +122,7 @@ def add_shellcode_data(index, value, num_bytes):
     if (num_bytes > 1):
         log.warning("Only handling single byte values in add_shellcode_data(). Skipping.")
         return
-    
+
     # Track the written byte.
     shellcode[index] = value
 
@@ -138,7 +138,7 @@ def get_shellcode_data():
 
     # Get the shellcode bytes in order. Assume any missing
     # bytes are x86 NOOP instructions.
-    indices = shellcode.keys()
+    indices = list(shellcode.keys())
     indices.sort()
     last_i = None
     r = []
@@ -155,14 +155,14 @@ def get_shellcode_data():
         curr_val = shellcode[i]
         if (curr_val < 0):
             curr_val += 2**8
-                    
+
         # Add in the current shellcode byte.
         r.append(curr_val)
         last_i = i
 
     # Return shellcode bytes, in order.
     return r
-    
+
 
 # === VBA CLASSES =====================================================================================================
 
@@ -227,7 +227,7 @@ class Context(object):
         @param copy_globals (boolean) Make a deep copy of the provided
         global variable dict If True and _globals or context
         is given as an argument. Make a shallow copy if copy_globals
-        is False and _globals or context is given as an argument. 
+        is False and _globals or context is given as an argument.
 
         @param log_funcs (list) The names (str) of additional functions to
         track calls of.
@@ -240,22 +240,22 @@ class Context(object):
         metadata information. This object has a field for each tracked
         metadata item (same name as the metadata item).
         """
-        
+
         # Track canonical names of variables.
         self.name_cache = {}
 
         # Track information about string decode functions.
         self.decoded_str_info = {}
-        
+
         # Track the name of the current function being emulated.
         self.curr_func_name = None
-        
+
         # Track the name of the last saved file.
         self.last_saved_file = None
-        
+
         # Track whether we are handling a non-boolean (bitwise) expression.
         self.in_bitwise_expression = False
-        
+
         # Track whether emulation actions have been reported.
         self.got_actions = False
 
@@ -264,17 +264,17 @@ class Context(object):
 
         # Whether a wildcard equality check should always match or never match.
         self.wildcard_match_value = True
-        
+
         # Track all external functions called by the program.
         self.external_funcs = []
 
         # Track a quick lookup of variables that have change handling functions.
         self.has_change_handler = {}
-        
+
         # Track the current call stack. This is used to detect simple cases of
         # infinite recursion.
         self.call_stack = []
-        
+
         # Track the maximum number of iterations to emulate in a while loop before
         # breaking out (infinite loop) due to no vars in the loop guard being
         # modified.
@@ -288,7 +288,7 @@ class Context(object):
 
         # Track whether logging should be throttled.
         self.throttle_logging = False
-        
+
         # Allow user to provide extra function names to be reported on.
         if log_funcs:
             self._log_funcs = [func_name.lower() for func_name in log_funcs]
@@ -297,15 +297,15 @@ class Context(object):
 
         # Allow user to determine whether to expand environment variables.
         self.expand_env_vars = expand_env_vars
-        
+
         # Track callback functions that should not be called. This is to handle
         # recusive change handler calls caused by modifying the element handled
         # by the change handler inside the handler.
         self.skip_handlers = set()
-        
+
         # Track the file being analyze.
         self.filename = filename
-        
+
         # Track whether an error was raised in an emulated statement.
         self.got_error = False
 
@@ -314,11 +314,11 @@ class Context(object):
 
         # Track the numebr of reported general errors.
         self.num_general_errors = 0
-        
+
         # Track mapping from bogus alias name of DLL imported functions to
         # real names.
         self.dll_func_true_names = {}
-        
+
         # Track a dict mapping the labels of code blocks labeled with the LABEL:
         # construct to code blocks. This will be used to evaluate GOTO statements
         # when emulating.
@@ -326,7 +326,7 @@ class Context(object):
 
         # Track the in-memory loaded Excel workbook (xlrd workbook object).
         self.loaded_excel = loaded_excel
-        
+
         # Track open files.
         self.open_files = {}
         self.file_id_map = {}
@@ -336,7 +336,7 @@ class Context(object):
 
         # Track document metadata.
         self.metadata = metadata
-        
+
         # Track whether variables by default should go in the global scope.
         self.global_scope = False
 
@@ -353,7 +353,7 @@ class Context(object):
         self.with_prefix = ""
         # Track the current with prefix for with statements. This has not been evaluated
         self.with_prefix_raw = None
-        
+
         # globals should be a pointer to the globals dict from the core VBA engine (ViperMonkey)
         # because each statement should be able to change global variables
         if _globals is not None:
@@ -363,9 +363,9 @@ class Context(object):
                 self.globals = _globals
 
             # Save intermediate IOCs if any appear.
-            for var in _globals.keys():
+            for var in list(_globals.keys()):
                 self.save_intermediate_iocs(_globals[var])
-                
+
         elif context is not None:
             if (copy_globals):
                 # deepcopy() can be slow.
@@ -417,7 +417,7 @@ class Context(object):
 
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Have xlrd loaded Excel file = " + safe_str_convert(self.loaded_excel is not None))
-            
+
         # Track data saved in document variables.
         if doc_vars is not None:
 
@@ -425,14 +425,14 @@ class Context(object):
             self.doc_vars = doc_vars
 
             # Save intermediate IOCs if any appear.
-            for var in doc_vars.keys():
+            for var in list(doc_vars.keys()):
                 self.save_intermediate_iocs(doc_vars[var])
 
         elif context is not None:
             self.doc_vars = context.doc_vars
         else:
             self.doc_vars = {}
-            
+
         # Track whether nested loops are running with a stack of flags. If a loop is
         # running its flag will be True.
         self.loop_stack = []
@@ -440,10 +440,10 @@ class Context(object):
         # Track the actual nested loops that are running on a stack. This is used to
         # handle GOTOs that jump out of the current loop body.
         self.loop_object_stack = []
-        
+
         # Track whether we have exited from the current function.
         self.exit_func = False
-        
+
         # Add in a global for the current time.
         self.globals["Now".lower()] = datetime.now()
 
@@ -459,7 +459,7 @@ class Context(object):
         if self.filename:
             self.globals["WSCRIPT.SCRIPTFULLNAME".lower()] = "C:\\" + self.filename
             self.globals["['WSCRIPT'].SCRIPTFULLNAME".lower()] = "C:\\" + self.filename
-        
+
     def __repr__(self):
         r = ""
         r += "Locals:\n"
@@ -467,16 +467,16 @@ class Context(object):
         #r += "Globals:\n"
         #r += safe_str_convert(self.globals) + "\n"
         return r
-        
+
     def __eq__(self, other):
         if isinstance(other, Context):
             globals_eq = (self.globals == other.globals)
             if (not globals_eq):
                 s1 = set()
-                for i in self.globals.items():
+                for i in list(self.globals.items()):
                     s1.add(safe_str_convert(i))
                 s2 = set()
-                for i in other.globals.items():
+                for i in list(other.globals.items()):
                     s2.add(safe_str_convert(i))
                 if (safe_str_convert(s1 ^ s2) == "set([])"):
                     globals_eq = True
@@ -531,7 +531,7 @@ class Context(object):
 
         # Done.
         return r
-            
+
     def read_metadata_item(self, var):
         """Read a metadata item from the current context.
 
@@ -541,24 +541,24 @@ class Context(object):
         not.
 
         """
-        
+
         # Make sure we read in the metadata.
         if (self.metadata is None):
             log.error("BuiltInDocumentProperties: Metadata not read.")
             return ""
-    
+
         # Normalize the variable name.
         var = var.lower().replace(" ", "_")
         if ("." in var):
             var = var[:var.index(".")]
-    
+
         # See if we can find the metadata attribute.
         if (not hasattr(self.metadata, var)):
             log.error("BuiltInDocumentProperties: Metadata field '" + var + "' not found.")
             return ""
 
         # We have the attribute. Return it.
-        r = getattr(self.metadata, var)
+        r = safe_str_convert(getattr(self.metadata, var))
 
         # Handle MS encoding of "\r" and "\n".
         r = r.replace("_x000d_.", "\r\n")
@@ -568,7 +568,7 @@ class Context(object):
 
         # Done.
         return r
-            
+
     def get_error_handler(self):
         """Get the onerror goto error handler.
 
@@ -618,7 +618,7 @@ class Context(object):
             return True
         first_cmd = safe_str_convert(handler.block[0]).strip()
         return (first_cmd == "Next")
-    
+
     def have_error(self):
         """See if Visual Basic threw an error.
 
@@ -650,7 +650,7 @@ class Context(object):
 
         """
         self.got_error = False
-        
+
     def must_handle_error(self):
         """Check to see if there was a Visual Basic error raised during
         emulation and we have an error handler.
@@ -713,7 +713,7 @@ class Context(object):
 
         @param reason (str) The reason the error occurred.
 
-        """        
+        """
         self.got_error = True
         self.increase_general_errors()
         log.error("A VB error has occurred. Reason: " + safe_str_convert(reason))
@@ -769,7 +769,7 @@ class Context(object):
 
         """
         self.num_general_errors += 1
-        
+
     def get_true_name(self, name):
         """Get the true name of an aliased function imported from a
         DLL.
@@ -829,7 +829,7 @@ class Context(object):
         # Also look for the last saved file.
         longest = ""
         cdrive = None
-        for file_id in self.open_files.keys():
+        for file_id in list(self.open_files.keys()):
             if ((self.last_saved_file is not None) and (safe_str_convert(file_id).lower() == self.last_saved_file.lower())):
                 cdrive = file_id
                 break
@@ -862,7 +862,7 @@ class Context(object):
         @see dump_file
 
         @param fname (str) The name of the file to check.
-        
+
         @return (boolean) True if the named emulated file is open,
         False if not.
 
@@ -871,9 +871,9 @@ class Context(object):
         fname = fname.replace(".\\", "").replace("\\", "/")
 
         # Don't reopen already opened files.
-        return (fname in self.open_files.keys())
-        
-    def open_file(self, fname, file_id=""):
+        return (fname in list(self.open_files.keys()))
+
+    def open_file(self, fname, file_id="", append=False):
         """Simulate opening a file.
 
         @see get_interesting_fileid
@@ -889,23 +889,31 @@ class Context(object):
 
         @param file_id (str) The numeric ID of the file.
 
+        @param append (boolean) If True pull data that was already
+        written to the file to use as the initial file contents, if
+        False the file contents are empty.
+
         """
         # Save that the file is opened.
         fname = safe_str_convert(fname)
         fname = fname.replace(".\\", "").replace("\\", "/")
 
         # Don't reopen already opened files.
-        if (fname in self.open_files.keys()):
+        if (fname in list(self.open_files.keys())):
             log.warning("File " + safe_str_convert(fname) + " is already open.")
             return
 
         # Open the simulated file.
-        self.open_files[fname] = b''
+        self.open_files[fname] = ''
         if (file_id != ""):
             self.file_id_map[file_id] = fname
         log.info("Opened file " + fname)
-        
-    def write_file(self, fname, data):
+
+        # Are we appending to a file we wrote to previously?
+        if append and (fname in self.closed_files):
+            self.open_files[fname] = self.closed_files[fname]
+
+    def write_file(self, fname, data, binary=False):
         """Simulate writing to a file.
 
         @see get_interesting_fileid
@@ -919,22 +927,29 @@ class Context(object):
 
         @param fname (str) The name of the open emulated file to which
         to simulate a write.
-        
+
         @param data (str) The data to write.
+
+        @param binary (boolean) Set to True if the given data is
+        binary data that should be left unmodified, False if the data
+        is a string that can be modified.
 
         @return (boolean) True if the simulated write succeeded, False
         if it failed.
 
         """
-        
-        
+
+        # Handle Excel cell data structures.
+        if excel.is_cell_dict(data):
+            data = data["value"]
+
         # Make sure the "file" exists.
         fname = safe_str_convert(fname)
         fname = fname.replace(".\\", "").replace("\\", "/")
         if fname not in self.open_files:
 
             # Are we referencing this by numeric ID.
-            if (fname in self.file_id_map.keys()):
+            if (fname in list(self.file_id_map.keys())):
                 fname = self.file_id_map[fname]
             else:
 
@@ -944,30 +959,32 @@ class Context(object):
                     var_name = fname[1:]
                     if self.contains(var_name):
                         fname = "#" + safe_str_convert(self.get(var_name))
-                        if (fname in self.file_id_map.keys()):
+                        if (fname in list(self.file_id_map.keys())):
                             got_it = True
                             fname = self.file_id_map[fname]
-                
+
                 # Punt if we cannot find the open file.
-                if (not got_it):
+                if not got_it:
                     log.error('File ' + safe_str_convert(fname) + ' not open. Cannot write new data.')
                     return False
-            
+
         # Are we writing a string?
         if isinstance(data, str):
 
             # Hex string?
-            if ((len(data.strip()) == 4) and (re.match('&H[0-9A-F]{2}', data, re.IGNORECASE))):
+            if (len(data.strip()) == 4) and (re.match('&H[0-9A-F]{2}', data, re.IGNORECASE)):
                 data = chr(int(data.strip()[-2:], 16))
-
-            self.open_files[fname] += data
+            write_data = data
+            if not binary:
+                write_data = safe_str_convert(data)
+            self.open_files[fname] += write_data
             return True
 
         # Are we writing a list?
         elif isinstance(data, list):
             for d in data:
-                if (isinstance(d, int)):
-                    self.open_files[fname] += chr(d)
+                if isinstance(d, int):
+                    self.open_files[fname] += safe_str_convert(chr(d))
                 else:
                     self.open_files[fname] += safe_str_convert(d)
             return True
@@ -977,7 +994,7 @@ class Context(object):
 
             # Convert the int to a series of bytes to write out.
             byte_list = struct.pack('<q', data)
-            
+
             # Skip 0 bytes at the end of the sequence.
             #
             # TODO: To do this correctly we need to know the VBA
@@ -990,17 +1007,26 @@ class Context(object):
             #print byte_list.__repr__()
             byte_list = byte_list[:byte_size]
             #print byte_list.__repr__()
-            
+
             # Write out each byte.
             for b in byte_list:
+                if isinstance(b, int):
+                    b = chr(b)
                 self.open_files[fname] += b
             return True
-        
+
+        # Are we writing a blob of bytes?
+        elif isinstance(data, bytes):
+            for b in data:
+                if isinstance(b, int):
+                    b = chr(b)
+                self.open_files[fname] += b
+
         # Unhandled.
         else:
             log.error("Unhandled data type to write. " + safe_str_convert(type(data)) + ".")
             return False
-        
+
     def dump_all_files(self, autoclose=False):
         """Call dump_file() on all open emulated files.
 
@@ -1017,7 +1043,7 @@ class Context(object):
         after dumping, if False leave them open.
 
         """
-        for fname in self.open_files.keys():
+        for fname in list(self.open_files.keys()):
             self.dump_file(fname, autoclose=autoclose)
 
     def get_num_open_files(self):
@@ -1036,7 +1062,7 @@ class Context(object):
 
         """
         return len(self.open_files)
-            
+
     def close_file(self, fname):
         """Simulate closing a file.
 
@@ -1054,14 +1080,14 @@ class Context(object):
         @return (boolean) True on success, False on failure.
 
         """
-        
+
         # Make sure the "file" exists.
         fname = safe_str_convert(fname).replace(".\\", "").replace("\\", "/")
         file_id = None
         if fname not in self.open_files:
 
             # Are we referencing this by numeric ID.
-            if (fname in self.file_id_map.keys()):
+            if (fname in list(self.file_id_map.keys())):
                 file_id = fname
                 fname = self.file_id_map[fname]
             else:
@@ -1071,12 +1097,12 @@ class Context(object):
         log.info("Closing file " + fname)
 
         # Get the data written to the file and track it.
-        data = self.open_files[fname]
+        data = safe_str_convert(self.open_files[fname])
         self.closed_files[fname] = data
 
         # Clear the file out of the open files.
         del self.open_files[fname]
-        if (file_id is not None):
+        if file_id is not None:
             del self.file_id_map[file_id]
 
         if out_dir:
@@ -1107,10 +1133,18 @@ class Context(object):
             else:
                 log.warning('File ' + safe_str_convert(fname) + ' not closed. Closing file.')
                 self.close_file(fname)
-                
+
         # Hash the data to be saved.
         raw_data = self.closed_files[fname]
-        file_hash = sha256(raw_data).hexdigest()
+        file_hash = None
+        if isinstance(raw_data, bytes):
+            file_hash = sha256(raw_data).hexdigest()
+        else:
+            try:
+                file_hash = sha256(bytes(raw_data, "latin-1")).hexdigest()
+            except UnicodeEncodeError:
+                raw_data = safe_str_convert(raw_data, strict=True)
+                file_hash = sha256(bytes(raw_data, "latin-1")).hexdigest()
 
         # TODO: Set a flag to control whether to dump file contents.
 
@@ -1147,8 +1181,15 @@ class Context(object):
 
             # Write out the dropped file.
             with open(file_path, 'wb') as f:
-                f.write(raw_data)
+                if isinstance(raw_data, bytes):
+                    f.write(raw_data)
+                else:
+                    f.write(bytes(raw_data, "latin-1"))
             log.info("Wrote dumped file (hash " + safe_str_convert(file_hash) + ") to " + safe_str_convert(file_path) + ".")
+
+            # Pull IOCs from file data.
+            self.save_intermediate_iocs(raw_data)
+
         except Exception as e:
             log.error("Writing file " + safe_str_convert(fname) + " failed with error: " + safe_str_convert(e))
 
@@ -1164,10 +1205,10 @@ class Context(object):
         @throws KeyError Thrown if the builtin function is not found.
 
         """
-        
+
         if (not isinstance(name, str)):
             raise KeyError('Object %r not found' % name)
-        
+
         # Search in the global VBA library:
         if (log.getEffectiveLevel() == logging.DEBUG):
             log.debug("Looking for library function '" + name + "'...")
@@ -1178,7 +1219,7 @@ class Context(object):
             return VBA_LIBRARY[name]
 
         # Unknown symbol.
-        else:            
+        else:
             raise KeyError('Library function %r not found' % name)
 
     def __get(self, name, case_insensitive=True, local_only=False, global_only=False):
@@ -1189,11 +1230,11 @@ class Context(object):
         @see get
 
         @param name (str) The name of the variable.
-        
+
         @param case_insensitive (boolean) If True try both the given
         name and all lowercase version of the name, if False just try
         the given name.
-        
+
         @param local_only (boolean) If True only look for local
         variables with the given name, If False also look for global
         variables with the name.
@@ -1203,10 +1244,10 @@ class Context(object):
         variables with the name.
 
         @return (any) The value of the named variable if found.
-        
+
         @throws KeyError Thrown if the named variable is not found.
 
-        """        
+        """
         if (not isinstance(name, str)):
             raise KeyError('Object %r not found' % name)
 
@@ -1214,7 +1255,7 @@ class Context(object):
         is_change_handler = (safe_str_convert(name).strip().lower().endswith("_change"))
         change_name = safe_str_convert(name).strip().lower()
         if is_change_handler: change_name = change_name[:-len("_change")]
-        
+
         # convert to lowercase if needed.
         orig_name = name
         if (case_insensitive):
@@ -1225,7 +1266,7 @@ class Context(object):
         # We will always say that a directory is not accessible.
         if (name.strip().endswith(".subfolders.count")):
             return -1
-        
+
         # First, search in locals. This handles variables whose name overrides
         # a system function.
         if ((not global_only) and (name in self.locals)):
@@ -1241,7 +1282,8 @@ class Context(object):
                 log.debug('Found %r in globals (%r)' % (name, type(self.globals[name])))
             if is_change_handler: self.has_change_handler[change_name] = True
             self.name_cache[orig_name] = name
-            return self.globals[name]
+            r = self.globals[name]
+            return r
 
         # next, search in the global VBA library:
         elif ((not local_only) and (name in VBA_LIBRARY)):
@@ -1262,7 +1304,7 @@ class Context(object):
         # VBA constant?
         elif vba_constants.is_constant(name):
             return vba_constants.get_constant(name)
-        
+
         # Unknown symbol.
         else:
             # Not found.
@@ -1279,14 +1321,14 @@ class Context(object):
         @see get
 
         @param name (str) The name of the variable.
-        
+
         @param search_wildcard (boolean) If True try some variations
         of the given named variable if not found.
 
         @param case_insensitive (boolean) If True try both the given
         name and all lowercase version of the name, if False just try
         the given name.
-        
+
         @param local_only (boolean) If True only look for local
         variables with the given name, If False also look for global
         variables with the name.
@@ -1296,11 +1338,11 @@ class Context(object):
         variables with the name.
 
         @return (any) The value of the named variable if found.
-        
+
         @throws KeyError Thrown if the named variable is not found.
 
         """
-        
+
         # See if this is an aliased reference to an objects .Text field.
         name = safe_str_convert(name)
         if (((name.lower() == "nodetypedvalue") or (name.lower() == ".nodetypedvalue")) and
@@ -1328,10 +1370,10 @@ class Context(object):
         if ((self.with_prefix_raw is not None) and
             (safe_str_convert(self.with_prefix_raw).startswith("ActiveDocument"))):
             with_prefix = self.with_prefix_raw
-                    
+
         # Try to get the item using the current with context.
         if (name.startswith(".")):
-            
+
             # Add in the current With context.
             tmp_name = safe_str_convert(with_prefix) + safe_str_convert(name)
             try:
@@ -1376,7 +1418,7 @@ class Context(object):
                 ("Shapes" in safe_str_convert(self.with_prefix_raw)) and
                 (safe_str_convert(name) == "Title")):
                 return self.with_prefix
-        
+
         # Are we referencing a field in an object?
         if ("." in name):
 
@@ -1420,12 +1462,22 @@ class Context(object):
                     return r
                 except KeyError:
                     pass
-            
+
+        # Does the variable end with a trailing '$'?
+        if (name.endswith("$")):
+
+            # Try it without the trailing '$'.
+            return self.__get(safe_str_convert(name)[:-1],
+                              case_insensitive=case_insensitive,
+                              local_only=local_only,
+                              global_only=global_only)
+
         # See if the variable was initially defined with a trailing '$'.
-        return self.__get(safe_str_convert(name) + "$",
-                          case_insensitive=case_insensitive,
-                          local_only=local_only,
-                          global_only=global_only)
+        else:
+            return self.__get(safe_str_convert(name) + "$",
+                              case_insensitive=case_insensitive,
+                              local_only=local_only,
+                              global_only=global_only)
 
     def _get_all_metadata(self, name):
         """Return all items in ActiveDocument.BuiltInDocumentProperties or
@@ -1469,12 +1521,12 @@ class Context(object):
         self.set("Comments.Name", "Comments", force_global=True)
         self.set("Comments.Value", comments, force_global=True)
         self.save_intermediate_iocs(comments)
-        
+
         # Return the metadata items as a list of their names. Accesses of their .Name and
         # .Value fields will hit the synthetic variables that were just added to the
         # context.
         return meta_names
-    
+
     def get(self, name, search_wildcard=True, local_only=False, global_only=False):
         """Top level method for getting the value of a tracked variable.
 
@@ -1482,14 +1534,14 @@ class Context(object):
         @see _get
 
         @param name (str) The name of the variable.
-        
+
         @param search_wildcard (boolean) If True try some variations
         of the given named variable if not found.
 
         @param case_insensitive (boolean) If True try both the given
         name and all lowercase version of the name, if False just try
         the given name.
-        
+
         @param local_only (boolean) If True only look for local
         variables with the given name, If False also look for global
         variables with the name.
@@ -1499,18 +1551,17 @@ class Context(object):
         variables with the name.
 
         @return (any) The value of the named variable if found.
-        
+
         @throws KeyError Thrown if the named variable is not found.
 
         """
-        
+
         # Sanity check.
-        if ((name is None) or
-            (isinstance(name, str) and (len(name.strip()) == 0))):
+        if (name is None) or (len(safe_str_convert(name).strip()) == 0):
             raise KeyError('Object %r not found' % name)
-        
+
         # Short circuit looking for variable change handlers if possible.
-        if (safe_str_convert(name).strip().lower().endswith("_change")):
+        if safe_str_convert(name).strip().lower().endswith("_change"):
 
             # Get the original variable name.
             orig_name = safe_str_convert(name).strip().lower()[:-len("_change")]
@@ -1525,7 +1576,7 @@ class Context(object):
             if (log.getEffectiveLevel() == logging.DEBUG):
                 log.debug("Read all metadata items.")
             return r
-            
+
         # First try a case sensitive search. If that fails try case insensitive.
         r = None
         try:
@@ -1549,10 +1600,10 @@ class Context(object):
             tmp_name = "." + safe_str_convert(name)
             if (self.contains(tmp_name)):
                 r = self._get(tmp_name)
-            
+
         # Done.
         return r
-            
+
     def contains(self, name, local=False):
         """See if the context contains the given variable.
 
@@ -1598,14 +1649,14 @@ class Context(object):
         """
         var = var.lower()
         self.types[var] = typ
-        
+
     def get_type(self, var):
         """Get the type of a variable.
 
         @param var (str) The name of the variable.
 
         @return (str) The type of the variable if found.
-        
+
         @throws KeyError This is thrown if the variable is not found.
 
         """
@@ -1623,7 +1674,7 @@ class Context(object):
 
         @param search_wildcard (boolean) If True try some variations
         of the given named variable if not found.
-        
+
         @return (str?) If found return the value of the named document
         variable, if not found return None.
 
@@ -1649,10 +1700,10 @@ class Context(object):
 
             # Return these as (name, value) tuples.
             r = []
-            for var_name in self.doc_vars.keys():
-                r.append((var_name, self.doc_vars[var_name]))                
+            for var_name in list(self.doc_vars.keys()):
+                r.append((var_name, self.doc_vars[var_name]))
             return r
-        
+
         if (var not in self.doc_vars):
 
             # Can't find a doc var with this name. See if we have an internal variable
@@ -1688,7 +1739,7 @@ class Context(object):
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("Found doc var " + var + " = " + safe_str_convert(r))
                     return r
-                
+
             # No variable. Return nothing.
             return None
 
@@ -1709,59 +1760,70 @@ class Context(object):
         """
 
         global num_b64_iocs
-        
+
+        # The given value may be a list. Process each item.
+        if (isinstance(value, list)):
+            for v in value:
+                self.save_intermediate_iocs(v)
+            return
+
         # Strip NULLs and unprintable characters from the potential IOC.
-        value = utils.strip_nonvb_chars(value)
+        value = utils.strip_nonvb_chars(safe_str_convert(value))
         if (len(re.findall(r"NULL", safe_str_convert(value))) > 20):
-            value = safe_str_convert(value).replace("NULL", "")
+            value = value.replace("NULL", "")
+        # ` is not interesting for b64 or URLs.
+        value = value.replace("`", "")
+
+        # If the value is too short or it is an integer we are not interested in it.
+        if ((len(value) < 10) or (value.isdigit())):
+            return
 
         # Is there a URL in the data?
+        pulled_iocs = set()
         got_ioc = False
-        URL_REGEX = r'.*([hH][tT][tT][pP][sS]?://(([a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(:[0-9]+)?)+(/([/\?&\~=a-zA-Z0-9_\-\.](?!http))+)?)).*'
-        value = safe_str_convert(value).strip()
-        tmp_value = value
-        if (len(tmp_value) > 100):
-            tmp_value = tmp_value[:100] + " ..."
-        if (re.match(URL_REGEX, value) is not None):
-            if (value not in intermediate_iocs):
-                got_ioc = True
-                log.info("Found possible intermediate IOC (URL): '" + tmp_value + "'")
+        if ("http" in value.lower()):
+            URL_REGEX = r'.*([hH][tT][tT][pP][sS]?://(([a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-\.]+(:[0-9]+)?)+(/([/\?&\~=a-zA-Z0-9_\-\.](?!http))+)?)).*'
+            value = safe_str_convert(value).strip()
+            tmp_value = value
+            if (len(tmp_value) > 800):
+                tmp_value = tmp_value[:800] + " ..."
+            if (re.match(URL_REGEX, value) is not None):
+                if (value not in intermediate_iocs):
+                    got_ioc = True
+                    pulled_iocs.add(tmp_value)
 
         # Is there base64 in the data? Don't track too many base64 IOCs.
         if ((num_b64_iocs < 200) and (value not in intermediate_iocs)):
-            uni_value = None
-            try:
-                uni_value = value.decode("utf-8")
-            except UnicodeDecodeError:
-                pass
-            except AttributeError:
-                pass
-            if (uni_value is not None):
-                B64_REGEX = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
-                b64_strs = re2.findall(B64_REGEX, uni_value)
-                for curr_value in b64_strs:
-                    if (len(curr_value) > 100):
-                        got_ioc = True
-                        num_b64_iocs += 1
-                        log.info("Found possible intermediate IOC (base64): '" + curr_value + "'")
+            B64_REGEX = r"(?:[A-Za-z0-9+/]{4}){10,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?"
+            b64_strs = re2.findall(B64_REGEX, value)
+            for curr_value in b64_strs:
+                if (len(curr_value) > 100):
+                    got_ioc = True
+                    num_b64_iocs += 1
+                    pulled_iocs.add(curr_value)
 
         # Did we find anything?
         if (not got_ioc):
             return
-        
+
         # Is this new and interesting?
         iocs_to_delete = set()
-        got_ioc = True
+        got_ioc = (len(intermediate_iocs) == 0)
+        tmp_iocs = set()
         for old_value in intermediate_iocs:
-            if (value.startswith(old_value)):
-                iocs_to_delete.add(old_value)
-            if ((old_value.startswith(value)) and (len(old_value) > len(value))):
-                got_ioc = False
+            for new_value in pulled_iocs:
+                if (new_value.startswith(old_value) and (new_value != old_value)):
+                    iocs_to_delete.add(old_value)
+                if (not ((old_value.startswith(new_value)) and (len(old_value) > len(new_value)))):
+                    got_ioc = True
+                    tmp_iocs.add(new_value)
 
         # Add the new IOC if it is interesting.
         if (got_ioc):
-            intermediate_iocs.add(value)
-            
+            for new_value in pulled_iocs:
+                log.info("Found possible intermediate IOC: '" + new_value + "'")
+                intermediate_iocs.add(new_value)
+
         # Delete old IOCs if needed.
         for old_ioc in iocs_to_delete:
             intermediate_iocs.remove(old_ioc)
@@ -1774,7 +1836,7 @@ class Context(object):
         @param name (str) The variable name. If it is something like
         "Sheets('dd').Cells('d, dd').FormulaLocal" the cell formula
         value will be saved in the context as an action.
-        
+
         @param value (str) The potential cell formula value.
 
         @return (boolean) True if this is setting an Excel cell
@@ -1787,7 +1849,7 @@ class Context(object):
             (value is None) or
             (value == "__ALREADY_SET__")):
             return False
-        
+
         # Are we setting a cell formula?
         from . import expressions
         from . import vba_object
@@ -1797,13 +1859,14 @@ class Context(object):
         if (isinstance(name.rhs, list)):
             tmp_rhs = safe_str_convert(name.rhs[-1])
         if ((tmp_rhs.lower() != "formulalocal") and
+            (tmp_rhs.lower() != "formula") and
             (tmp_rhs.lower() != "value") and
             (tmp_rhs.lower() != "name")):
             return False
         typ = tmp_rhs
         if (typ.lower() == "formulalocal"):
             typ = "Formula"
-        
+
         # Looks like we are setting a formula, name, or value. See if we can resolve the
         # row and column of the cell.
         row = "??"
@@ -1827,7 +1890,7 @@ class Context(object):
             # Resolve the sheet.
             sheet_call = name.lhs
             sheet = safe_str_convert(vba_object.eval_arg(sheet_call.params[0], self))
-        
+
         # Report setting the formula, name, or value as an action.
         r = "Sheet(" + sheet + ").Cell(" + row + ", " + col + ") = '" + safe_str_convert(value) + "'"
         self.report_action('Set Cell ' + typ, r, tmp_rhs, strip_null_bytes=True)
@@ -1838,7 +1901,7 @@ class Context(object):
         handler.
 
         @param name (str) The name of the potential property.
-        
+
         @param value (??) The value to which the potential property is
         being set. If this is a property with a handler the value will
         be passed as the argument to the property handler.
@@ -1849,7 +1912,7 @@ class Context(object):
         """
 
         from . import procedures
-        
+
         # Do we know the value of the variable?
         if not self.contains(name):
             return False
@@ -1864,7 +1927,45 @@ class Context(object):
 
         # Handled property assignment.
         return True
-    
+
+    def _handle_privateprofilestring(self, name, value):
+        """Handle setting a registry key using
+        System.PrivateProfileString().
+
+        @param name (??) The item being assigned a value.
+
+        @param value (??) The value to which the item is being set.
+
+        @return (boolean) True if this is a property
+        System.PrivateProfileString(), False if not.
+
+        """
+
+        # This should be a MemberAccessExpression if it is a
+        # System.PrivateProfileString() assignment.
+        from . import expressions
+        if (not isinstance(name, expressions.MemberAccessExpression)):
+            return False
+
+        # Is it a System.PrivateProfileString() assignment?
+        if (not str(name).strip().startswith("System.PrivateProfileString(")):
+            return False
+
+        # We have one. Pull out the registry key.
+        if ((not isinstance(name.rhs, list)) or
+            (len(name.rhs) == 0) or
+            (not isinstance(name.rhs[0], expressions.Function_Call)) or
+            (len(name.rhs[0].params) < 2)):
+            return False
+        key = safe_str_convert(name.rhs[0].params[1])
+        value = safe_str_convert(value)
+
+        # Track the registry write.
+        self.report_action("Registry Write", key + " = " + value, "System.PrivateProfileString()", strip_null_bytes=True)
+
+        # Done.
+        return True
+
     def set(self,
             name,
             value,
@@ -1880,14 +1981,14 @@ class Context(object):
         @param name (str) The variable name.
 
         @param value (??) The variable value.
-        
+
         @param var_type (str) The type (Integer, String, etc.) of the
         variable.
-        
+
         @param do_with_prefix (boolean) If True and a With prefix is
         tracked in the context, prepend the With prefix to the given
         variable name before setting the value.
-        
+
         @param force_local (boolean) If True always save the given
         variable as a local variable.
 
@@ -1904,26 +2005,28 @@ class Context(object):
         existing values of the variable.
 
         """
-        
+
         # Special case. Are we setting a formula in an Excel cell?
         if (self._set_excel_formula(name, value)):
             return
 
         # Are we assigning a Property? If so we will call the property handler?
-        if (self._handle_property_assignment(name, value)):
+        if self._handle_property_assignment(name, value):
             return
 
-        # We might have a vipermonkey simple name expression. Convert to a string
-        # so we can use it.
-        from . import expressions
-        if (isinstance(name, expressions.SimpleNameExpression)):
-            name = safe_str_convert(name)
-        
+        # Are we assigning a registry key using System.PrivateProfileString()?
+        if self._handle_privateprofilestring(name, value):
+            return
+
         # Does the name make sense?
         orig_name = name
         if not isinstance(name, str):
             log.warning("context.set() " + safe_str_convert(name) + " is improper type. " + safe_str_convert(type(name)))
             name = safe_str_convert(name)
+
+        # Report on setting the language of a ScriptControl object.
+        if (name.endswith(".Language")):
+            self.report_action('Set Dynamic Script Language', safe_str_convert(value), "ScriptControl Object")
 
         # Does the value make sense?
         if (value is None):
@@ -1938,10 +2041,18 @@ class Context(object):
         # Skip this if this variable is already set and we are not allowing value overwrites.
         if (no_overwrite and self.contains(name)):
             return
-            
+
+        # Treat things like document variables, form captions, etc. as global variables.
+        if ("." in name):
+            suffix = name[name.rindex("."):].strip().lower()
+            fields = set([".caption", ".tag", ".text", ".name", ".alternativetext", ".controltiptext"])
+            if (suffix in fields):
+                log.warning("Saving " + name + " as a global variable.")
+                force_global = True
+
         # Save IOCs from intermediate values if needed.
         self.save_intermediate_iocs(value)
-        
+
         # convert to lowercase
         if (case_insensitive):
             tmp_name = name.lower()
@@ -1954,14 +2065,14 @@ class Context(object):
 
             # See if this is actually referring to a global variable.
             name_str = name_str[:name_str.index("(")].strip()
-            if (name_str in self.globals.keys()):
+            if (name_str in list(self.globals.keys())):
                 force_global = True
 
         # This should be a global variable if we are not in a function.
         if ((not self.in_procedure) and (not force_global) and (not force_local)):
             self.set(name, value, force_global=True, do_with_prefix=do_with_prefix)
             return
-                
+
         # Set the variable
 
         # Forced save in global context?
@@ -2006,7 +2117,7 @@ class Context(object):
                     self.globals[text_name] = value
                     if (log.getEffectiveLevel() == logging.DEBUG):
                         log.debug("Set global var " + text_name + " = " + safe_str_convert(value))
-                
+
         # If we know the type of the variable, save it.
         if (var_type is not None):
             self.types[name] = var_type
@@ -2020,7 +2131,7 @@ class Context(object):
         # Skip automatic data conversion if needed.
         if (no_conversion):
             return
-            
+
         # Handle base64 conversion with VBA objects.
         if (name.endswith(".text")):
 
@@ -2042,7 +2153,8 @@ class Context(object):
             try:
 
                 # Is this a Microsoft.XMLDOM object?
-                import vba_object
+                from . import vba_object
+                from . import expressions
                 node_type = orig_name
                 if (isinstance(orig_name, expressions.MemberAccessExpression)):
                     node_type = orig_name.lhs
@@ -2054,7 +2166,7 @@ class Context(object):
 
             except KeyError:
                 pass
-            
+
             # Handle doing conversions on the data.
             if (do_b64):
 
@@ -2067,7 +2179,12 @@ class Context(object):
                     self.set(val_name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
 
         # Handle hex conversion with VBA objects.
-        if (name.lower().endswith(".nodetypedvalue")):
+        if ((name.lower().endswith(".nodetypedvalue")) or (name.lower().endswith(".text"))):
+
+            # Figure out in which field to put the decoded value.
+            decode_field = ".Text"
+            if (name.lower().endswith(".text")):
+                decode_field = ".NodeTypedValue"
 
             # Handle doing conversions on the data.
             node_type = name[:name.rindex(".")] + ".datatype"
@@ -2075,6 +2192,7 @@ class Context(object):
 
                 # Something set to type "bin.hex"?
                 val = safe_str_convert(self.get(node_type)).strip()
+                conv_val = None
                 if (val.lower() == "bin.hex"):
 
                     # Try converting from hex.
@@ -2082,22 +2200,35 @@ class Context(object):
 
                         # Set the typed value of the node to the decoded value.
                         conv_val = codecs.decode(safe_str_convert(value).strip(), "hex")
-                        self.set(name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
                     except Exception as e:
                         log.warning("hex conversion of '" + safe_str_convert(value) + \
                                     "' FROM hex failed. Converting TO hex. " + safe_str_convert(e))
                         conv_val = to_hex(safe_str_convert(value).strip())
-                        self.set(name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
-                        
+
+                # Base64 conversion?
+                elif (val.lower() == "bin.base64"):
+                    conv_val = utils.b64_decode(value)
+
+                # Set the decoded value if we got one.
+                if (conv_val is not None):
+                    self.set(name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
+
+                    # Save the decoded value in the decoded value field of the object.
+                    text_name = name[:name.rindex(".")] + decode_field
+                    self.set(text_name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
+
             except KeyError:
                 if (log.getEffectiveLevel() == logging.DEBUG):
                     log.debug("Did not find type var " + node_type)
 
         # Handle after the fact data conversion with VBA objects.
-        if (name.endswith(".datatype")):
+        if (name.lower().endswith(".datatype")):
 
             # Handle doing conversions on the existing data.
-            node_value_name = name.replace(".datatype", ".nodetypedvalue")
+            if (name.endswith(".datatype")):
+                node_value_name = name.replace(".datatype", ".nodetypedvalue")
+            else:
+                node_value_name = name[:name.rindex(".")] + ".NodeTypedValue"
             try:
 
                 # Do we have data to convert from type "bin.hex"?
@@ -2119,15 +2250,15 @@ class Context(object):
                 # Do we have data to convert from type "bin.base64"?
                 if (value.lower() == "bin.base64"):
 
-                    
+
                     # Try converting the text from base64.
                     conv_val = utils.b64_decode(node_value)
                     if (conv_val is not None):
                         self.set(node_value_name, conv_val, no_conversion=True, do_with_prefix=do_with_prefix)
-                        
+
             except KeyError:
                 pass
-            
+
     def _strip_null_bytes(self, item):
         """Strip null (0x00) bytes from strings. This works on strings
         or lists of strings. If a list is given nulls will be stripped
@@ -2151,14 +2282,14 @@ class Context(object):
                 else:
                     r.append(s)
         return r
-                    
+
     def report_action(self, action, params=None, description=None, strip_null_bytes=False):
         """Save information about an interesting action.
 
         @param action (str) The action to save in the context.
-        
+
         @param params (list or str) Any parameter values for the
-        action. 
+        action.
 
         @param description (str) A human readable description of the
         action.
@@ -2167,9 +2298,9 @@ class Context(object):
         (0x00) from all strings in the action.
 
         """
-        
+
         # Strip out bad characters if needed.
-        if strip_null_bytes:
+        if (strip_null_bytes):
 
             # Strip bad characters.
             action = utils.strip_nonvb_chars(action)
@@ -2183,7 +2314,7 @@ class Context(object):
                     new_params.append(tmp_p)
             params = new_params
             description = utils.strip_nonvb_chars(description)
-            action = str(action)
+
             # Strip repeated NULLs in the action.
             if len(re.findall(r"NULL", action)) > 20:
                 action = action.replace("NULL", "")

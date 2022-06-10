@@ -62,7 +62,7 @@ import re
 from .curses_ascii import isprint
 import traceback
 
-from inspect import getouterframes, currentframe
+import inspect
 import sys
 from datetime import datetime
 import pyparsing
@@ -131,7 +131,7 @@ def limits_exceeded(throw_error=False):
     """
 
     # Check to see if we are approaching the recursion limit.
-    level = len(getouterframes(currentframe()))
+    level = len(inspect.stack())
     recursion_exceeded = (level > (sys.getrecursionlimit() * .50))
     time_exceeded = False
 
@@ -238,7 +238,7 @@ class VBA_Object(object):
                     if (isinstance(i, VBA_Object)):
                         r.append(i)
             if (isinstance(value, dict)):
-                for i in value.values():
+                for i in list(value.values()):
                     if (isinstance(i, VBA_Object)):
                         r.append(i)
         self._children = r
@@ -487,7 +487,7 @@ def get_cached_value(arg):
 
     # This is not already resolved to an int. See if we computed this before.
     arg_str = safe_str_convert(arg)
-    if (arg_str not in constant_expr_cache.keys()):
+    if (arg_str not in list(constant_expr_cache.keys())):
         return None
     return constant_expr_cache[arg_str]
 
@@ -513,7 +513,11 @@ def set_cached_value(arg, val):
     # Don't cache things that contain Excel sheets or workbooks.
     if contains_excel(arg):
         return
-        
+
+    # Only cache constant math expressions.
+    if not is_constant_math(arg):
+        return
+
     # We have a number. Cache it.
     arg_str = safe_str_convert(arg)
     try:
@@ -534,9 +538,10 @@ def is_constant_math(arg):
 
     """
 
-    # Sanity check. If there are variables in the expression it is not all literals.
+    # Sanity check. If there are variables/function calls in the
+    # expression it is not all literals.
     if (isinstance(arg, VBA_Object)):
-        var_visitor = var_in_expr_visitor()
+        var_visitor = var_in_expr_visitor(get_functions=True)
         arg.accept(var_visitor)
         if (len(var_visitor.variables) > 0):
             return False
@@ -561,7 +566,7 @@ def is_constant_math(arg):
     try:
         arg_str = str(arg_str)
     except UnicodeDecodeError:
-        arg_str = filter(isprint, arg_str)
+        arg_str = list(filter(isprint, arg_str))
         arg_str = str(arg_str)
     return (local_re.match(str(paren_pat), arg_str) is not None)
 
@@ -802,11 +807,13 @@ def _handle_form_variable_read(arg, context, got_constant_math):
 
         # Are we trying to load some document data?
         if ((tmp.startswith("thisdocument.builtindocumentproperties(")) or
+            (tmp.startswith("null.builtindocumentproperties(")) or
             (tmp.startswith("activeworkbook.builtindocumentproperties("))):
 
             # Try to pull the result from the document data.
             var = tmp.replace("thisdocument.builtindocumentproperties(", "").replace(")", "").replace("'","").strip()
             var = var.replace("activeworkbook.builtindocumentproperties(", "")
+            var = var.replace("null.builtindocumentproperties(", "")
             val = context.get_doc_var(var)
             if (val is not None):
                 return val
@@ -842,11 +849,15 @@ def _handle_form_variable_read(arg, context, got_constant_math):
                     log.debug("eval_arg: did NOT get it as document variable.")
 
         # Are we loading a custom document property?
-        if (tmp.startswith("activedocument.customdocumentproperties(")):
+        if ((tmp.startswith("activedocument.customdocumentproperties(")) or
+            (tmp.startswith("thisdocument.customdocumentproperties(")) or
+            (tmp.startswith("thisworkbook.customdocumentproperties("))):
 
             # ActiveDocument.CustomDocumentProperties("l3qDvt3B53wxeXu").Value
             # Try to pull the result from the custom properties.
             var = tmp.replace("activedocument.customdocumentproperties(", "").\
+                  replace("thisdocument.customdocumentproperties(", "").\
+                  replace("thisworkbook.customdocumentproperties(", "").\
                   replace(")", "").\
                   replace("'","").\
                   replace('"',"").\
@@ -910,12 +921,16 @@ def eval_arg(arg, context, treat_as_var_name=False):
     excel_val = _read_from_excel(arg, context)
     if (excel_val is not None):
         if got_constant_math: set_cached_value(arg, excel_val)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("eval_arg: Excel read: %r = %r" % (arg, excel_val))
         return excel_val
 
     # Short circuit the checks and see if we are accessing some object text first.
     obj_text_val = _read_from_object_text(arg, context)
     if (obj_text_val is not None):
         if got_constant_math: set_cached_value(arg, obj_text_val)
+        if (log.getEffectiveLevel() == logging.DEBUG):
+            log.debug("eval_arg: Object text read: %r = %r" % (arg, obj_text_val))
         return obj_text_val
     
     # Not reading from an Excel cell. Try as a VBA object.
@@ -924,6 +939,8 @@ def eval_arg(arg, context, treat_as_var_name=False):
         # Handle cases where wscriptshell.run() is being called and there is a local run() function.
         tmp_r = _handle_wscriptshell_run(arg, context, got_constant_math)
         if (tmp_r is not None):
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_arg: WScriptShell run: %r = %r" % (arg, tmp_r))
             return tmp_r
 
         # Handle as a regular VBA object.
@@ -934,6 +951,8 @@ def eval_arg(arg, context, treat_as_var_name=False):
         # Is this a Shapes() access that still needs to be handled?
         tmp_r = _handle_shapes_access(r, arg, context, got_constant_math)
         if (tmp_r is not None):
+            if (log.getEffectiveLevel() == logging.DEBUG):
+                log.debug("eval_arg: Shapes access: %r = %r" % (arg, tmp_r))
             return tmp_r
 
         # Regular VBA object.
@@ -1035,5 +1054,5 @@ def eval_args(args, context, treat_as_var_name=False):
             got_vba_objects = True
     if (not got_vba_objects):
         return args
-    r = map(lambda arg: eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name), args)
+    r = [eval_arg(arg, context=context, treat_as_var_name=treat_as_var_name) for arg in args]
     return r
